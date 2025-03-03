@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct EventAppPortalApp: App {
+    @State private var isAuthenticated = false
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isAuthenticated {
+                MainTabView()
+            } else {
+                LoginView()
+            }
         }
     }
 }
