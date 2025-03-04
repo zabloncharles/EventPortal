@@ -11,6 +11,14 @@
 		F746F4EB2D766320009B68BA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F746F4EA2D766320009B68BA /* ContentView.swift */; };
 		F746F4ED2D766322009B68BA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EC2D766322009B68BA /* Assets.xcassets */; };
 		F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EF2D766322009B68BA /* Preview Assets.xcassets */; };
+		F79C82812D77564900C87783 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82772D77564900C87783 /* ProfileView.swift */; };
+		F79C82822D77564900C87783 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82782D77564900C87783 /* HomeView.swift */; };
+		F79C82832D77564900C87783 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82792D77564900C87783 /* DiscoverView.swift */; };
+		F79C82842D77564900C87783 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827A2D77564900C87783 /* CreateEventView.swift */; };
+		F79C82852D77564900C87783 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827B2D77564900C87783 /* MainTabView.swift */; };
+		F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827D2D77564900C87783 /* ViewModifiers.swift */; };
+		F79C82872D77564900C87783 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827F2D77564900C87783 /* RegistrationView.swift */; };
+		F79C82882D77564900C87783 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82802D77564900C87783 /* LoginView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +27,14 @@
 		F746F4EA2D766320009B68BA /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F746F4EC2D766322009B68BA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F746F4EF2D766322009B68BA /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		F79C82772D77564900C87783 /* ProfileView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		F79C82782D77564900C87783 /* HomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		F79C82792D77564900C87783 /* DiscoverView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
+		F79C827A2D77564900C87783 /* CreateEventView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateEventView.swift; sourceTree = "<group>"; };
+		F79C827B2D77564900C87783 /* MainTabView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		F79C827D2D77564900C87783 /* ViewModifiers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
+		F79C827F2D77564900C87783 /* RegistrationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
+		F79C82802D77564900C87783 /* LoginView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +67,7 @@
 		F746F4E72D766320009B68BA /* EventAppPortal */ = {
 			isa = PBXGroup;
 			children = (
+				F79C82752D77564900C87783 /* Views */,
 				F746F4E82D766320009B68BA /* EventAppPortalApp.swift */,
 				F746F4EA2D766320009B68BA /* ContentView.swift */,
 				F746F4EC2D766322009B68BA /* Assets.xcassets */,
@@ -65,6 +82,45 @@
 				F746F4EF2D766322009B68BA /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		F79C82752D77564900C87783 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F79C82762D77564900C87783 /* Tabs */,
+				F79C827B2D77564900C87783 /* MainTabView.swift */,
+				F79C827C2D77564900C87783 /* Modifiers */,
+				F79C827E2D77564900C87783 /* Authentication */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F79C82762D77564900C87783 /* Tabs */ = {
+			isa = PBXGroup;
+			children = (
+				F79C82772D77564900C87783 /* ProfileView.swift */,
+				F79C82782D77564900C87783 /* HomeView.swift */,
+				F79C82792D77564900C87783 /* DiscoverView.swift */,
+				F79C827A2D77564900C87783 /* CreateEventView.swift */,
+			);
+			path = Tabs;
+			sourceTree = "<group>";
+		};
+		F79C827C2D77564900C87783 /* Modifiers */ = {
+			isa = PBXGroup;
+			children = (
+				F79C827D2D77564900C87783 /* ViewModifiers.swift */,
+			);
+			path = Modifiers;
+			sourceTree = "<group>";
+		};
+		F79C827E2D77564900C87783 /* Authentication */ = {
+			isa = PBXGroup;
+			children = (
+				F79C827F2D77564900C87783 /* RegistrationView.swift */,
+				F79C82802D77564900C87783 /* LoginView.swift */,
+			);
+			path = Authentication;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -138,6 +194,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				F746F4EB2D766320009B68BA /* ContentView.swift in Sources */,
+				F79C82822D77564900C87783 /* HomeView.swift in Sources */,
+				F79C82832D77564900C87783 /* DiscoverView.swift in Sources */,
+				F79C82872D77564900C87783 /* RegistrationView.swift in Sources */,
+				F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */,
+				F79C82842D77564900C87783 /* CreateEventView.swift in Sources */,
+				F79C82852D77564900C87783 /* MainTabView.swift in Sources */,
+				F79C82812D77564900C87783 /* ProfileView.swift in Sources */,
+				F79C82882D77564900C87783 /* LoginView.swift in Sources */,
 				F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,27 +1,26 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @AppStorage("selectedTab") var selectedTab: Tab = .home
+    
     var body: some View {
-        TabView {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
+        ZStack(alignment: .bottom) {
+            TabView(selection: $selectedTab) {
+                HomeView()
+                    .tag(Tab.home)
+                
+                DiscoverView()
+                    .tag(Tab.discover)
+                
+                CreateEventView()
+                    .tag(Tab.create)
+                
+                ProfileView()
+                    .tag(Tab.profile)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
             
-            DiscoverView()
-                .tabItem {
-                    Label("Discover", systemImage: "magnifyingglass")
-                }
-            
-            CreateEventView()
-                .tabItem {
-                    Label("Create", systemImage: "plus.circle.fill")
-                }
-            
-            ProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.fill")
-                }
+            TabBar()
         }
     }
 }
