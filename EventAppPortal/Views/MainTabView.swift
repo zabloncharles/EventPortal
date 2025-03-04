@@ -1,5 +1,8 @@
 import SwiftUI
 
+// Import TabBar from Components
+@_exported import struct EventAppPortal.TabBar
+
 struct MainTabView: View {
     @AppStorage("selectedTab") var selectedTab: Tab = .home
     
