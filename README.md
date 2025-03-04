@@ -26,7 +26,17 @@ A modern iOS application for discovering, creating, and joining events in your a
 
 ## Screenshots
 
-[Coming Soon]
+### Authentication
+
+| Login                                  | Registration                                         |
+| -------------------------------------- | ---------------------------------------------------- |
+| ![Login Screen](Screenshots/login.png) | ![Registration Screen](Screenshots/registration.png) |
+
+### Main Interface
+
+| Home                                 | Discover                                     | Create Event                                   | Profile                                    |
+| ------------------------------------ | -------------------------------------------- | ---------------------------------------------- | ------------------------------------------ |
+| ![Home Screen](Screenshots/home.png) | ![Discover Screen](Screenshots/discover.png) | ![Create Event Screen](Screenshots/create.png) | ![Profile Screen](Screenshots/profile.png) |
 
 ## Technical Details
 
