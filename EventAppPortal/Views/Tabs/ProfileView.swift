@@ -82,9 +82,13 @@ struct ProfileView: View {
                 Text("Are you sure you want to sign out?")
             }
         }
+        .appBackground()
     }
 }
 
-#Preview {
-    ProfileView()
-} 
+struct ProfileView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProfileView()
+    }
+}
+

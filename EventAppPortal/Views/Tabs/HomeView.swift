@@ -41,6 +41,7 @@ struct HomeView: View {
             }
             .navigationTitle("Home")
         }
+        .appBackground()
     }
 }
 
@@ -50,7 +51,8 @@ struct FeaturedEventCard: View {
             Image(systemName: "photo")
                 .resizable()
                 .scaledToFill()
-                .frame(width: 280, height: 160)
+                .frame(width: 280, height: 180)
+                .clipped()
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(12)
             
@@ -67,7 +69,7 @@ struct FeaturedEventCard: View {
             .padding(.horizontal, 8)
         }
         .frame(width: 280)
-        .background(Color.white)
+        .background(Color(uiColor: .secondarySystemBackground))
         .cornerRadius(12)
         .shadow(radius: 5)
     }
@@ -76,10 +78,11 @@ struct FeaturedEventCard: View {
 struct EventCard: View {
     var body: some View {
         HStack(spacing: 15) {
-            Image(systemName: "photo")
+            Image("bg1")
                 .resizable()
                 .scaledToFill()
-                .frame(width: 80, height: 80)
+                .frame(width: 100, height: 100)
+                .clipped()
                 .background(Color.gray.opacity(0.2))
                 .cornerRadius(8)
             
@@ -100,12 +103,14 @@ struct EventCard: View {
                 .foregroundColor(.gray)
         }
         .padding()
-        .background(Color.white)
+        .background(Color(uiColor: .secondarySystemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
     }
 }
 
-#Preview {
-    HomeView()
+struct HomeView_Previews: PreviewProvider {
+    static var previews: some View {
+        HomeView()
+    }
 } 

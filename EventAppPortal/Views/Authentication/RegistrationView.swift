@@ -70,9 +70,7 @@ struct RegistrationView: View {
                 dismiss()
             })
         }
+        .appBackground()
     }
 }
 
-#Preview {
-    RegistrationView()
-} 

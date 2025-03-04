@@ -38,6 +38,7 @@ struct DiscoverView: View {
             .navigationTitle("Discover")
             .searchable(text: $searchText, prompt: "Search events")
         }
+        .appBackground()
     }
 }
 
@@ -65,7 +66,7 @@ struct CategoryButton: View {
                 .fontWeight(.medium)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.blue : Color.gray.opacity(0.1))
+                .background(isSelected ? Color.blue : Color(uiColor: .secondarySystemBackground))
                 .foregroundColor(isSelected ? .white : .primary)
                 .cornerRadius(20)
         }
@@ -103,12 +104,14 @@ struct DiscoverEventCard: View {
             }
             .padding(.horizontal, 4)
         }
-        .background(Color.white)
+        .background(Color(uiColor: .secondarySystemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
     }
 }
 
-#Preview {
-    DiscoverView()
+struct DiscoverView_Previews: PreviewProvider {
+    static var previews: some View {
+        DiscoverView()
+    }
 } 

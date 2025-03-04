@@ -33,7 +33,7 @@ struct CreateEventView: View {
                             }
                             .frame(height: 200)
                             .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.1))
+                            .background(Color(uiColor: .secondarySystemBackground))
                             .cornerRadius(10)
                         }
                     }
@@ -80,6 +80,7 @@ struct CreateEventView: View {
                 ImagePicker(image: $selectedImage)
             }
         }
+        .appBackground()
     }
 }
 
@@ -119,6 +120,8 @@ struct ImagePicker: UIViewControllerRepresentable {
     }
 }
 
-#Preview {
-    CreateEventView()
+struct CreateEventView_Previews: PreviewProvider {
+    static var previews: some View {
+        CreateEventView()
+    }
 } 
