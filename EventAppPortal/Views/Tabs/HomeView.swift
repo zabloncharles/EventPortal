@@ -116,9 +116,9 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: 20) {
                             HStack(alignment: .bottom) {
                                 VStack(alignment: .leading) {
-                                    Text("Popular event")
+                                    Text("Popular events")
                                         .font(.headline)
-                                    Text("View and join popular plans!")
+                                    Text("View & join popular events!")
                                         .font(.callout)
                                 }
                                 Spacer()
@@ -375,7 +375,7 @@ struct RegularEventCard: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.invert.opacity(0.20), lineWidth: 1)
+                    .stroke(Color.dynamic.opacity(0.20), lineWidth: 1)
             )
             .cornerRadius(20)
         }.frame(height: 200)

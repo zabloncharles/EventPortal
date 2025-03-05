@@ -6,7 +6,28 @@
 //
 
 import SwiftUI
+// Add TabBar visibility manager
+class TabBarVisibilityManager: ObservableObject {
+    static let shared = TabBarVisibilityManager()
+    @AppStorage("hideTab") var hideTab: Bool = false {
+        didSet {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                isVisible = !hideTab
+            }
+        }
+    }
+    @Published var isVisible: Bool = true
+}
 
+// Add TabBar visibility modifier
+struct TabBarModifier: ViewModifier {
+    let isVisible: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .offset(y: isVisible ? 0 : UIScreen.main.bounds.height)
+    }
+}
 struct TabBar: View {
     @AppStorage("selectedTab") var selectedTab: Tab = .home
     @AppStorage("hideTab") var hideTab: Bool = false
