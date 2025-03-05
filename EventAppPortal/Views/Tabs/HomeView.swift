@@ -8,7 +8,7 @@ struct HomeView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 30) {
                     VStack {
                         HStack {
@@ -82,7 +82,7 @@ struct HomeView: View {
                                 
                                 if searchText.isEmpty {
                                     ForEach(["Community Cleanup", "Yoga Workshop", "Charity Gala"], id: \.self) { eventName in
-                                        NavigationLink(destination: Text(eventName)) {
+                                        NavigationLink(destination: ViewEventDetail(event: sampleEvent)) {
                                             VStack {
                                                 Divider()
                                                 HStack {
@@ -109,7 +109,7 @@ struct HomeView: View {
                     }
                     .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
-                    Spacer()
+                    
                     
                     VStack {
                         // Popular Events Section
@@ -125,18 +125,21 @@ struct HomeView: View {
                                 VStack(alignment: .center) {
                                     Image(systemName: "flame")
                                 }
-                            }
+                            }.padding(.horizontal)
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 16) {
                                     ForEach(0..<5) { _ in
-                                        PopularEventCard(event: sampleEvent)
-                                            .frame(width: 280)
+                                        NavigationLink(destination: ViewEventDetail(event: sampleEvent)) {
+                                            PopularEventCard(event: sampleEvent)
+                                                .frame(width: 280)
+                                        }
                                     }
-                                }
+                                }.padding(.leading)
+                                    .padding(.trailing, 10)
                             }
                         }
-                        .padding(.horizontal)
+                        
                         
                         // Plans Near You Section
                         VStack(alignment: .leading) {
@@ -171,7 +174,7 @@ struct HomeView: View {
                     }
                     .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                 }
-                .padding(.vertical)
+                .padding(.bottom)
             }
             .background(Color.dynamic)
             .navigationBarHidden(true)
@@ -375,8 +378,8 @@ struct RegularEventCard: View {
                     .stroke(Color.invert.opacity(0.20), lineWidth: 1)
             )
             .cornerRadius(20)
-        }
-        .frame(width: 280)
+        }.frame(height: 200)
+        
     }
     
     func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {
