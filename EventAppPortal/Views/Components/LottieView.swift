@@ -8,8 +8,21 @@ struct LottieView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
         let animationView = AnimationView()
-        let animation = Animation.named(filename)
-        animationView.animation = animation
+        
+        // Debug: Print the file path
+        if let bundlePath = Bundle.main.path(forResource: filename, ofType: "json") {
+            print("Found Lottie file at: \(bundlePath)")
+        } else {
+            print("⚠️ Could not find Lottie file: \(filename).json")
+        }
+        
+        if let animation = Animation.named(filename) {
+            animationView.animation = animation
+            print("✅ Successfully loaded animation: \(filename)")
+        } else {
+            print("❌ Failed to load animation: \(filename)")
+        }
+        
         animationView.contentMode = .scaleAspectFit
         animationView.loopMode = loop ? .loop : .playOnce
         animationView.play()

@@ -18,7 +18,7 @@ struct CreateEventView: View {
     @State private var typingText = ""
     @State private var scrollProxy: ScrollViewProxy? = nil
     @State private var showingLocationSearch = false
-    
+    @State private var quickActionButtonTapped = false
     private let questions = [
         "What's the name of your event?",
         "When will the event take place?",
@@ -56,49 +56,92 @@ struct CreateEventView: View {
                 
                 VStack(spacing: 0) {
                     // Header
-                    HStack {
-                        Text("Event Assistant")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
+                    VStack(alignment: .leading) {
                         
-                        Spacer()
-                        
-                        NavigationLink(destination: QuickActionsView { action in
-                            handleQuickAction(action)
-                        }) {
-                            Image(systemName: "slider.vertical.3")
-                                .font(.title2)
-                                .foregroundColor(.white.opacity(0.7))
+                        HStack {
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Text("Let's create your event!")
+                                        .font(.title3)
+                                    
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                    )
+                                    Spacer()
+                                    
+                                    NavigationLink(destination: QuickActionsView { action in
+                                        handleQuickAction(action)
+                                    }) {
+                                        Image(systemName: "text.badge.plus")
+                                            .font(.title2)
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+                                }
+                                Text("Provide the name of your event.")
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            
                         }
-                    }
-                    .padding()
-                    .background(Color.black)
+                        
+                        
+                    } .fontWeight(.bold)
+                        .padding(.horizontal)
+                        .padding(.top,20)
+                        .multilineTextAlignment(.leading)
+                   
                     
-                    LottieView(filename:"robotai", loop: true)
-                        .frame(height: 100)
+                        
+                        
+                                
+                                   
+                           
+                    // Quick Actions
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(quickActions, id: \.text) { action in
+//                                QuickActionButton(
+//                                    icon: action.icon,
+//                                    text: action.text,
+//                                    description: action.description,
+//                                    iconColor: action.iconColor
+//                                )
+                                HStack {
+                                    Image(systemName: action.icon)
+                                    Text(action.text)
+                                    
+                                } .foregroundColor(action.iconColor)
+                                    .padding(.vertical,10)
+                                    .padding(.horizontal,10)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(10)
+                                    .scaleEffect(quickActionButtonTapped ? 0.97 : 1)
+                                    .onTapGesture {
+                                        //animate button tap
+                                        quickActionButtonTappedAnimationFunc()
+                                        handleQuickAction(action.action)
+                                
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }.padding(.top,5)
+                    RegularEventCard(event: sampleEvent)
+                        .padding()
+                        .frame(height: 200)
+                        .padding(.top)
+                    
+                    
                     // Chat Messages
                     ScrollViewReader { proxy in
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                // Quick Actions
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(quickActions, id: \.text) { action in
-                                            QuickActionButton(
-                                                icon: action.icon,
-                                                text: action.text,
-                                                description: action.description,
-                                                iconColor: action.iconColor
-                                            )
-                                            .onTapGesture {
-                                                handleQuickAction(action.action)
-                                            }
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                                
+                              
+                                Spacer()
                                 ForEach(messages) { message in
                                     ChatBubble(message: message)
                                         .id(message.id)
@@ -107,21 +150,36 @@ struct CreateEventView: View {
                                 // Typing indicator
                                 if isTyping {
                                     HStack {
-                                        ChatBubble(message: ChatMessage(content: typingText + "...", isUser: false))
+                                        ChatBubble(message: ChatMessage(content: typingText + "|", isUser: false))
+                                            .id("typing")
                                     }
                                     .transition(.opacity)
                                 }
+                                
+                                // Spacer at the bottom to ensure content can scroll up
+                                Color.clear
+                                    .frame(height: 1)
+                                    .id("bottom")
                             }
                             .padding(.top)
-                            .onChange(of: messages) { _ in
-                                withAnimation {
-                                    if let lastMessage = messages.last {
-                                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                                    }
-                                }
+                        }
+                        .onChange(of: messages) { _ in
+                            withAnimation(.spring()) {
+                                proxy.scrollTo("bottom", anchor: .bottom)
                             }
                         }
+                        .onChange(of: typingText) { _ in
+                            withAnimation(.spring()) {
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
+                        }
+                        .onAppear {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
                     }
+                    .scrollDisabled(false)
+                    .scrollDismissesKeyboard(.immediately)
+                    .scrollIndicators(.hidden)
                     
                     // Message Input
                     VStack(spacing: 0) {
@@ -129,11 +187,11 @@ struct CreateEventView: View {
                             .background(Color.gray.opacity(0.3))
                         
                         VStack {
-                            
-                                
+                           
                                 HStack(spacing: 15) {
                                     TextField("Message AI assistant", text: $currentInput)
                                         .padding(12)
+                                        .padding(.leading, 5)
                                         .background(Color.gray.opacity(0.15))
                                         .cornerRadius(25)
                                         .foregroundColor(.white)
@@ -148,7 +206,7 @@ struct CreateEventView: View {
                                             .fill(LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
                                             .frame(width: 45, height: 45)
                                             .overlay(
-                                                Image(systemName: currentInput.isEmpty ? "mic.fill" : "arrow.up")
+                                                Image(systemName: currentInput.isEmpty ? "face.dashed" : "arrow.up")
                                                     .foregroundColor(.white)
                                                     .font(.system(size: 20))
                                             )
@@ -174,18 +232,29 @@ struct CreateEventView: View {
                 sendMessage()
             }
         }
-        .sheet(isPresented: $showingLocationSearch) {
+        .fullScreenCover(isPresented: $showingLocationSearch) {
             LocationSearchView(isPresented: $showingLocationSearch) { location in
                 eventDetails.location = location
                 currentInput = location
                 sendMessage()
             }
         }
-        .sheet(isPresented: $showingReview) {
+        .fullScreenCover(isPresented: $showingReview) {
             EventReviewView(eventDetails: eventDetails, selectedImage: selectedImage, isPresented: $showingReview)
         }
     }
-    
+    private func quickActionButtonTappedAnimationFunc(){
+        withAnimation(.spring()) {
+            quickActionButtonTapped = true
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.spring()) {
+                quickActionButtonTapped = false
+            }
+        }
+        
+    }
     private func sendMessage() {
         guard !currentInput.isEmpty else { return }
         let userMessage = ChatMessage(content: currentInput, isUser: true)
@@ -205,9 +274,10 @@ struct CreateEventView: View {
             addAIResponse("Great name! When would you like to hold the event?", showCalendarAfter: true)
         case 1:
             eventDetails.date = parseDate(input) ?? Date()
-            addAIResponse("Perfect! Where will the event be held?")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                showingLocationSearch = true
+            addAIResponse("Perfect! Where will the event be held?") { [self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showingLocationSearch = true
+                }
             }
         case 2:
             eventDetails.location = input
@@ -232,7 +302,7 @@ struct CreateEventView: View {
         currentQuestion += 1
     }
     
-    private func addAIResponse(_ response: String, showCalendarAfter: Bool = false) {
+    private func addAIResponse(_ response: String, showCalendarAfter: Bool = false, completion: (() -> Void)? = nil) {
         isTyping = true
         typingText = ""
         
@@ -253,10 +323,14 @@ struct CreateEventView: View {
                 
                 // Show calendar after message is complete and a small delay
                 if showCalendarAfter {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Add a longer delay after typing is complete
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         showingDatePicker = true
                     }
                 }
+                
+                // Call completion handler if provided
+                completion?()
             }
         }
     }
@@ -266,9 +340,10 @@ struct CreateEventView: View {
         case .schedule:
             addAIResponse("Let's schedule your event! When would you like it to take place?", showCalendarAfter: true)
         case .location:
-            addAIResponse("Let's set the location for your event!", showCalendarAfter: false)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                showingLocationSearch = true
+            addAIResponse("Let's set the location for your event!") { [self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showingLocationSearch = true
+                }
             }
         case .participants:
             addAIResponse("How many people can attend this event?")
@@ -344,56 +419,94 @@ struct DatePickerView: View {
     
     var body: some View {
         NavigationView {
-            ZStack {
-                Color.dynamic.edgesIgnoringSafeArea(.all)
-                
-                VStack(spacing: 20) {
-                    Text("Enter Date and Time")
-                    RegularEventCard(event: previewEvent)
-                        .padding()
-                        .frame(height: 200)
-                        .padding(.top)
-                    
-                    DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-                        .datePickerStyle(GraphicalDatePickerStyle())
-                        .padding()
-                        .background(.gray.opacity(0.30))
-                        .cornerRadius(19)
-                        .padding()
-                        .onChange(of: selectedDate) { newValue in
-                            previewEvent = Event(
-                                name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
-                                description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
-                                location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
-                                startDate: newValue,
-                                endDate: newValue.addingTimeInterval(7200),
-                                images: ["bg1"],
-                                participants: []
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators:false) {
+                    ZStack {
+                        Color.dynamic.edgesIgnoringSafeArea(.all)
+                        
+                        VStack(alignment: .leading, spacing: 20) {
+                            VStack(alignment: .leading) {
+                             
+                                HStack {
+                                    VStack(alignment: .leading) {
+                                        Text("Select a date and time")
+                                                .font(.title3)
+                                             
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        Text("Provide the date and time that the event take place")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                   
+                                }
+                               
+                                
+                            } .fontWeight(.bold)
+                                .padding(.horizontal)
+                                .padding(.top,20)
+                                .multilineTextAlignment(.leading)
+                            
+                          
+                                
+                            RegularEventCard(event: previewEvent)
+                                .padding()
+                                .frame(height: 200)
+                                .padding(.top)
+                            
+                            DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                                .datePickerStyle(GraphicalDatePickerStyle())
+                                .padding()
+                                .background(.gray.opacity(0.10))
+                                .cornerRadius(19)
+                                .padding()
+                                .onChange(of: selectedDate) { newValue in
+                                    previewEvent = Event(
+                                        name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
+                                        description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
+                                        location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
+                                        startDate: newValue,
+                                        endDate: newValue.addingTimeInterval(7200),
+                                        images: ["bg1"],
+                                        participants: []
+                                    )
+                                    
+                                    withAnimation(.spring()) {
+                                        proxy.scrollTo("bottom", anchor: .bottom)
+                                    }
+                                }
+                            
+                            Text("Done")
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .blue]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                            .onTapGesture(perform: {
+                                onDateSelected(selectedDate)
+                                isPresented = false
+                            })
+                            .padding()
+                            .id("bottom")
                         }
-                    
-                    Button("Done") {
-                        onDateSelected(selectedDate)
+                    }.navigationTitle("Select Date")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .navigationBarItems(trailing: Button("Cancel") {
                         isPresented = false
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [.purple, .blue]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
-                    .padding()
+                    }).padding(.bottom,20)
                 }
             }
-            .navigationBarHidden(true)
-            .navigationBarItems(trailing: Button("Cancel") {
-                isPresented = false
-            })
         }
         .preferredColorScheme(.dark)
     }
@@ -432,10 +545,10 @@ struct ChatBubble: View {
         HStack {
             if message.isUser { Spacer() }
             
-            Text(message.content)
+            Text(message.content.lowercased())
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(message.isUser ? Color.purple.opacity(0.8) : Color.gray.opacity(0.15))
+                .background(message.isUser ? Color.purple.opacity(0.8) : Color.gray.opacity(0.09))
                 .foregroundColor(.white)
                 .cornerRadius(20)
                 .padding(.horizontal, 16)
@@ -599,146 +712,161 @@ struct LocationSearchView: View {
     let onLocationSelected: (String) -> Void
     
     var body: some View {
-        ZStack {
-            VStack {
-                if !isFocused {
-                    LottieView(filename:"locationbubble", loop: true)
-                        .frame(height: 200)
-                        .padding(.top, 30)
-                        .padding(.bottom, 10)
-                        .overlay {
-                            Image(systemName: "location.fill.viewfinder")
-                                .font(.largeTitle)
-                                .foregroundColor(.white)
-                        }
-                }
-                
-                HStack {
-                    Text("Add an address for Your Event")
-                        .font(.title3)
-                        .padding(.bottom, 3)
-                    Image(systemName: "info.circle")
-                }
-                .foregroundStyle(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.purple, .blue]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .fontWeight(.bold)
-                .multilineTextAlignment(isFocused ? .leading : .center)
-                .padding(.bottom, 5)
-                .padding(.top,20)
-                
-                Text("Provide the location details where your event will take place. This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(isFocused ? .leading : .center)
-                    .padding(.horizontal, isFocused ? 0 : 25)
-                
-                TextField("Enter Address", text: $searchText)
-                    .focused($isFocused)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white, lineWidth: 1)
-                    )
-                    .padding(.vertical)
-                    .onChange(of: searchText) { newValue in
-                        completer.search(text: newValue)
+        NavigationView {
+            ZStack {
+                Color.dynamic
+                    .edgesIgnoringSafeArea(.all)
+                VStack {
+                    if !isFocused {
+                        LottieView(filename:"locationbubble", loop: true)
+                            .frame(height: 200)
+                            .padding(.top, 30)
+                            .padding(.bottom, 10)
+                            .overlay {
+                                Image(systemName: "location.fill.viewfinder")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.white)
+                            }
                     }
+                    
+                   
+                    VStack(alignment: isFocused ? .leading : .center) {
+                        Text("Add an address for Your Event")
+                                .font(.title3)
+                                .padding(.bottom, 3)
+                        
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(isFocused ? .leading : .center)
+                        .padding(.bottom, isFocused ? 0 : 5)
+                    .padding(.top,20)
+                        
+                        Text("Provide the location details where your event will take place. This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(isFocused ? .leading : .center)
+                            .padding(.horizontal, isFocused ? 0 : 25)
+                    }
+                    
+                    
+                    
+                    TextField("Enter Address", text: $searchText)
+                        .focused($isFocused)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white, lineWidth: 1)
+                        )
+                        .padding()
+                        .onChange(of: searchText) { newValue in
+                            completer.search(text: newValue)
+                        }
+                    
+                    if !completer.searchResults.isEmpty {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 12) {
+                                ForEach(completer.searchResults.prefix(3), id: \.self) { result in
+                                    Button(action: {
+                                        searchLocation(result)
+                                    }) {
+                                        VStack(alignment: .center) {
+                                            Divider()
+                                            Text(result.title + ", " + result.subtitle)
+                                                .font(.callout)
+                                                .foregroundColor(.primary)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                    .padding(.vertical, 7)
+                                    .padding(.horizontal, 10)
+                                    .cornerRadius(9)
+                                    .padding(.horizontal)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, isFocused ? 25 : 0)
+                .animation(.spring(), value: isFocused)
                 
-                if !completer.searchResults.isEmpty {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(completer.searchResults.prefix(3), id: \.self) { result in
-                                Button(action: {
-                                    searchLocation(result)
-                                }) {
-                                    VStack(alignment: .center) {
-                                        Divider()
-                                        Text(result.title + ", " + result.subtitle)
-                                            .font(.callout)
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                if showMap {
+                    Rectangle()
+                        .fill(Color.black.opacity(0.85))
+                        .edgesIgnoringSafeArea(.all)
+                    
+                    VStack {
+                        Text(confirmed ? "You have chosen \(completer.selectedAddress)" : "Please confirm the location of the event on the map below.")
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                        
+                        Divider()
+                        
+                        if let region = completer.region {
+                            Map(coordinateRegion: .constant(region),
+                                annotationItems: [MapPin(coordinate: region.center)]) { pin in
+                                MapMarker(coordinate: pin.coordinate, tint: .blue)
+                            }
+                            .frame(height: 500)
+                        }
+                        
+                        Divider()
+                        
+                        if !confirmed {
+                            HStack {
+                                Button("Back") {
+                                    withAnimation(.spring()) {
+                                        showMap = false
                                     }
                                 }
-                                .padding(.vertical, 7)
-                                .padding(.horizontal, 10)
-                                .cornerRadius(9)
-                                .padding(.horizontal)
-                            }
-                        }
-                    }
-                }
-                
-                Spacer()
-            }
-            .padding(.horizontal, isFocused ? 25 : 0)
-            
-            if showMap {
-                Rectangle()
-                    .fill(Color.black.opacity(0.85))
-                    .edgesIgnoringSafeArea(.all)
-                
-                VStack {
-                    Text(confirmed ? "You have chosen \(completer.selectedAddress)" : "Please confirm the location of the event on the map below.")
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                    
-                    Divider()
-                    
-                    if let region = completer.region {
-                        Map(coordinateRegion: .constant(region),
-                            annotationItems: [MapPin(coordinate: region.center)]) { pin in
-                            MapMarker(coordinate: pin.coordinate, tint: .blue)
-                        }
-                        .frame(height: 500)
-                    }
-                    
-                    Divider()
-                    
-                    if !confirmed {
-                        HStack {
-                            Button("Back") {
-                                withAnimation(.spring()) {
-                                    showMap = false
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.3))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                
+                                Button("Confirm") {
+                                    confirmed = true
+                                    onLocationSelected(completer.selectedAddress)
+                                    isPresented = false
                                 }
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(Color.gray.opacity(0.3))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            
-                            Button("Confirm") {
-                                confirmed = true
-                                onLocationSelected(completer.selectedAddress)
-                                isPresented = false
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.purple, .blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.purple, .blue]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
                         }
                     }
+                    .padding()
+                    .background(Color.dynamic)
+                    
+                   
+                    .onAppear {
+                        isFocused = false
+                    }
                 }
-                .padding()
-                .onAppear {
-                    isFocused = false
-                }
-            }
+            }.navigationTitle("Select Location")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(trailing: Button("Cancel") {
+                    isPresented = false
+                })
         }
-        .navigationBarHidden(showMap)
+      
     }
     
     private func searchLocation(_ result: MKLocalSearchCompletion) {
@@ -808,6 +936,7 @@ class SearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegat
 
 struct QuickActionsView: View {
     let onActionSelected: (QuickActionType) -> Void
+    @Environment(\.dismiss) private var dismiss
     
     private let quickActions = [
         QuickAction(icon: "calendar", text: "Schedule", action: .schedule, 
@@ -844,6 +973,7 @@ struct QuickActionsView: View {
                     )
                     .onTapGesture {
                         onActionSelected(action.action)
+                        dismiss()
                     }
                 }
             }

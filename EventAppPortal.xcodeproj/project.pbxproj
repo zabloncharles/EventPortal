@@ -18,7 +18,8 @@
 		F773EC742D7910CE0009AC93 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = F773EC732D7910CE0009AC93 /* Lottie */; };
 		F773EC762D7911650009AC93 /* locationbubble.json in Resources */ = {isa = PBXBuildFile; fileRef = F773EC752D7911650009AC93 /* locationbubble.json */; };
 		F773EC782D7915C30009AC93 /* robotai.json in Resources */ = {isa = PBXBuildFile; fileRef = F773EC772D7915C30009AC93 /* robotai.json */; };
-		F773EC7A2D79183C0009AC93 /* aiorb.json in Resources */ = {isa = PBXBuildFile; fileRef = F773EC792D79183C0009AC93 /* aiorb.json */; };
+		F773EC7C2D79DD990009AC93 /* orbpurple.json in Resources */ = {isa = PBXBuildFile; fileRef = F773EC7B2D79DD990009AC93 /* orbpurple.json */; };
+		F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC7F2D79E1700009AC93 /* AIOrb.swift */; };
 		F79C82812D77564900C87783 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82772D77564900C87783 /* ProfileView.swift */; };
 		F79C82822D77564900C87783 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82782D77564900C87783 /* HomeView.swift */; };
 		F79C82832D77564900C87783 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82792D77564900C87783 /* DiscoverView.swift */; };
@@ -41,7 +42,8 @@
 		F773EC702D790FAC0009AC93 /* LottieView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		F773EC752D7911650009AC93 /* locationbubble.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = locationbubble.json; sourceTree = "<group>"; };
 		F773EC772D7915C30009AC93 /* robotai.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = robotai.json; sourceTree = "<group>"; };
-		F773EC792D79183C0009AC93 /* aiorb.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = aiorb.json; sourceTree = "<group>"; };
+		F773EC7B2D79DD990009AC93 /* orbpurple.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = orbpurple.json; sourceTree = "<group>"; };
+		F773EC7F2D79E1700009AC93 /* AIOrb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AIOrb.swift; sourceTree = "<group>"; };
 		F79C82772D77564900C87783 /* ProfileView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		F79C82782D77564900C87783 /* HomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F79C82792D77564900C87783 /* DiscoverView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
@@ -129,13 +131,31 @@
 		F773EC6F2D790FAC0009AC93 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				F773EC822D79EDC60009AC93 /* Resources */,
 				F773EC702D790FAC0009AC93 /* LottieView.swift */,
-				F773EC752D7911650009AC93 /* locationbubble.json */,
-				F773EC772D7915C30009AC93 /* robotai.json */,
-				F773EC792D79183C0009AC93 /* aiorb.json */,
+				F773EC7F2D79E1700009AC93 /* AIOrb.swift */,
 			);
 			name = Components;
 			path = Views/Components;
+			sourceTree = "<group>";
+		};
+		F773EC822D79EDC60009AC93 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F773EC852D79EE8A0009AC93 /* Lottie */,
+			);
+			name = Resources;
+			path = EventAppPortal/Resources;
+			sourceTree = SOURCE_ROOT;
+		};
+		F773EC852D79EE8A0009AC93 /* Lottie */ = {
+			isa = PBXGroup;
+			children = (
+				F773EC752D7911650009AC93 /* locationbubble.json */,
+				F773EC772D7915C30009AC93 /* robotai.json */,
+				F773EC7B2D79DD990009AC93 /* orbpurple.json */,
+			);
+			path = Lottie;
 			sourceTree = "<group>";
 		};
 		F79C82752D77564900C87783 /* Views */ = {
@@ -244,9 +264,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F773EC782D7915C30009AC93 /* robotai.json in Resources */,
+				F773EC7C2D79DD990009AC93 /* orbpurple.json in Resources */,
 				F773EC762D7911650009AC93 /* locationbubble.json in Resources */,
 				F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */,
-				F773EC7A2D79183C0009AC93 /* aiorb.json in Resources */,
 				F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,6 +279,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F79C82822D77564900C87783 /* HomeView.swift in Sources */,
+				F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */,
 				F79C82832D77564900C87783 /* DiscoverView.swift in Sources */,
 				F773EC672D788A600009AC93 /* ColorExtension.swift in Sources */,
 				F79C82872D77564900C87783 /* RegistrationView.swift in Sources */,
