@@ -2,7 +2,9 @@ import SwiftUI
 import MapKit
 
 struct CreateEventView: View {
-    @State private var messages: [ChatMessage] = []
+    @State private var messages: [ChatMessage] = [
+        ChatMessage(content: "Hello! Let's create your event.\nWhat would you like to name it?", isUser: false)
+    ]
     @State private var currentInput = ""
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
@@ -27,133 +29,142 @@ struct CreateEventView: View {
     ]
     
     private let quickActions = [
-        QuickAction(icon: "calendar", text: "Schedule Event", action: .schedule),
-        QuickAction(icon: "mappin.and.ellipse", text: "Set Location", action: .location),
-        QuickAction(icon: "person.2", text: "Add Participants", action: .participants),
-        QuickAction(icon: "tag", text: "Set Category", action: .category),
-        QuickAction(icon: "photo", text: "Add Photos", action: .photos),
-        QuickAction(icon: "doc.text", text: "Add Description", action: .description)
+        QuickAction(icon: "calendar", text: "Schedule Event", action: .schedule, 
+                   description: "Set the date and time for your event", 
+                   iconColor: .orange),
+        QuickAction(icon: "mappin.and.ellipse", text: "Set Location", action: .location, 
+                   description: "Choose where your event will take place", 
+                   iconColor: .blue),
+        QuickAction(icon: "person.2", text: "Add Participants", action: .participants, 
+                   description: "Set the number of attendees for your event", 
+                   iconColor: .green),
+        QuickAction(icon: "tag", text: "Set Category", action: .category, 
+                   description: "Classify your event type and theme", 
+                   iconColor: .purple),
+        QuickAction(icon: "photo", text: "Add Photos", action: .photos, 
+                   description: "Add images to showcase your event", 
+                   iconColor: .red),
+        QuickAction(icon: "doc.text", text: "Add Description", action: .description, 
+                   description: "Write details about your event", 
+                   iconColor: .cyan)
     ]
 
     var body: some View {
-        ZStack {
-            Color.black.edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("Event Assistant")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        // Show settings
-                    }) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.title2)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                }
-                .padding()
-                .background(Color.black)
+        NavigationView {
+            ZStack {
+                Color.black.edgesIgnoringSafeArea(.all)
                 
-                // Chat Messages
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            // AI Assistant Header
-                            if messages.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("AI assistant")
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                    
-                                    Text("Hello! Let's create your event.\nWhat would you like to name it?")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.gray.opacity(0.15))
-                                .cornerRadius(15)
-                            }
-                            
-                            // Quick Actions
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(quickActions, id: \.text) { action in
-                                        QuickActionButton(icon: action.icon, text: action.text)
-                                            .onTapGesture {
-                                                handleQuickAction(action.action)
-                                            }
-                                    }
-                                }
-                                .padding(.horizontal)
-                            }
-                            
-                            ForEach(messages) { message in
-                                ChatBubble(message: message)
-                                    .id(message.id)
-                            }
-                            
-                            // Typing indicator
-                            if isTyping {
-                                HStack {
-                                    ChatBubble(message: ChatMessage(content: typingText + "...", isUser: false))
-                                }
-                                .transition(.opacity)
-                            }
-                        }
-                        .padding(.top)
-                        .onChange(of: messages) { _ in
-                            withAnimation {
-                                if let lastMessage = messages.last {
-                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Message Input
                 VStack(spacing: 0) {
-                    Divider()
-                        .background(Color.gray.opacity(0.3))
-                    
-                    HStack(spacing: 15) {
-                        TextField("Message AI assistant", text: $currentInput)
-                            .padding(12)
-                            .background(Color.gray.opacity(0.15))
-                            .cornerRadius(25)
+                    // Header
+                    HStack {
+                        Text("Event Assistant")
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(.white)
-                            .onSubmit {
-                                sendMessage()
-                            }
                         
-                        Button(action: {
-                            sendMessage()
+                        Spacer()
+                        
+                        NavigationLink(destination: QuickActionsView { action in
+                            handleQuickAction(action)
                         }) {
-                            Circle()
-                                .fill(LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 45, height: 45)
-                                .overlay(
-                                    Image(systemName: currentInput.isEmpty ? "mic.fill" : "arrow.up")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 20))
-                                )
+                            Image(systemName: "slider.vertical.3")
+                                .font(.title2)
+                                .foregroundColor(.white.opacity(0.7))
                         }
                     }
                     .padding()
+                    .background(Color.black)
+                    
+                    LottieView(filename:"robotai", loop: true)
+                        .frame(height: 100)
+                    // Chat Messages
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 20) {
+                                // Quick Actions
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 12) {
+                                        ForEach(quickActions, id: \.text) { action in
+                                            QuickActionButton(
+                                                icon: action.icon,
+                                                text: action.text,
+                                                description: action.description,
+                                                iconColor: action.iconColor
+                                            )
+                                            .onTapGesture {
+                                                handleQuickAction(action.action)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                                
+                                ForEach(messages) { message in
+                                    ChatBubble(message: message)
+                                        .id(message.id)
+                                }
+                                
+                                // Typing indicator
+                                if isTyping {
+                                    HStack {
+                                        ChatBubble(message: ChatMessage(content: typingText + "...", isUser: false))
+                                    }
+                                    .transition(.opacity)
+                                }
+                            }
+                            .padding(.top)
+                            .onChange(of: messages) { _ in
+                                withAnimation {
+                                    if let lastMessage = messages.last {
+                                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Message Input
+                    VStack(spacing: 0) {
+                        Divider()
+                            .background(Color.gray.opacity(0.3))
+                        
+                        VStack {
+                            
+                                
+                                HStack(spacing: 15) {
+                                    TextField("Message AI assistant", text: $currentInput)
+                                        .padding(12)
+                                        .background(Color.gray.opacity(0.15))
+                                        .cornerRadius(25)
+                                        .foregroundColor(.white)
+                                        .onSubmit {
+                                            sendMessage()
+                                        }
+                                    
+                                    Button(action: {
+                                        sendMessage()
+                                    }) {
+                                        Circle()
+                                            .fill(LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .frame(width: 45, height: 45)
+                                            .overlay(
+                                                Image(systemName: currentInput.isEmpty ? "mic.fill" : "arrow.up")
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 20))
+                                            )
+                                    }
+                                }
+                                .padding()
+                            
+                        }
+                    }
                 }
             }
         }
         .preferredColorScheme(.dark)
-        .sheet(isPresented: $showingDatePicker) {
-            DatePickerView(selectedDate: $selectedDate, isPresented: $showingDatePicker) { date in
+      
+        .fullScreenCover(isPresented: $showingDatePicker) {
+            DatePickerView(selectedDate: $selectedDate, isPresented: $showingDatePicker, eventDetails: eventDetails) { date in
                 eventDetails.date = date
                 let formatter = DateFormatter()
                 formatter.dateStyle = .long
@@ -295,43 +306,103 @@ struct QuickAction {
     let icon: String
     let text: String
     let action: QuickActionType
+    let description: String
+    let iconColor: Color
 }
 
 struct DatePickerView: View {
     @Binding var selectedDate: Date
     @Binding var isPresented: Bool
+    let eventDetails: EventDetails
     var onDateSelected: (Date) -> Void
+    @State private var previewEvent: Event
+    
+    init(selectedDate: Binding<Date>, isPresented: Binding<Bool>, eventDetails: EventDetails, onDateSelected: @escaping (Date) -> Void) {
+        self._selectedDate = selectedDate
+        self._isPresented = isPresented
+        self.eventDetails = eventDetails
+        self.onDateSelected = onDateSelected
+        
+        // Create a temporary formatter for initialization
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        let dateString = formatter.string(from: selectedDate.wrappedValue)
+        
+        // Initialize the preview event
+        let initialEvent = Event(
+            name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
+            description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
+            location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
+            startDate: selectedDate.wrappedValue,
+            endDate: selectedDate.wrappedValue.addingTimeInterval(7200),
+            images: ["bg1"],
+            participants: []
+        )
+        self._previewEvent = State(initialValue: initialEvent)
+    }
     
     var body: some View {
         NavigationView {
-            VStack {
-                DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
-                    .datePickerStyle(GraphicalDatePickerStyle())
-                    .padding()
+            ZStack {
+                Color.dynamic.edgesIgnoringSafeArea(.all)
                 
-                Button("Done") {
-                    onDateSelected(selectedDate)
-                    isPresented = false
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [.purple, .blue]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                VStack(spacing: 20) {
+                    Text("Enter Date and Time")
+                    RegularEventCard(event: previewEvent)
+                        .padding()
+                        .frame(height: 200)
+                        .padding(.top)
+                    
+                    DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(GraphicalDatePickerStyle())
+                        .padding()
+                        .background(.gray.opacity(0.30))
+                        .cornerRadius(19)
+                        .padding()
+                        .onChange(of: selectedDate) { newValue in
+                            previewEvent = Event(
+                                name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
+                                description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
+                                location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
+                                startDate: newValue,
+                                endDate: newValue.addingTimeInterval(7200),
+                                images: ["bg1"],
+                                participants: []
+                            )
+                        }
+                    
+                    Button("Done") {
+                        onDateSelected(selectedDate)
+                        isPresented = false
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [.purple, .blue]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding()
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                    .padding()
+                }
             }
-            .navigationTitle("Select Date & Time")
+            .navigationBarHidden(true)
             .navigationBarItems(trailing: Button("Cancel") {
                 isPresented = false
             })
         }
         .preferredColorScheme(.dark)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
@@ -377,19 +448,31 @@ struct ChatBubble: View {
 struct QuickActionButton: View {
     let icon: String
     let text: String
+    let description: String
+    let iconColor: Color
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 24))
+                .font(.system(size: 28))
+                .foregroundColor(iconColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            
             Text(text)
-                .font(.caption)
-                .multilineTextAlignment(.center)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            Text(description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .lineLimit(3)
+                .multilineTextAlignment(.leading)
         }
-        .foregroundColor(.white)
-        .frame(width: 100, height: 80)
-        .background(Color.gray.opacity(0.15))
-        .cornerRadius(12)
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(UIColor.systemGray6).opacity(0.2))
+        .cornerRadius(16)
     }
 }
 
@@ -519,12 +602,15 @@ struct LocationSearchView: View {
         ZStack {
             VStack {
                 if !isFocused {
-                    // Note: You'll need to add the LottieView and animation file
-                    Image(systemName: "location.fill.viewfinder")
+                    LottieView(filename:"locationbubble", loop: true)
                         .frame(height: 200)
                         .padding(.top, 30)
                         .padding(.bottom, 10)
-                        .font(.largeTitle)
+                        .overlay {
+                            Image(systemName: "location.fill.viewfinder")
+                                .font(.largeTitle)
+                                .foregroundColor(.white)
+                        }
                 }
                 
                 HStack {
@@ -543,6 +629,7 @@ struct LocationSearchView: View {
                 .fontWeight(.bold)
                 .multilineTextAlignment(isFocused ? .leading : .center)
                 .padding(.bottom, 5)
+                .padding(.top,20)
                 
                 Text("Provide the location details where your event will take place. This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
                     .foregroundColor(.secondary)
@@ -558,7 +645,7 @@ struct LocationSearchView: View {
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.white, lineWidth: 1)
                     )
-                    .padding()
+                    .padding(.vertical)
                     .onChange(of: searchText) { newValue in
                         completer.search(text: newValue)
                     }
@@ -570,7 +657,7 @@ struct LocationSearchView: View {
                                 Button(action: {
                                     searchLocation(result)
                                 }) {
-                                    VStack {
+                                    VStack(alignment: .center) {
                                         Divider()
                                         Text(result.title + ", " + result.subtitle)
                                             .font(.callout)
@@ -716,6 +803,55 @@ class SearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegat
             self.searchResults = []
             self.error = error
         }
+    }
+}
+
+struct QuickActionsView: View {
+    let onActionSelected: (QuickActionType) -> Void
+    
+    private let quickActions = [
+        QuickAction(icon: "calendar", text: "Schedule", action: .schedule, 
+                   description: "Set the date and time for your event", 
+                   iconColor: .orange),
+        QuickAction(icon: "mappin.and.ellipse", text: "Location", action: .location, 
+                   description: "Choose where your event will take place", 
+                   iconColor: .blue),
+        QuickAction(icon: "person.2", text: "Participants", action: .participants, 
+                   description: "Set the number of attendees for your event", 
+                   iconColor: .green),
+        QuickAction(icon: "tag", text: "Category", action: .category, 
+                   description: "Classify your event type and theme", 
+                   iconColor: .purple),
+        QuickAction(icon: "photo", text: "Photos", action: .photos, 
+                   description: "Add images to showcase your event", 
+                   iconColor: .red),
+        QuickAction(icon: "doc.text", text: "Description", action: .description, 
+                   description: "Write details about your event", 
+                   iconColor: .cyan)
+    ]
+    
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            LazyVGrid(columns: [
+                GridItem(.flexible())
+            ], spacing: 16) {
+                ForEach(quickActions, id: \.text) { action in
+                    QuickActionButton(
+                        icon: action.icon,
+                        text: action.text,
+                        description: action.description,
+                        iconColor: action.iconColor
+                    )
+                    .onTapGesture {
+                        onActionSelected(action.action)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Quick Actions")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.black.edgesIgnoringSafeArea(.all))
     }
 }
 
