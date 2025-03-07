@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct EventAppPortalApp: App {
-    @State private var isAuthenticated = false
+    @State private var isAuthenticated = true
     
     var body: some Scene {
         WindowGroup {

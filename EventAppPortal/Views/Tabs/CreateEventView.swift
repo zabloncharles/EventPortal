@@ -1,10 +1,45 @@
 import SwiftUI
 import MapKit
 
+// MARK: - Models
+enum EventTimingType {
+    case ongoing
+    case timed
+}
+
+let eventTypes: [String] = [
+    "Corporate",
+    "Concert",
+    "Marketing",
+    "Health & Wellness",
+    "Technology",
+    "Art & Culture",
+    "Charity",
+    "Literature",
+    "Lifestyle",
+    "Environmental",
+    "Entertainment"
+]
+
+let typeSymbols: [String: String] = [
+    "Concert": "figure.dance",
+    "Corporate": "building.2.fill",
+    "Marketing": "megaphone.fill",
+    "Health & Wellness": "heart.fill",
+    "Technology": "desktopcomputer",
+    "Art & Culture": "paintbrush.fill",
+    "Charity": "heart.circle.fill",
+    "Literature": "book.fill",
+    "Lifestyle": "leaf.fill",
+    "Environmental": "leaf.arrow.triangle.circlepath",
+    "Entertainment": "music.note.list"
+]
+
 struct CreateEventView: View {
     @State private var messages: [ChatMessage] = [
         ChatMessage(content: "Hello! Let's create your event.\nWhat would you like to name it?", isUser: false)
     ]
+    @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     @State private var currentInput = ""
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
@@ -19,6 +54,28 @@ struct CreateEventView: View {
     @State private var scrollProxy: ScrollViewProxy? = nil
     @State private var showingLocationSearch = false
     @State private var quickActionButtonTapped = false
+    @State private var showingCategoryPicker = false
+    
+    // Add computed property for live preview event
+    private var previewEvent: Event {
+        Event(
+            name: eventDetails.title.isEmpty ? "Your Event Name" : eventDetails.title,
+            description: eventDetails.description.isEmpty ? "Add a description of your event" : eventDetails.description,
+            type: eventDetails.category,
+            views: "0",
+            location: eventDetails.location.isEmpty ? "Set event location" : eventDetails.location,
+            price: "Free",
+            owner: "Current User",
+            startDate: eventDetails.date,
+            endDate: eventDetails.date.addingTimeInterval(7200),
+            images: ["bg1"],
+            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            isTimed: true,
+            createdAt: Date(),
+            coordinates: []
+        )
+    }
+
     private let questions = [
         "What's the name of your event?",
         "When will the event take place?",
@@ -130,7 +187,9 @@ struct CreateEventView: View {
                         }
                         .padding(.horizontal)
                     }.padding(.top,5)
-                    RegularEventCard(event: sampleEvent)
+                    
+                    //event at before chat bubble that update the information being inputed so the user can have a visual of what the card will look like when it's done
+                    RegularEventCard(event: previewEvent)
                         .padding()
                         .frame(height: 200)
                         .padding(.top)
@@ -242,6 +301,18 @@ struct CreateEventView: View {
         .fullScreenCover(isPresented: $showingReview) {
             EventReviewView(eventDetails: eventDetails, selectedImage: selectedImage, isPresented: $showingReview)
         }
+        .fullScreenCover(isPresented: $showingCategoryPicker) {
+            CategorySelectionView(isPresented: $showingCategoryPicker) { category in
+                currentInput = category
+                sendMessage()
+            }
+        }
+        .onAppear {
+            tabBarManager.hideTab = true
+        }
+        .onDisappear {
+            tabBarManager.hideTab = false
+        }
     }
     private func quickActionButtonTappedAnimationFunc(){
         withAnimation(.spring()) {
@@ -288,14 +359,18 @@ struct CreateEventView: View {
         case 4:
             if let participants = Int(input) {
                 eventDetails.maxParticipants = participants
-                addAIResponse("What category best describes your event? (Social, Business, Education, etc.)")
+                showingCategoryPicker = true
             } else {
                 addAIResponse("Please enter a valid number of participants.")
                 currentQuestion -= 1
             }
         case 5:
-            eventDetails.category = EventCategory(rawValue: input.lowercased()) ?? .social
-            addAIResponse("Great! I've got all the details. Would you like to review your event or make any changes?")
+            eventDetails.category = input
+            addAIResponse("Great! I've got all the details. Would you like to review your event or make any changes?") { [self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
+                    showingReview = true
+                }
+            }
         default:
             handleFinalSteps(input)
         }
@@ -348,7 +423,7 @@ struct CreateEventView: View {
         case .participants:
             addAIResponse("How many people can attend this event?")
         case .category:
-            addAIResponse("What category best describes your event? Available categories are: Social, Business, Education, Sports, Cultural")
+            showingCategoryPicker = true
         case .photos:
             showImagePicker = true
         case .description:
@@ -408,11 +483,18 @@ struct DatePickerView: View {
         let initialEvent = Event(
             name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
             description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
+            type: eventDetails.category,
+            views: "0",
             location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
+            price: "Free",
+            owner: "Current User",
             startDate: selectedDate.wrappedValue,
             endDate: selectedDate.wrappedValue.addingTimeInterval(7200),
             images: ["bg1"],
-            participants: []
+            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            isTimed: true,
+            createdAt: Date(),
+            coordinates: []
         )
         self._previewEvent = State(initialValue: initialEvent)
     }
@@ -454,10 +536,7 @@ struct DatePickerView: View {
                             
                           
                                 
-                            RegularEventCard(event: previewEvent)
-                                .padding()
-                                .frame(height: 200)
-                                .padding(.top)
+                           
                             
                             DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(GraphicalDatePickerStyle())
@@ -469,11 +548,18 @@ struct DatePickerView: View {
                                     previewEvent = Event(
                                         name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
                                         description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
+                                        type: eventDetails.category,
+                                        views: "0",
                                         location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
+                                        price: "Free",
+                                        owner: "Current User",
                                         startDate: newValue,
                                         endDate: newValue.addingTimeInterval(7200),
                                         images: ["bg1"],
-                                        participants: []
+                                        participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                                        isTimed: true,
+                                        createdAt: Date(),
+                                        coordinates: []
                                     )
                                     
                                     withAnimation(.spring()) {
@@ -535,7 +621,89 @@ struct EventDetails {
     var location = ""
     var description = ""
     var maxParticipants = 0
-    var category: EventCategory = .social
+    var category: String = eventTypes[0]
+}
+
+struct CategorySelectionView: View {
+    @Binding var isPresented: Bool
+    let onCategorySelected: (String) -> Void
+    
+    let typeColors: [String: Color] = [
+        "Concert": .purple,
+        "Corporate": .blue,
+        "Marketing": .orange,
+        "Health & Wellness": .red,
+        "Technology": .cyan,
+        "Art & Culture": .pink,
+        "Charity": .red,
+        "Literature": .brown,
+        "Lifestyle": .green,
+        "Environmental": .green,
+        "Entertainment": .purple
+    ]
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Select Event Category")
+                        .font(.title3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                        .padding(.top)
+                    
+                    Text("Choose a category that best describes your event")
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 15) {
+                        ForEach(eventTypes, id: \.self) { type in
+                            Button(action: {
+                                onCategorySelected(type)
+                                isPresented = false
+                            }) {
+                                HStack {
+                                    Image(systemName: typeSymbols[type] ?? "questionmark")
+                                        .font(.system(size: 16))
+                                    Text(type)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                                .foregroundColor(typeColors[type] ?? .white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(typeColors[type] ?? .white, lineWidth: 1)
+                                        .opacity(0.3)
+                                )
+                            }
+                        }
+                    }
+                    .padding()
+                }
+            }
+            .navigationBarItems(trailing: Button("Cancel") {
+                isPresented = false
+            })
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+        }
+        .preferredColorScheme(.dark)
+    }
 }
 
 struct ChatBubble: View {
@@ -545,10 +713,10 @@ struct ChatBubble: View {
         HStack {
             if message.isUser { Spacer() }
             
-            Text(message.content.lowercased())
+            Text(message.content)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(message.isUser ? Color.purple.opacity(0.8) : Color.gray.opacity(0.09))
+                .background(message.isUser ? Color.blue.opacity(0.8) : Color.gray.opacity(0.09))
                 .foregroundColor(.white)
                 .cornerRadius(20)
                 .padding(.horizontal, 16)
@@ -589,9 +757,84 @@ struct QuickActionButton: View {
     }
 }
 
+struct SimpleQuickActionButton: View {
+    let icon: String
+    let text: String
+    let iconColor: Color
+    let action: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+            Text(text)
+        }
+        .foregroundColor(iconColor)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(10)
+        .scaleEffect(isPressed ? 0.97 : 1)
+        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        .onTapGesture {
+            // Animate button tap
+            withAnimation {
+                isPressed = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    isPressed = false
+                }
+            }
+            action()
+        }
+    }
+}
+
 struct CreateEventView_Previews: PreviewProvider {
     static var previews: some View {
-        CreateEventView()
+        Group {
+            CreateEventView()
+            
+            // Preview for EventReviewView
+            EventReviewView(
+                eventDetails: EventDetails(
+                    title: "Sample Event",
+                    date: Date(),
+                    location: "123 Main St, San Francisco",
+                    description: "This is a sample event description",
+                    maxParticipants: 50,
+                    category: "Entertainment"
+                ),
+                selectedImage: nil,
+                isPresented: .constant(true)
+            ) .preferredColorScheme(.dark)
+        }
+       
+    }
+}
+
+struct ReviewSection: View {
+    let title: String
+    let content: String
+    let isLarge: Bool
+    
+    init(title: String, content: String, isLarge: Bool = false) {
+        self.title = title
+        self.content = content
+        self.isLarge = isLarge
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+            Text(content)
+                .font(.system(size: isLarge ? 40 : 18, weight: isLarge ? .bold : .medium))
+                .foregroundColor(.black)
+        }
+        
+        .padding(.vertical, 8)
     }
 }
 
@@ -599,105 +842,283 @@ struct EventReviewView: View {
     let eventDetails: EventDetails
     let selectedImage: UIImage?
     @Binding var isPresented: Bool
+    @State private var isLoading = false
+    @State private var showSuccess = false
+    
+    // Add computed property for preview event
+    private var previewEvent: Event {
+        Event(
+            name: eventDetails.title,
+            description: eventDetails.description,
+            type: eventDetails.category,
+            views: "0",
+            location: eventDetails.location,
+            price: "Free",
+            owner: "Current User",
+            startDate: eventDetails.date,
+            endDate: eventDetails.date.addingTimeInterval(7200),
+            images: ["bg1"],
+            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            isTimed: true,
+            createdAt: Date(),
+            coordinates: []
+        )
+    }
+    
+    // Add computed property for map region
+    private var region: MKCoordinateRegion {
+        // Try to parse coordinates from location string
+        let components = eventDetails.location.components(separatedBy: ", ")
+        if components.count >= 2 {
+            let lastTwoComponents = Array(components.suffix(2))
+            if let lat = Double(lastTwoComponents[0]),
+               let lon = Double(lastTwoComponents[1]) {
+                return MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+            }
+        }
+        // Default to San Francisco if no valid coordinates
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        )
+    }
+    
+    private func formatTimeOnly(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Event Image
-                    if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 200)
+            ZStack {
+                // Background Map
+                Map(coordinateRegion: .constant(region),
+                    annotationItems: [MapPin(coordinate: region.center)]) { pin in
+                    MapMarker(coordinate: pin.coordinate, tint: .blue)
+                }
+                .edgesIgnoringSafeArea(.all)
+                .blur(radius: 5)
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Event Details Card
+                        VStack(spacing: 0) {
+                            // Header with Logo and Category
+                            VStack(spacing: 16) {
+                                Image(systemName: typeSymbols[eventDetails.category] ?? "calendar")
+                                    .font(.system(size: 40))
+                                    .frame(width: 80, height: 80)
+                                    .background(Circle().fill(Color.blue))
+                                
+                                Text(eventDetails.title)
+                                    .font(.title2)
+                                
+                                Text(eventDetails.category)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
                             .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 15))
-                    }
-                    
-                    // Event Details
-                    VStack(alignment: .leading, spacing: 20) {
-                        ReviewSection(title: "Event Name", content: eventDetails.title)
+                            .padding(.vertical, 20)
+                            .background(Color.dynamic)
+                            
+                            // Time Section
+                            HStack(spacing: 40) {
+                                VStack(alignment: .center) {
+                                    Text(formatTimeOnly(eventDetails.date))
+                                        .font(.system(size: 40, weight: .bold))
+                                        .foregroundColor(.black)
+                                    Text("Start")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                                
+                                Image(systemName: "arrow.right")
+                                    .font(.title2)
+                                    .foregroundColor(Color.invert)
+                                
+                                VStack(alignment: .center) {
+                                    Text(formatTimeOnly(eventDetails.date.addingTimeInterval(7200)))
+                                        .font(.system(size: 40, weight: .bold))
+                                        .foregroundColor(Color.invert)
+                                    Text("End")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            .background(Color.dynamic)
+                            
+                            Divider().background(Color.gray.opacity(0.3))
+                            
+                            // Location and Details Grid
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    ReviewSection(title: "Location", content: eventDetails.location)
+                                    Spacer()
+                                    ReviewSection(title: "Participants", content: "\(eventDetails.maxParticipants)")
+                                }
+                                HStack {
+                                    ReviewSection(title: "Description", content: eventDetails.description)
+                                        .lineLimit(2)
+                                    
+                                }
+                                
+                            }
+                            .padding()
+                            .background(Color.dynamic)
+                            
+                            Divider().background(Color.gray.opacity(0.3))
+                            
+                            
+                            if !showSuccess {
+                                // Additional Options
+                                VStack(alignment: .center, spacing: 16) {
+                                  
+                                    
+                                    HStack {
+                                        
+                                        Text("Location Details")
+                                        Image(systemName: "map")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                         
+                                    }
+                                    
+                                    HStack {
+                                        
+                                        Text("Event Details")
+                                        Image(systemName: "doc.text")
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                    }
+                                }
+                                .foregroundColor(Color.invert)
+                                .padding()
+                                .background(Color.dynamic)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                            } else {
+                           
+                               // Success View Overlay
+                                VStack(spacing: 25) {
+                                    // Animated success checkmark
+                                    ZStack {
+                                        
+                                        
+                                        Circle()
+                                            .trim(from: 0, to: 1)
+                                            .stroke(Color.green, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                            .frame(width: 50, height: 50)
+                                            .rotationEffect(.degrees(-90))
+                                            .animation(.easeOut(duration: 1), value: showSuccess)
+                                        
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 30, weight: .bold))
+                                            .foregroundColor(.green)
+                                            .scaleEffect(showSuccess ? 1 : 0)
+                                            .animation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.4), value: showSuccess)
+                                    }
+                                    
+                                    VStack(spacing: 12) {
+                                        Text("Event Created!")
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                        
+                                        Text("Your event has been successfully created")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                            .multilineTextAlignment(.center)
+                                    }
+                                    .offset(y: showSuccess ? 0 : 20)
+                                    .opacity(showSuccess ? 1 : 0)
+                                    .animation(.easeOut(duration: 0.6).delay(0.2), value: showSuccess)
+                                    
+                                    // Confetti effect or additional animation could be added here
+                                }
+                                .padding(.horizontal, 40)
+                                .padding()
+                                .background(Color.dynamic)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                            }
+                            
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 15))
+                        .shadow(radius: 10)
                         
-                        ReviewSection(title: "Date & Time", content: formatDate(eventDetails.date))
-                        
-                        ReviewSection(title: "Location", content: eventDetails.location)
-                        
-                        ReviewSection(title: "Description", content: eventDetails.description)
-                        
-                        ReviewSection(title: "Maximum Participants", content: "\(eventDetails.maxParticipants)")
-                        
-                        ReviewSection(title: "Category", content: eventDetails.category.rawValue.capitalized)
+                       
+
+                        // Action Button
+                        Button(action: {
+                            // Dismiss after showing success
+                            if showSuccess {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                    withAnimation {
+                                        isPresented = false
+                                    }
+                                    return
+                                }
+                            }
+                            withAnimation {
+                                isLoading = true
+                            }
+                            
+                            // Simulate network request
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                withAnimation(.spring()) {
+                                    isLoading = false
+                                    showSuccess = true
+                                }
+                                
+                               
+                            }
+                        }) {
+                            HStack(spacing: 15) {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 20, weight: .semibold))
+                                    Text(showSuccess ? "Close" : "Create Event")
+                                        .font(.headline)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [isLoading ? .gray : .purple, isLoading ? .gray.opacity(0.8) : .blue]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(16)
+                            .shadow(color: isLoading ? .clear : .purple.opacity(0.3),
+                                    radius: 10, x: 0, y: 5)
+                            .opacity(isLoading ? 0.8 : 1)
+                            .scaleEffect(isLoading ? 0.98 : 1)
+                            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isLoading)
+                        }
+                        .disabled(isLoading || showSuccess)
+                        .padding(.top)
+                        .padding(.horizontal, 20)
                     }
                     .padding()
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(15)
-                    
-                    // Action Buttons
-                    HStack(spacing: 16) {
-                        Button(action: {
-                            isPresented = false
-                        }) {
-                            Text("Make Changes")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.gray.opacity(0.3))
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                        
-                        Button(action: {
-                            // TODO: Submit event
-                            isPresented = false
-                        }) {
-                            Text("Submit Event")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.purple, .blue]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
-                        }
-                    }
-                    .padding(.top)
                 }
-                .padding()
             }
-            .navigationTitle("Event Review")
+            .navigationTitle("Event Pass")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Close") {
                 isPresented = false
             })
         }
-        .preferredColorScheme(.dark)
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-}
-
-struct ReviewSection: View {
-    let title: String
-    let content: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Text(content)
-                .font(.body)
-                .foregroundColor(.white)
-        }
+        .preferredColorScheme(.light)
     }
 }
 

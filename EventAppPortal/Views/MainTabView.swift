@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @AppStorage("selectedTab") var selectedTab: Tab = .home
-    @AppStorage("hideTab") var hideTab: Bool = false
+   
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     
     var body: some View {
@@ -22,10 +22,13 @@ struct MainTabView: View {
             VStack {
                 Spacer()
                 TabBar()
-                    .offset(y: hideTab ? 50 : 0) // Move down when hidden
-                    .animation(.spring(), value: hideTab)
+//                    .offset(y: hideTab ? 50 : 0) // Move down when hidden
+//                    .animation(.spring(), value: hideTab)
             }
             .ignoresSafeArea(.keyboard)
+        }
+        .onAppear {
+            tabBarManager.hideTab = true
         }
     }
 }
