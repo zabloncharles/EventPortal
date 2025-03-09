@@ -234,8 +234,10 @@ struct ViewEventDetail: View {
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
-                                    ForEach(0..<5) { _ in
-                                        RecommendedEventCard()
+                                    ForEach(sampleEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            RecommendedEventCard(event: event)
+                                        }
                                     }
                                 }
                             }
@@ -317,6 +319,11 @@ struct ViewEventDetail: View {
         }
         .onAppear {
             tabBarManager.hideTab = true
+            
+            DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
+                //
+                tabBarManager.hideTab = true
+            }
         }
         .onDisappear {
             tabBarManager.hideTab = false
@@ -924,21 +931,23 @@ struct ViewEventDetail_Previews: PreviewProvider {
 }
 
 struct RecommendedEventCard: View {
+    var event: Event = sampleEvent
+    let colors: [Color] = [.red, .blue, .green, .orange]
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading) {
             // Event Image
             
             RoundedRectangle(cornerRadius: 0)
                 .fill(Color.gray.opacity(0))
-                .frame(height: 150)
-                .background(Image("bg3") // Replace with your event image
+                .frame(height: 160)
+                .background(Image(event.images[0]) // Replace with your event image
                     .resizable()
                     .aspectRatio(contentMode: .fill))
                 .overlay(
                     VStack {
                         HStack {
                             Spacer()
-                            Text("Party")
+                            Text(event.type)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .lineLimit(1)
@@ -952,7 +961,7 @@ struct RecommendedEventCard: View {
                         Spacer()
                     }.padding()
                 )
-               
+                .padding(.bottom,-20)
             
             
             VStack(alignment: .leading, spacing: 4) {
@@ -960,8 +969,12 @@ struct RecommendedEventCard: View {
                     .font(.caption)
                     .foregroundColor(.gray)
                 
-                Text("Tech Conference 2024")
+                Text(event.name)
                     .font(.headline)
+                    .foregroundStyle(.linearGradient(colors: [colors.randomElement() ?? .blue, .purple],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
                     .lineLimit(1)
                 
                 HStack {
@@ -970,6 +983,7 @@ struct RecommendedEventCard: View {
                     Text("New York")
                         .font(.caption)
                         .foregroundColor(.gray)
+                    Spacer()
                 }
                 
                
@@ -978,16 +992,18 @@ struct RecommendedEventCard: View {
             .padding(.bottom, 12)
             .padding(.top, 12)
             .background(.ultraThinMaterial)
+            
             .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
           
             
         }
         
-        .background(Image("bg3") // Replace with your event image
+        .background(Image(event.images[0]) // Replace with your event image
             .resizable()
             .aspectRatio(contentMode: .fill).blur(radius: 40))
         
         .cornerRadius(16)
+        .frame(width: 200)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.dynamic.opacity(1), lineWidth: 1)

@@ -129,9 +129,9 @@ struct HomeView: View {
                             
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: 16) {
-                                    ForEach(0..<5) { _ in
-                                        NavigationLink(destination: ViewEventDetail(event: sampleEvent)) {
-                                            PopularEventCard(event: sampleEvent)
+                                    ForEach(sampleEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            PopularEventCard(event: event)
                                                 .frame(width: 280)
                                         }
                                     }
@@ -158,17 +158,41 @@ struct HomeView: View {
                             }
                             
                             ScrollView(.vertical, showsIndicators: false) {
-                                LazyVStack {
-                                    ForEach(0..<5) { _ in
-                                        NavigationLink(destination: ViewEventDetail(event: sampleEvent)) {
-                                            RegularEventCard(event: sampleEvent)
+                                LazyVStack(spacing: 16) {
+                                    ForEach(sampleEvents.prefix(4)) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            RegularEventCard(event: event,showdescription:false)
                                         }
                                     }
                                 }
-                                .padding(.bottom, 70)
+                                
                             }
                         }
                         .padding(.horizontal)
+                        .padding(.bottom)
+                        
+                        // Recommended Events
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack {
+                                Text("Recommended Events")
+                                    .font(.title3)
+                                .fontWeight(.bold)
+                                Spacer()
+                                VStack(alignment: .center) {
+                                    Image(systemName: "figure.dance")
+                                }
+                            }.padding(.horizontal)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(sampleEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            RecommendedEventCard(event: event)
+                                        }
+                                    }
+                                }
+                            }.padding(.leading)
+                        }.padding(.bottom, 70)
                         
                         Spacer()
                     }
@@ -286,6 +310,7 @@ struct PopularEventCard: View {
 
 struct RegularEventCard: View {
     var event: Event = sampleEvent
+    var showdescription = true
     let colors: [Color] = [.red, .blue, .green, .orange]
     
     var body: some View {
@@ -321,11 +346,13 @@ struct RegularEventCard: View {
                         HStack(alignment: .bottom) {
                             Spacer()
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(event.description.split(separator: ".")[0] + ".")
-                                    .font(.callout)
-                                    .foregroundColor(.white)
-                                    .padding(.leading)
-                                    .lineLimit(2)
+                                    Text(event.description.split(separator: ".")[0] + ".")
+                                        .font(.callout)
+                                        .foregroundColor(.white)
+                                        .padding(.leading)
+                                        .lineLimit(2)
+                                    .opacity(showdescription ? 1 : 0)
+                                
                             }.multilineTextAlignment(.trailing)
                         }
                         HStack(alignment: .bottom) {

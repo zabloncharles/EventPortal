@@ -13,7 +13,7 @@ struct MainTabView: View {
                 case .explore:
                     DiscoverView()
                 case .notifications:
-                    CreateEventView()
+                    NotificationView()
                 case .account:
                     ProfileView()
             }
@@ -28,7 +28,7 @@ struct MainTabView: View {
             .ignoresSafeArea(.keyboard)
         }
         .onAppear {
-            tabBarManager.hideTab = true
+            tabBarManager.hideTab = false
         }
     }
 }
