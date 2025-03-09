@@ -1029,21 +1029,23 @@ struct EventReviewView: View {
                             } else {
                            
                                // Success View Overlay
-                                VStack(spacing: 25) {
+                                VStack(spacing: 20) {
                                     // Animated success checkmark
                                     ZStack {
                                         
                                         
-                                        Circle()
-                                            .trim(from: 0, to: 1)
-                                            .stroke(Color.green, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                                            .frame(width: 50, height: 50)
-                                            .rotationEffect(.degrees(-90))
-                                            .animation(.easeOut(duration: 1), value: showSuccess)
                                         
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 30, weight: .bold))
-                                            .foregroundColor(.green)
+                                        
+                                        Image(systemName: "checkmark.circle")
+                                            .font(.system(size: 50, weight: .regular))
+                                            
+                                            .foregroundStyle(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [Color.purple,Color.invert, .blue]),
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
                                             .scaleEffect(showSuccess ? 1 : 0)
                                             .animation(.spring(response: 0.6, dampingFraction: 0.6).delay(0.4), value: showSuccess)
                                     }
@@ -1057,6 +1059,7 @@ struct EventReviewView: View {
                                             .font(.subheadline)
                                             .foregroundColor(.gray)
                                             .multilineTextAlignment(.center)
+                                            .padding(.bottom,10)
                                     }
                                     .offset(y: showSuccess ? 0 : 20)
                                     .opacity(showSuccess ? 1 : 0)
@@ -1101,7 +1104,7 @@ struct EventReviewView: View {
                                
                             }
                         }) {
-                            HStack(spacing: 15) {
+                            HStack(spacing: showSuccess ? 5 : 15) {
                                 if isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))

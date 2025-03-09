@@ -71,7 +71,7 @@ struct NotificationView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            ScrollView(showsIndicators:false) {
                 VStack(spacing: 0) {
                     // Month and View Mode Selector
                     HStack {
@@ -95,7 +95,7 @@ struct NotificationView: View {
                         
                         HStack(spacing: 0) {
                             Button(action: { viewMode = .single }) {
-                                Text("single")
+                                Text("Single")
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(viewMode == .single ? Color.purple : Color.clear)
@@ -103,7 +103,7 @@ struct NotificationView: View {
                             }
                             
                             Button(action: { viewMode = .multiple }) {
-                                Text("multiple")
+                                Text("Multiple")
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
                                     .background(viewMode == .multiple ? Color.blue : Color.clear)
@@ -120,12 +120,13 @@ struct NotificationView: View {
                         // Weekday headers
                         HStack(spacing: 15) {
                             ForEach(["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], id: \.self) { day in
-                                Text(day)
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.gray)
-                                    .frame(maxWidth: .infinity)
-                            }
+                               
+                                    Text(day)
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity)
+                                }
                         }
                         .padding(.horizontal)
                         
@@ -205,7 +206,7 @@ struct NotificationView: View {
                 }
                 .animation(.easeInOut, value: selectedDate)
             }
-            .background(Color(UIColor.systemGroupedBackground))
+            .background(Color.dynamic)
             .navigationTitle("Notification")
             .navigationBarTitleDisplayMode(.inline)
         }

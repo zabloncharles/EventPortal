@@ -12,322 +12,313 @@ struct ViewEventDetail: View {
     @State private var showTicket = false
     @State private var showPurchaseView = false
     @State private var hasTicket = false
+    @State private var bookmarked = false
     let hapticFeedback = UINotificationFeedbackGenerator()
     
     var body: some View {
-        ZStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    // Header Image with Paging Dots
-                    ZStack(alignment: .top) {
-                        // Image
-                        TabView(selection: $currentPage) {
-                            ForEach(event.images.indices, id: \.self) { index in
-                                Image(event.images[index])
-                                    .resizable()
-                                    .scaledToFill()
-                                    .tag(index)
+        NavigationView {
+            ZStack {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // Header Image with Paging Dots
+                        ZStack(alignment: .top) {
+                            // Image
+                            TabView(selection: $currentPage) {
+                                ForEach(event.images.indices, id: \.self) { index in
+                                    Image(event.images[index])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .tag(index)
+                                }
                             }
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                            .frame(height: 400)
+                          
+                            .background(Color.red)
+                          
+                         
+                            
+                            // Page Indicator
+                            HStack(spacing: 8) {
+                                ForEach(0..<event.images.count, id: \.self) { index in
+                                    Circle()
+                                        .fill(currentPage == index ? Color.white : Color.white.opacity(0.5))
+                                        .frame(width: 8, height: 8)
+                                }
+                            }
+                            .padding(.top, 370)
                         }
-                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                        .frame(height: 400)
-                      
-                        .background(Color.red)
-                      
-                        // Navigation Bar
-                        HStack {
-                            Button(action: {
-                                presentationMode.wrappedValue.dismiss()
-                            }) {
+                        
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Title and Views
+                            VStack {
                                 HStack {
-                                    Image(systemName: "chevron.left")
-                                    Text("Back")
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal)
-                                .padding(.vertical, 8)
-                                .background(.ultraThinMaterial)
-                                .cornerRadius(20)
-                            }
-                            
-                            Spacer()
-                            
-                            Button(action: {
-                                // Add to bookmarks
-                            }) {
-                                Image(systemName: "bookmark")
-                                    .foregroundColor(.white)
-                                    .padding(10)
-                                    .background(.ultraThinMaterial)
-                                    .clipShape(Circle())
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 50)
-                        
-                        // Page Indicator
-                        HStack(spacing: 8) {
-                            ForEach(0..<event.images.count, id: \.self) { index in
-                                Circle()
-                                    .fill(currentPage == index ? Color.white : Color.white.opacity(0.5))
-                                    .frame(width: 8, height: 8)
-                            }
-                        }
-                        .padding(.top, 370)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Title and Views
-                        VStack {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(event.name)
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    //event location county
-                                    Text("New York City")
-                                        .foregroundColor(.gray)
-                                }
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "eye")
-                                    Text("\(4)k")
-                                }
-                                .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            }
-                            // Event Type Icons
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(alignment: .top, spacing: 16) {
-                                    EventTypeIcon(icon: "display", text: "Technology")
-                                    
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(width: 1, height: 40)
-                                    
-                                    EventTypeIcon(icon: "hand.raised.slash", text: "18+")
-                                    
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(width: 1, height: 40)
-                                    
-                                    EventTypeIcon(icon: "person.2", text: "Going \(event.participants.count)")
-                                    
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(width: 1, height: 40)
-                                    
-                                    EventTypeIcon(icon: "stairs", text: "1 Floor")
-                                    
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(width: 1, height: 40)
-                                    
-                                    EventTypeIcon(icon: "hand.raised.slash", text: "18+")
-                                }
-                                
-                            }
-                               
-                            }.padding(.vertical).padding(.horizontal,10).background(Color.dynamic).cornerRadius(16)
-                                .padding(.top,-30)
-                            .padding(.bottom,-20)
-                        
-                        // Event Type Icons
-                        
-                        
-                        
-                        
-                        // Description
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Description")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(event.description)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(isDescriptionExpanded ? nil : 2)
-                                    .animation(.easeInOut, value: isDescriptionExpanded)
-                                
-                                Button(action: {
-                                    withAnimation {
-                                        isDescriptionExpanded.toggle()
+                                    VStack(alignment: .leading) {
+                                        Text(event.name)
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        //event location county
+                                        HStack {
+                                            Text("New York City")
+                                               
+                                            Image(systemName: "location")
+                                        } .foregroundColor(.gray)
                                     }
-                                }) {
-                                    Text(isDescriptionExpanded ? "Read Less" : "Read More")
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "eye.square")
+                                        Text("\(4)k")
+                                    }
+                                    .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                }
+                                // Event Type Icons
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(alignment: .top, spacing: 16) {
+                                        EventTypeIcon(icon: "display", text: "Technology")
+                                        
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: 1, height: 40)
+                                        
+                                        EventTypeIcon(icon: "hand.raised.slash", text: "18+")
+                                        
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: 1, height: 40)
+                                        
+                                        EventTypeIcon(icon: "person.2", text: "Going \(event.participants.count)")
+                                        
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: 1, height: 40)
+                                        
+                                        EventTypeIcon(icon: "stairs", text: "1 Floor")
+                                        
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(width: 1, height: 40)
+                                        
+                                        EventTypeIcon(icon: "hand.raised.slash", text: "18+")
+                                    }
+                                    
+                                }
+                                   
+                                }.padding(.vertical)
+                                
+                                .background(Color.dynamic)
+                                .cornerRadius(16)
+                                    .padding(.top,-15)
+                                .padding(.bottom,-20)
+                            
+                            // Event Type Icons
+                            
+                            
+                            
+                            
+                            // Description
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Description")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(event.description)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(isDescriptionExpanded ? nil : 2)
+                                        .animation(.easeInOut, value: isDescriptionExpanded)
+                                    
+                                    Button(action: {
+                                        withAnimation {
+                                            isDescriptionExpanded.toggle()
+                                        }
+                                    }) {
+                                        Text(isDescriptionExpanded ? "Read Less" : "Read More")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding(.top, 4)
+                                }
+                            }
+                            
+                            // Event Facilitator
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Event Facilitator")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                
+                                HStack {
+                                    Image("bob") // Replace with actual facilitator image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(Circle())
+                                    
+                                    VStack(alignment: .leading) {
+                                        Text("Bob")
+                                            .fontWeight(.semibold)
+                                        Text("Event Facilitator")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 16) {
+                                        Button(action: {}) {
+                                            Image(systemName: "message")
+                                                .foregroundColor(.blue)
+                                        }
+                                        
+                                        Button(action: {}) {
+                                            Image(systemName: "phone")
+                                                .foregroundColor(.blue)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            // Location
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Location")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                
+                                LocationMapView(coordinate: CLLocationCoordinate2D(
+                                    latitude:
+                                    40.7128,
+                                    longitude:  -74.0060
+                                ))
+                                .frame(height: 200)
+                                .cornerRadius(12)
+                                
+                                HStack {
+                                    Text(event.location)
+                                    Spacer()
+                                    Text("Get directions")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(.blue)
-                                }
-                                .padding(.top, 4)
+                                }.foregroundColor(.secondary)
+                                    .padding(.top, 8)
                             }
-                        }
-                        
-                        // Event Facilitator
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Event Facilitator")
-                                .font(.title3)
-                                .fontWeight(.bold)
                             
-                            HStack {
-                                Image("bob") // Replace with actual facilitator image
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 50, height: 50)
-                                    .clipShape(Circle())
+                            // Recommended Events
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Recommended Events")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
                                 
-                                VStack(alignment: .leading) {
-                                    Text("Bob")
-                                        .fontWeight(.semibold)
-                                    Text("Event Facilitator")
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                HStack(spacing: 16) {
-                                    Button(action: {}) {
-                                        Image(systemName: "message")
-                                            .foregroundColor(.blue)
-                                    }
-                                    
-                                    Button(action: {}) {
-                                        Image(systemName: "phone")
-                                            .foregroundColor(.blue)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Location
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Location")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            
-                            LocationMapView(coordinate: CLLocationCoordinate2D(
-                                latitude:
-                                40.7128,
-                                longitude:  -74.0060
-                            ))
-                            .frame(height: 200)
-                            .cornerRadius(12)
-                            
-                            HStack {
-                                Text(event.location)
-                                Spacer()
-                                Text("Get directions")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.blue)
-                            }.foregroundColor(.secondary)
-                                .padding(.top, 8)
-                        }
-                        
-                        // Recommended Events
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Recommended Events")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(sampleEvents) { event in
-                                        NavigationLink(destination: ViewEventDetail(event: event)) {
-                                            RecommendedEventCard(event: event)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        ForEach(sampleEvents) { event in
+                                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                                RecommendedEventCard(event: event)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    .padding()
-                    
-                    
-                }.padding(.bottom,130) //makes sure the bottom bar is not covering content in this vstack scroll section
-            }
-            .ignoresSafeArea()
-        .navigationBarHidden(true)
-        .offset(y: showTicket ? -90 : 0) //move the view up when ticket is shown
-        .animation(.spring(), value: showTicket) //use the spring animation to move the view up
-          
-            
-            // Bottom Bar that is on top of the other sections
-            VStack {
-                
-                //make the ticketview full screen 
-                if !showTicket {
-                    Spacer()
+                        .padding()
+                        
+                        
+                    }.padding(.bottom,130) //makes sure the bottom bar is not covering content in this vstack scroll section
                 }
+                .ignoresSafeArea()
+            .navigationBarHidden(true)
+            .offset(y: showTicket ? -90 : 0) //move the view up when ticket is shown
+            .animation(.spring(), value: showTicket) //use the spring animation to move the view up
+              
                 
-               
-                
+                // Bottom Bar that is on top of the other sections
                 VStack {
-                
-                    // Add the ticket sheet
-                    if showTicket {
-                       
-                        TicketView(event: event, isShowing: $showTicket)
-                            .transition(.move(edge: .bottom))
-                    }
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading) {
-                            Text("$\(String(format: "%.2f", 29.99))")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                          
-                            Text("This is a paid technology event")
-                                .foregroundColor(.secondary)
-                                .font(.callout)
-                        }
-                        
+                    
+                    //make the ticketview full screen
+                    if !showTicket {
                         Spacer()
-                        
-                        Button(action: {
-                            hapticFeedback.notificationOccurred(.success)
-                            withAnimation(.spring()) {
-                                if hasTicket {
-                                    showTicket.toggle()
-                                } else {
-                                    showPurchaseView.toggle()
-                                }
-                            }
-                        }) {
-                            Text(hasTicket ? (showTicket ? "Hide Ticket" : "View Ticket") : "Buy Ticket")
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 12)
-                                .background(showTicket ? Color.gray : (hasTicket ? Color.green : Color.blue))
-                                .animation(.easeInOut, value: showTicket)
-                                .cornerRadius(25)
-                        }
                     }
-                    .padding()
-                    .background(
-                        LinearGradient(colors: [.dynamic, .clear], startPoint: .bottom, endPoint: .top)
-                        
-                    )
-                }.background(Color.dynamic.opacity(showTicket ? 0 : 0.99))
-                    .background(.ultraThinMaterial)
+                    
+                   
+                    
+                    VStack {
+                    
+                        // Add the ticket sheet
+                        if showTicket {
+                           
+                            TicketView(event: event, isShowing: $showTicket)
+                                .transition(.move(edge: .bottom))
+                        }
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading) {
+                                Text("$\(String(format: "%.2f", 29.99))")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                              
+                                Text("This is a paid technology event")
+                                    .foregroundColor(.secondary)
+                                    .font(.callout)
+                            }
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                hapticFeedback.notificationOccurred(.success)
+                                withAnimation(.spring()) {
+                                    if hasTicket {
+                                        showTicket.toggle()
+                                    } else {
+                                        showPurchaseView.toggle()
+                                    }
+                                }
+                            }) {
+                                Text(hasTicket ? (showTicket ? "Hide Ticket" : "View Ticket") : "Buy Ticket")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 12)
+                                    .background(showTicket ? Color.gray : (hasTicket ? Color.green : Color.blue))
+                                    .animation(.easeInOut, value: showTicket)
+                                    .cornerRadius(25)
+                            }
+                        }
+                        .padding()
+                        .background(
+                            LinearGradient(colors: [.dynamic, .clear], startPoint: .bottom, endPoint: .top)
+                            
+                        )
+                    }.background(Color.dynamic.opacity(showTicket ? 0 : 0.99))
+                        .background(.ultraThinMaterial)
+                }
             }
-        }
-        .sheet(isPresented: $showPurchaseView) {
-            PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
-        }
-        .onAppear {
-            tabBarManager.hideTab = true
-            
-            DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
-                //
+                .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showPurchaseView) {
+                PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
+            }
+            .onAppear {
                 tabBarManager.hideTab = true
+                
+                DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
+                    //
+                    tabBarManager.hideTab = true
+                }
             }
+            .onDisappear {
+                tabBarManager.hideTab = false
         }
-        .onDisappear {
-            tabBarManager.hideTab = false
-        }
+        }.navigationTitle(event.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
+                    .foregroundColor(bookmarked ? .blue : .white)
+                    .onTapGesture {
+                        bookmarked.toggle()
+                    }
+                    .padding(10)
+                    
+            }
     }
 }
 
