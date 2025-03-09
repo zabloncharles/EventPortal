@@ -209,7 +209,7 @@ struct CreateEventView: View {
                                 // Typing indicator
                                 if isTyping {
                                     HStack {
-                                        ChatBubble(message: ChatMessage(content: typingText + "|", isUser: false))
+                                        TypingBubbleView()
                                             .id("typing")
                                     }
                                     .transition(.opacity)
@@ -366,7 +366,7 @@ struct CreateEventView: View {
             }
         case 5:
             eventDetails.category = input
-            addAIResponse("Great! I've got all the details. Would you like to review your event or make any changes?") { [self] in
+            addAIResponse("Great! I've got all the details. Let me put everything together...") { [self] in
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
                     showingReview = true
                 }
@@ -644,65 +644,69 @@ struct CategorySelectionView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Select Event Category")
-                        .font(.title3)
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.purple, .blue]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-                        .padding(.top)
-                    
-                    Text("Choose a category that best describes your event")
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                    
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 15) {
-                        ForEach(eventTypes, id: \.self) { type in
-                            Button(action: {
-                                onCategorySelected(type)
-                                isPresented = false
-                            }) {
-                                HStack {
-                                    Image(systemName: typeSymbols[type] ?? "questionmark")
-                                        .font(.system(size: 16))
-                                    Text(type)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
-                                .foregroundColor(typeColors[type] ?? .white)
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 16)
-                                .frame(maxWidth: .infinity)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(10)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(typeColors[type] ?? .white, lineWidth: 1)
-                                        .opacity(0.3)
+            ZStack {
+                Color.dynamic
+                    .edgesIgnoringSafeArea(.all)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Text("Select Event Category")
+                            .font(.title3)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.purple, .blue]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 )
+                            )
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                            .padding(.top)
+                        
+                        Text("Choose a category that best describes your event")
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                        
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 15) {
+                            ForEach(eventTypes, id: \.self) { type in
+                                Button(action: {
+                                    onCategorySelected(type)
+                                    isPresented = false
+                                }) {
+                                    HStack {
+                                        Image(systemName: typeSymbols[type] ?? "questionmark")
+                                            .font(.system(size: 16))
+                                        Text(type)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .foregroundColor(typeColors[type] ?? .white)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(typeColors[type] ?? .white, lineWidth: 1)
+                                            .opacity(0.3)
+                                    )
+                                }
                             }
                         }
+                        .padding()
                     }
-                    .padding()
                 }
-            }
-            .navigationBarItems(trailing: Button("Cancel") {
-                isPresented = false
-            })
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(trailing: Button("Cancel") {
+                    isPresented = false
+                })
+                .navigationBarTitleDisplayMode(.inline)
             .background(Color.black.edgesIgnoringSafeArea(.all))
+            }
         }
-        .preferredColorScheme(.dark)
+        
     }
 }
 
@@ -830,8 +834,8 @@ struct ReviewSection: View {
                 .font(.system(size: 14))
                 .foregroundColor(.gray)
             Text(content)
-                .font(.system(size: isLarge ? 40 : 18, weight: isLarge ? .bold : .medium))
-                .foregroundColor(.black)
+                .font(.system(size: isLarge ? 40 : 16, weight: isLarge ? .bold : .medium))
+               
         }
         
         .padding(.vertical, 8)
@@ -908,14 +912,22 @@ struct EventReviewView: View {
                         // Event Details Card
                         VStack(spacing: 0) {
                             // Header with Logo and Category
-                            VStack(spacing: 16) {
+                            VStack(spacing: 10) {
                                 Image(systemName: typeSymbols[eventDetails.category] ?? "calendar")
                                     .font(.system(size: 40))
                                     .frame(width: 80, height: 80)
-                                    .background(Circle().fill(Color.blue))
+                                   // .background(Circle().fill(Color.blue))
                                 
                                 Text(eventDetails.title)
                                     .font(.title2)
+                                    .bold()
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.purple,Color.invert, .blue]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
                                 
                                 Text(eventDetails.category)
                                     .font(.subheadline)
@@ -927,10 +939,18 @@ struct EventReviewView: View {
                             
                             // Time Section
                             HStack(spacing: 40) {
-                                VStack(alignment: .center) {
+                                VStack(alignment: .center, spacing: 5) {
                                     Text(formatTimeOnly(eventDetails.date))
                                         .font(.system(size: 40, weight: .bold))
-                                        .foregroundColor(.black)
+                                        .padding(.horizontal,10)
+                                        .background(Color.gray.opacity(0.07))
+                                        .cornerRadius(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(.white, lineWidth: 1)
+                                                .opacity(0.1)
+                                        )
+                                        
                                     Text("Start")
                                         .font(.caption)
                                         .foregroundColor(.gray)
@@ -938,12 +958,20 @@ struct EventReviewView: View {
                                 
                                 Image(systemName: "arrow.right")
                                     .font(.title2)
-                                    .foregroundColor(Color.invert)
+                                    
                                 
-                                VStack(alignment: .center) {
+                                VStack(alignment: .center, spacing: 5) {
                                     Text(formatTimeOnly(eventDetails.date.addingTimeInterval(7200)))
                                         .font(.system(size: 40, weight: .bold))
-                                        .foregroundColor(Color.invert)
+                                        .padding(.horizontal,10)
+                                        .background(Color.gray.opacity(0.07))
+                                        .cornerRadius(10)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .stroke(.white, lineWidth: 1)
+                                                .opacity(0.1)
+                                        )
+                                    
                                     Text("End")
                                         .font(.caption)
                                         .foregroundColor(.gray)
@@ -981,20 +1009,17 @@ struct EventReviewView: View {
                                   
                                     
                                     HStack {
-                                        
-                                        Text("Location Details")
-                                        Image(systemName: "map")
+                                        ReviewSection(title: "Event", content: "Ongoing")
+                                            .lineLimit(2)
                                         Spacer()
-                                        Image(systemName: "chevron.right")
-                                         
+                                        
                                     }
                                     
                                     HStack {
-                                        
-                                        Text("Event Details")
-                                        Image(systemName: "doc.text")
+                                        ReviewSection(title: "Owner", content: "Jack Mao")
+                                            .lineLimit(2)
                                         Spacer()
-                                        Image(systemName: "chevron.right")
+                                        
                                     }
                                 }
                                 .foregroundColor(Color.invert)
@@ -1047,7 +1072,7 @@ struct EventReviewView: View {
                             
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 15))
-                        .shadow(radius: 10)
+                      
                         
                        
 
@@ -1097,8 +1122,8 @@ struct EventReviewView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .foregroundColor(.white)
-                            .cornerRadius(16)
+                            .foregroundColor(.white) //button color
+                            .cornerRadius(19)
                             .shadow(color: isLoading ? .clear : .purple.opacity(0.3),
                                     radius: 10, x: 0, y: 5)
                             .opacity(isLoading ? 0.8 : 1)
@@ -1114,11 +1139,11 @@ struct EventReviewView: View {
             }
             .navigationTitle("Event Pass")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Close") {
+            .navigationBarItems(trailing: Button("Edit") {
                 isPresented = false
             })
         }
-        .preferredColorScheme(.light)
+        
     }
 }
 
@@ -1403,6 +1428,45 @@ struct QuickActionsView: View {
         .navigationTitle("Quick Actions")
         .navigationBarTitleDisplayMode(.inline)
         .background(Color.black.edgesIgnoringSafeArea(.all))
+    }
+}
+
+struct TypingBubbleView: View {
+    @State private var firstDotOffset: CGFloat = 0
+    @State private var secondDotOffset: CGFloat = 0
+    @State private var thirdDotOffset: CGFloat = 0
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.gray.opacity(0.5))
+                    .frame(width: 7, height: 7)
+                    .offset(y: index == 0 ? firstDotOffset :
+                             index == 1 ? secondDotOffset : thirdDotOffset)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+        .onAppear {
+            withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
+                firstDotOffset = -5
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
+                    secondDotOffset = -5
+                }
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
+                    thirdDotOffset = -5
+                }
+            }
+        }
     }
 }
 
