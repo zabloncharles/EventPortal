@@ -2,6 +2,8 @@
 
 A modern iOS application for discovering, creating, and joining events in your area. Built with SwiftUI and designed with a focus on user experience and modern aesthetics.
 
+![App Preview](Screenshots/Wallpaper.png)
+
 ## Features
 
 ### 🎯 Core Features
