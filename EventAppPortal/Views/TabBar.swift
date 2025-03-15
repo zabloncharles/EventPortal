@@ -42,11 +42,10 @@ struct TabBar: View {
         .padding(.horizontal, 8)
         .padding(.top, 14)
        
-        .frame(height: 78, alignment: .top)
+        .frame(height: 178, alignment: .top)
         
-        .background(Color.dynamic.opacity(0.90))
-        .background(.ultraThinMaterial)
-        .padding(.bottom,20)
+        .background(Color.dynamic)
+        .padding(.bottom,10)
        
         .cornerRadius(0)
         .overlay(
@@ -55,15 +54,16 @@ struct TabBar: View {
         )
        // .scaleEffect(animateClick ? 0.97 : 1)
         
-        .offset(y: hideTab ? 200 : 0) // Move the tab downwards when hideTab is true
+        .offset(y: hideTab ? 200 : 100) // Move the tab downwards when hideTab is true
         .animation(.spring(), value: hideTab) // Animate the offset change
         .frame(maxHeight: .infinity, alignment: .bottom)
         
         .onChange(of: selectedTab, perform: { change in
             withAnimation(.spring()) {
                 animateClick = true
-              
-               
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.prepare()
+                generator.impactOccurred()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.spring()) {
@@ -80,6 +80,9 @@ struct TabBar: View {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     selectedTab = item.tab
                     color = item.color
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.prepare()
+                    generator.impactOccurred()
                 }
             } label: {
                 VStack(spacing: 0) {

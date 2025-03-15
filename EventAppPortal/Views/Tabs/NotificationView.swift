@@ -228,10 +228,8 @@ struct NotificationView: View {
     
     private func eventsForDate(_ date: Date) -> [Event] {
         return sampleEvents.filter { event in
-            if let eventDate = event.startDate {
-                return calendar.isDate(eventDate, inSameDayAs: date)
-            }
-            return false
+            let eventDate = event.startDate
+            return calendar.isDate(eventDate, inSameDayAs: date)
         }
     }
 }
@@ -272,19 +270,22 @@ struct EventRow: View {
     let isLastEvent: Bool
     
     private func timeUntilEvent() -> String {
-        guard let startDate = event.startDate else { return "" }
-        let now = Date()
-        let difference = Calendar.current.dateComponents([.hour, .minute], from: now, to: startDate)
+        let eventDate = event.startDate
+        let timeUntilEvent = eventDate.timeIntervalSinceNow
         
-        if let hours = difference.hour {
-            if hours < 24 {
-                if hours == 0 {
-                    return "In less than an hour"
+        if timeUntilEvent < 0 {
+            let difference = Calendar.current.dateComponents([.hour, .minute], from: Date(), to: eventDate)
+            if let hours = difference.hour {
+                if hours < 24 {
+                    if hours == 0 {
+                        return "In less than an hour"
+                    }
+                    return "In \(hours) hour\(hours == 1 ? "" : "s")"
                 }
-                return "In \(hours) hour\(hours == 1 ? "" : "s")"
             }
+            return eventDate.formatted(date: .abbreviated, time: .shortened)
         }
-        return startDate.formatted(date: .abbreviated, time: .shortened)
+        return ""
     }
     
     var body: some View {

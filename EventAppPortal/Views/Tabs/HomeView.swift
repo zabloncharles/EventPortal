@@ -46,7 +46,7 @@ struct HomeView: View {
                                     )
                             }
                             
-                            NavigationLink(destination: Text("calendar")) {
+                            NavigationLink(destination: MyEventsView()) {
                                 Image(systemName: "calendar")
                                     .renderingMode(.original)
                                     .font(.system(size: 16, weight: .medium))

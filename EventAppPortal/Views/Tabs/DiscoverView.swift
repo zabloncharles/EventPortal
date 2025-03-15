@@ -24,9 +24,8 @@ class FilterModel: ObservableObject {
             matches = matches && price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
             
             // Date filter
-            if let eventDate = event.startDate {
-                matches = matches && eventDate >= filters.startDate && eventDate <= filters.endDate
-            }
+            let eventDate = event.startDate
+            matches = matches && eventDate >= filters.startDate && eventDate <= filters.endDate
             
             // Timed events
             if filters.showTimedEventsOnly {
@@ -279,7 +278,7 @@ struct SearchResultRow: View {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.blue)
-                        Text(event.startDate?.formatted(date: .abbreviated, time: .omitted) ?? "No date")
+                        Text(event.startDate.formatted(date: .abbreviated, time: .omitted))
                             .font(.caption)
                             .foregroundColor(.gray)
                         

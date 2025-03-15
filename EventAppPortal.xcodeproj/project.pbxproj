@@ -45,7 +45,7 @@
 		F773EC5D2D7888B50009AC93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F773EC662D788A600009AC93 /* ColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtension.swift; sourceTree = "<group>"; };
 		F773EC692D788DB90009AC93 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
-		F773EC6D2D78A99F0009AC93 /* ViewEventDetail.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ViewEventDetail.swift; path = EventAppPortal/Views/ViewEventDetail.swift; sourceTree = SOURCE_ROOT; };
+		F773EC6D2D78A99F0009AC93 /* ViewEventDetail.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ViewEventDetail.swift; path = EventAppPortal/Views/Detail/ViewEventDetail.swift; sourceTree = SOURCE_ROOT; };
 		F773EC702D790FAC0009AC93 /* LottieView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		F773EC752D7911650009AC93 /* locationbubble.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = locationbubble.json; sourceTree = "<group>"; };
 		F773EC772D7915C30009AC93 /* robotai.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = robotai.json; sourceTree = "<group>"; };
@@ -137,14 +137,6 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		F773EC6C2D78A9850009AC93 /* Detail */ = {
-			isa = PBXGroup;
-			children = (
-				F773EC6D2D78A99F0009AC93 /* ViewEventDetail.swift */,
-			);
-			path = Detail;
-			sourceTree = "<group>";
-		};
 		F773EC6F2D790FAC0009AC93 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -183,10 +175,18 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		F7855EB02D85439D00D668CD /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				F773EC6D2D78A99F0009AC93 /* ViewEventDetail.swift */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
 		F79C82752D77564900C87783 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				F773EC6C2D78A9850009AC93 /* Detail */,
+				F7855EB02D85439D00D668CD /* Detail */,
 				F79C82762D77564900C87783 /* Tabs */,
 				F79C827B2D77564900C87783 /* MainTabView.swift */,
 				F7633E322D77589E00644438 /* TabBar.swift */,

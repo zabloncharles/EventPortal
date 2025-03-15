@@ -38,6 +38,7 @@ let typeSymbols: [String: String] = [
 struct CreateEventView: View {
     @State private var messages: [ChatMessage] = []
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var currentInput = ""
     @State private var animatedPlaceholder = ""
     @State private var isTypingPlaceholder = true
@@ -57,24 +58,33 @@ struct CreateEventView: View {
     @State private var showingCategoryPicker = false
     @State private var placeholderTimer: Timer?
     @State private var shouldAnimatePlaceholder = true
+    @State private var clearMessages = false
+    @Environment(\.dismiss) private var dismiss
     
     // Add computed property for live preview event
     private var previewEvent: Event {
-        Event(
-            name: eventDetails.title.isEmpty ? "Your Event Name" : eventDetails.title,
-            description: eventDetails.description.isEmpty ? "Add a description of your event" : eventDetails.description,
+        let ownerName: String = {
+            if let user = firebaseManager.currentUser {
+                return user.displayName ?? user.email ?? "Anonymous"
+            }
+            return "Anonymous"
+        }()
+        
+        return Event(
+            name: eventDetails.title,
+            description: eventDetails.description,
             type: eventDetails.category,
             views: "0",
-            location: eventDetails.location.isEmpty ? "Set event location" : eventDetails.location,
+            location: eventDetails.location,
             price: "Free",
-            owner: "Current User",
+            owner: ownerName,
             startDate: eventDetails.date,
             endDate: eventDetails.date.addingTimeInterval(7200),
             images: ["bg1"],
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
             isTimed: true,
             createdAt: Date(),
-            coordinates: []
+            coordinates: eventDetails.coordinates
         )
     }
 
@@ -227,16 +237,18 @@ struct CreateEventView: View {
                             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         })
                         .onChange(of: messages) { _ in
-                            
-                                proxy.scrollTo("bottom", anchor: .bottom)
-                            
+                            generateHapticFeedback()
+                            proxy.scrollTo("bottom", anchor: .bottom)
                         }
                         .onChange(of: currentQuestion) { _ in
-                            
+                            generateHapticFeedback()
                             withAnimation(.spring()) {
                                 proxy.scrollTo("bottom", anchor: .bottom)
                             }
-                            
+                        }
+                        .onChange(of: clearMessages) { _ in
+                            generateHapticFeedback()
+                            dismiss()
                         }
                         .onAppear {
                             proxy.scrollTo("bottom", anchor: .bottom)
@@ -303,16 +315,18 @@ struct CreateEventView: View {
                 currentInput = dateString
                 sendMessage()
             }
+            .environmentObject(firebaseManager)
         }
         .fullScreenCover(isPresented: $showingLocationSearch) {
-            LocationSearchView(isPresented: $showingLocationSearch) { location in
+            LocationSearchView(isPresented: $showingLocationSearch) { location, coordinates in
                 eventDetails.location = location
+                eventDetails.coordinates = coordinates
                 currentInput = location
                 sendMessage()
             }
         }
         .fullScreenCover(isPresented: $showingReview) {
-            EventReviewView(eventDetails: eventDetails, selectedImage: selectedImage, isPresented: $showingReview)
+            EventReviewView(eventDetails: eventDetails, selectedImage: selectedImage, isPresented: $showingReview, clearMessages: $clearMessages)
         }
         .fullScreenCover(isPresented: $showingCategoryPicker) {
             CategorySelectionView(isPresented: $showingCategoryPicker) { category in
@@ -553,6 +567,12 @@ struct CreateEventView: View {
             }
         }
     }
+    
+    private func generateHapticFeedback() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+    }
 }
 
 enum QuickActionType {
@@ -571,40 +591,8 @@ struct DatePickerView: View {
     @Binding var selectedDate: Date
     @Binding var isPresented: Bool
     let eventDetails: EventDetails
-    var onDateSelected: (Date) -> Void
-    @State private var previewEvent: Event
-    
-    init(selectedDate: Binding<Date>, isPresented: Binding<Bool>, eventDetails: EventDetails, onDateSelected: @escaping (Date) -> Void) {
-        self._selectedDate = selectedDate
-        self._isPresented = isPresented
-        self.eventDetails = eventDetails
-        self.onDateSelected = onDateSelected
-        
-        // Create a temporary formatter for initialization
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .short
-        let dateString = formatter.string(from: selectedDate.wrappedValue)
-        
-        // Initialize the preview event
-        let initialEvent = Event(
-            name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
-            description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
-            type: eventDetails.category,
-            views: "0",
-            location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
-            price: "Free",
-            owner: "Current User",
-            startDate: selectedDate.wrappedValue,
-            endDate: selectedDate.wrappedValue.addingTimeInterval(7200),
-            images: ["bg1"],
-            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-            isTimed: true,
-            createdAt: Date(),
-            coordinates: []
-        )
-        self._previewEvent = State(initialValue: initialEvent)
-    }
+    let onDateSelected: (Date) -> Void
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     
     var body: some View {
         NavigationView {
@@ -615,35 +603,26 @@ struct DatePickerView: View {
                         
                         VStack(alignment: .center, spacing: 20) {
                             VStack(alignment: .center) {
-                             
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text("Select a date and time")
-                                                .font(.title3)
-                                             
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                gradient: Gradient(colors: [Color.purple, .blue]),
-                                                startPoint: .leading,
-                                                endPoint: .trailing
+                                            .font(.title3)
+                                            .foregroundStyle(
+                                                LinearGradient(
+                                                    gradient: Gradient(colors: [Color.purple, .blue]),
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
                                             )
-                                        )
                                         Text("Provide the date and time that the event take place")
                                             .foregroundColor(.secondary)
                                     }
                                     Spacer()
-                                   
                                 }
-                               
-                                
-                            } .fontWeight(.bold)
-                                .padding(.horizontal)
-                                .padding(.top,20)
-                                
-                            
-                          
-                                
-                           
+                            }
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                            .padding(.top,20)
                             
                             DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(GraphicalDatePickerStyle())
@@ -656,64 +635,36 @@ struct DatePickerView: View {
                                         .stroke(Color.blue.opacity(0.50), lineWidth: 1)
                                 )
                                 .padding(.horizontal)
-                                .onChange(of: selectedDate) { newValue in
-                                    previewEvent = Event(
-                                        name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
-                                        description: eventDetails.description.isEmpty ? "Event has no description yet!" : eventDetails.description,
-                                        type: eventDetails.category,
-                                        views: "0",
-                                        location: eventDetails.location.isEmpty ? "Location TBD" : eventDetails.location,
-                                        price: "Free",
-                                        owner: "Current User",
-                                        startDate: newValue,
-                                        endDate: newValue.addingTimeInterval(7200),
-                                        images: ["bg1"],
-                                        participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-                                        isTimed: true,
-                                        createdAt: Date(),
-                                        coordinates: []
-                                    )
-                                    
-//                                   used to show a preview of event card and scrolls to bottom if user taps a date  withAnimation(.spring()) {
-//                                        proxy.scrollTo("bottom", anchor: .bottom)
-//                                    }
-                                }
                             
                             Text("Done")
-                            .padding()
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.purple, .blue]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.purple, .blue]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
                                 )
-                            )
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .onTapGesture(perform: {
-                                onDateSelected(selectedDate)
-                                isPresented = false
-                            })
-                            .padding()
-                            .id("bottom")
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                .onTapGesture {
+                                    onDateSelected(selectedDate)
+                                    isPresented = false
+                                }
+                                .padding()
+                                .id("bottom")
                         }
-                    }.navigationTitle("Select Date")
+                    }
+                    .navigationTitle("Select Date")
                     .navigationBarTitleDisplayMode(.inline)
                     .navigationBarItems(trailing: Button("Cancel") {
                         isPresented = false
-                    }).padding(.bottom,20)
+                    })
+                    .padding(.bottom,20)
                 }
             }
         }
-        
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
     }
 }
 
@@ -734,6 +685,7 @@ struct EventDetails {
     var description = ""
     var maxParticipants = 0
     var category: String = eventTypes[0]
+    var coordinates: [Double] = []
 }
 
 struct CategorySelectionView: View {
@@ -873,71 +825,46 @@ struct QuickActionButton: View {
     }
 }
 
-struct SimpleQuickActionButton: View {
-    let icon: String
-    let text: String
-    let iconColor: Color
-    let action: () -> Void
-    
-    @State private var isPressed = false
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-            Text(text)
-        }
-        .foregroundColor(iconColor)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 10)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
-        .scaleEffect(isPressed ? 0.97 : 1)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-        .onTapGesture {
-            // Animate button tap
-            withAnimation {
-                isPressed = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isPressed = false
-                }
-            }
-            action()
-        }
-    }
-}
-
-struct CreateEventView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            CreateEventView()
-            LocationSearchView(isPresented: .constant(true)) { selectedLocation in
-                print("Selected location: \(selectedLocation)")
-            }
-            DatePickerView(
-                selectedDate: .constant(Date()),
-                isPresented: .constant(true),
-                eventDetails: EventDetails( description: "Team sync-up"),
-                onDateSelected: { selectedDate in
-                    print("Selected date: \(selectedDate)")
-                }
-            )
-            // Preview for EventReviewView
-            EventReviewView(
-                eventDetails: EventDetails(
-                    title: "Sample Event",
-                    date: Date(),
-                    location: "123 Main St, San Francisco",
-                    description: "This is a sample event description",
-                    maxParticipants: 50,
-                    category: "Entertainment"
-                ),
-                selectedImage: nil,
-                isPresented: .constant(true)
-            )
-        }
-       
-    }
-}
+//struct CreateEventView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        Group {
+//            // Main CreateEventView preview
+//            CreateEventView()
+//                .environmentObject(FirebaseManager.preview)
+//            
+//            // LocationSearchView preview
+//            LocationSearchView(isPresented: .constant(true)) { location, coordinates in
+//                print("Selected location: \(location), coordinates: \(coordinates)")
+//            }
+//            
+//            // DatePickerView preview
+//            DatePickerView(
+//                selectedDate: .constant(Date()),
+//                isPresented: .constant(true),
+//                eventDetails: EventDetails(description: "Team sync-up"),
+//                onDateSelected: { selectedDate in
+//                    print("Selected date: \(selectedDate)")
+//                }
+//            )
+//            .environmentObject(FirebaseManager.preview)
+//            
+//            // EventReviewView preview
+//            EventReviewView(
+//                eventDetails: EventDetails(
+//                    title: "Sample Event",
+//                    date: Date(),
+//                    location: "123 Main St, San Francisco",
+//                    description: "This is a sample event description",
+//                    maxParticipants: 50,
+//                    category: "Entertainment"
+//                ),
+//                selectedImage: nil,
+//                isPresented: .constant(true)
+//            )
+//            .environmentObject(FirebaseManager.preview)
+//        }
+//    }
+//}
 
 struct ReviewSection: View {
     let title: String
@@ -968,42 +895,52 @@ struct EventReviewView: View {
     let eventDetails: EventDetails
     let selectedImage: UIImage?
     @Binding var isPresented: Bool
+    @Binding var clearMessages: Bool
     @State private var isLoading = false
     @State private var showSuccess = false
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var errorMessage: String?
+    @State private var showError = false
     
-    // Add computed property for preview event
+   
+    
+    // Update the computed property for preview event
     private var previewEvent: Event {
-        Event(
+        let ownerName: String = {
+            if let user = firebaseManager.currentUser {
+                return user.displayName ?? user.email ?? "Anonymous"
+            }
+            return "Anonymous"
+        }()
+        
+        return Event(
             name: eventDetails.title,
             description: eventDetails.description,
             type: eventDetails.category,
             views: "0",
             location: eventDetails.location,
             price: "Free",
-            owner: "Current User",
+            owner: ownerName,
             startDate: eventDetails.date,
             endDate: eventDetails.date.addingTimeInterval(7200),
             images: ["bg1"],
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
             isTimed: true,
             createdAt: Date(),
-            coordinates: []
+            coordinates: eventDetails.coordinates
         )
     }
     
-    // Add computed property for map region
+    // Update the map region to use actual coordinates if available
     private var region: MKCoordinateRegion {
-        // Try to parse coordinates from location string
-        let components = eventDetails.location.components(separatedBy: ", ")
-        if components.count >= 2 {
-            let lastTwoComponents = Array(components.suffix(2))
-            if let lat = Double(lastTwoComponents[0]),
-               let lon = Double(lastTwoComponents[1]) {
-                return MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                )
-            }
+        if eventDetails.coordinates.count >= 2 {
+            return MKCoordinateRegion(
+                center: CLLocationCoordinate2D(
+                    latitude: eventDetails.coordinates[0],
+                    longitude: eventDetails.coordinates[1]
+                ),
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
         }
         // Default to San Francisco if no valid coordinates
         return MKCoordinateRegion(
@@ -1014,8 +951,49 @@ struct EventReviewView: View {
     
     private func formatTimeOnly(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
+        formatter.dateFormat = "h:mm a"
         return formatter.string(from: date)
+    }
+    
+    private func formatDateOnly(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
+    }
+    
+    private func createEvent() {
+        isLoading = true
+        
+       
+        
+        let event = Event(
+            name: eventDetails.title,
+            description: eventDetails.description,
+            type: eventDetails.category,
+            views: "0",
+            location: eventDetails.location,
+            price: "Free",
+            owner: "ownerName",
+            startDate: eventDetails.date,
+            endDate: eventDetails.date.addingTimeInterval(7200),
+            images: ["bg1"],
+            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            isTimed: true,
+            createdAt: Date(),
+            coordinates: eventDetails.coordinates
+        )
+        
+        firebaseManager.createEvent(event: event) { success, error in
+            isLoading = false
+            if success {
+                withAnimation {
+                    showSuccess = true
+                }
+            } else {
+                errorMessage = error ?? "Failed to create event"
+                showError = true
+            }
+        }
     }
     
     var body: some View {
@@ -1063,7 +1041,7 @@ struct EventReviewView: View {
                             HStack(spacing: 40) {
                                 VStack(alignment: .center, spacing: 5) {
                                     Text(formatTimeOnly(eventDetails.date))
-                                        .font(.system(size: 40, weight: .bold))
+                                        .font(.system(size: 20, weight: .bold))
                                         .padding(.horizontal,10)
                                         .background(Color.gray.opacity(0.07))
                                         .cornerRadius(10)
@@ -1073,7 +1051,7 @@ struct EventReviewView: View {
                                                 .opacity(0.1)
                                         )
                                         
-                                    Text("Start")
+                                    Text(formatDateOnly(eventDetails.date))
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
@@ -1084,7 +1062,7 @@ struct EventReviewView: View {
                                 
                                 VStack(alignment: .center, spacing: 5) {
                                     Text(formatTimeOnly(eventDetails.date.addingTimeInterval(7200)))
-                                        .font(.system(size: 40, weight: .bold))
+                                        .font(.system(size: 20, weight: .bold))
                                         .padding(.horizontal,10)
                                         .background(Color.gray.opacity(0.07))
                                         .cornerRadius(10)
@@ -1094,7 +1072,7 @@ struct EventReviewView: View {
                                                 .opacity(0.1)
                                         )
                                     
-                                    Text("End")
+                                    Text(formatDateOnly(eventDetails.date.addingTimeInterval(7200)))
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
@@ -1138,7 +1116,12 @@ struct EventReviewView: View {
                                     }
                                     
                                     HStack {
-                                        ReviewSection(title: "Owner", content: "Jack Mao")
+                                        ReviewSection(title: "Owner", content: {
+                                            if let user = firebaseManager.currentUser {
+                                                return user.displayName ?? user.email ?? "Anonymous"
+                                            }
+                                            return "Anonymous"
+                                        }())
                                             .lineLimit(2)
                                         Spacer()
                                         
@@ -1203,27 +1186,13 @@ struct EventReviewView: View {
 
                         // Action Button
                         Button(action: {
-                            // Dismiss after showing success
                             if showSuccess {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                    withAnimation {
-                                        isPresented = false
-                                    }
-                                    return
-                                }
-                            }
-                            withAnimation {
-                                isLoading = true
-                            }
-                            
-                            // Simulate network request
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                withAnimation(.spring()) {
-                                    isLoading = false
-                                    showSuccess = true
-                                }
+                                clearMessages = true
+                                isPresented = false
                                 
-                               
+                                
+                            } else {
+                                createEvent()
                             }
                         }) {
                             HStack(spacing: showSuccess ? 5 : 15) {
@@ -1247,7 +1216,8 @@ struct EventReviewView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .foregroundColor(.white) //button color
+                            
+                            .foregroundColor(.white)
                             .cornerRadius(19)
                             .shadow(color: isLoading ? .clear : .purple.opacity(0.3),
                                     radius: 10, x: 0, y: 5)
@@ -1255,7 +1225,7 @@ struct EventReviewView: View {
                             .scaleEffect(isLoading ? 0.98 : 1)
                             .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isLoading)
                         }
-                        .disabled(isLoading || showSuccess)
+                        .disabled(isLoading)
                         .padding(.top)
                         .padding(.horizontal, 20)
                     }
@@ -1264,11 +1234,16 @@ struct EventReviewView: View {
             }
             .navigationTitle("Event Pass")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationBarItems(trailing: Button("Edit") {
+            .navigationBarItems(trailing: Button(showSuccess ? "" : "Edit") {
                 isPresented = false
+                
             })
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "An unknown error occurred")
+            }
         }
-        
     }
 }
 
@@ -1280,7 +1255,7 @@ struct LocationSearchView: View {
     @State private var confirmed = false
     @FocusState private var isFocused: Bool
     
-    let onLocationSelected: (String) -> Void
+    let onLocationSelected: (String, [Double]) -> Void
     
     var body: some View {
         NavigationView {
@@ -1399,7 +1374,12 @@ struct LocationSearchView: View {
                                 
                                 Button("Confirm") {
                                     confirmed = true
-                                    onLocationSelected(completer.selectedAddress)
+                                    // Split location and coordinates
+                                    let locationComponents = completer.selectedAddress.components(separatedBy: " | ")
+                                    let address = locationComponents[0]
+                                    let coordinates = locationComponents[1].components(separatedBy: ", ")
+                                        .compactMap { Double($0) }
+                                    onLocationSelected(address, coordinates)
                                     isPresented = false
                                 }
                                 .padding()
@@ -1463,13 +1443,14 @@ struct LocationSearchView: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
                 )
                 
-                // Update the selected address with coordinates
-                let coordinates = "\(coordinate.latitude), \(coordinate.longitude)"
-                completer.selectedAddress = [
+                // Create location string with address and coordinates separated
+                let address = [
                     mapItem.name,
-                    mapItem.placemark.locality,
-                    coordinates
+                    mapItem.placemark.locality
                 ].compactMap { $0 }.joined(separator: ", ")
+                
+                // Store address and coordinates separately with a delimiter
+                completer.selectedAddress = "\(address) | \(coordinate.latitude), \(coordinate.longitude)"
             }
             
             withAnimation(.spring()) {
@@ -1570,47 +1551,93 @@ struct QuickActionsView: View {
 }
 
 struct TypingBubbleView: View {
-    @State private var firstDotOffset: CGFloat = 0
-    @State private var secondDotOffset: CGFloat = 0
-    @State private var thirdDotOffset: CGFloat = 0
+    @State private var firstDotOpacity: Double = 0.3
+    @State private var secondDotOpacity: Double = 0.3
+    @State private var thirdDotOpacity: Double = 0.3
+    @State private var animationTimer: Timer?
     
     var body: some View {
         HStack(alignment: .center, spacing: 4) {
-            ForEach(0..<3) { index in
+            Text("Typing")
+                .foregroundColor(.gray)
+            
+            // Three animated dots
+            HStack(alignment: .center, spacing: 4) {
                 Circle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(width: 7, height: 7)
-                    .offset(y: index == 0 ? firstDotOffset :
-                             index == 1 ? secondDotOffset : thirdDotOffset)
+                    .frame(width: 4, height: 4)
+                    .opacity(firstDotOpacity)
+                Circle()
+                    .frame(width: 4, height: 4)
+                    .opacity(secondDotOpacity)
+                Circle()
+                    .frame(width: 4, height: 4)
+                    .opacity(thirdDotOpacity)
             }
+            .foregroundColor(.gray)
         }
+        .frame(height: 30)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
+        .background(Color.gray.opacity(0.09))
         .cornerRadius(16)
         .transition(.asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
+            insertion: .opacity,
+            removal: .opacity
         ))
         .padding(.horizontal, 16)
         .onAppear {
-            withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
-                firstDotOffset = -5
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
-                    secondDotOffset = -5
+            startAnimation()
+        }
+        .onDisappear {
+            stopAnimation()
+        }
+    }
+    
+    private func startAnimation() {
+        // Reset opacities
+        firstDotOpacity = 0.3
+        secondDotOpacity = 0.3
+        thirdDotOpacity = 0.3
+        
+        // Create and start the timer
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.3)) {
+                // First dot animation
+                firstDotOpacity = firstDotOpacity == 1.0 ? 0.3 : 1.0
+                
+                // Delay second dot
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        secondDotOpacity = secondDotOpacity == 1.0 ? 0.3 : 1.0
+                    }
                 }
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
-                    thirdDotOffset = -5
+                
+                // Delay third dot
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        thirdDotOpacity = thirdDotOpacity == 1.0 ? 0.3 : 1.0
+                    }
                 }
             }
         }
     }
+    
+    private func stopAnimation() {
+        animationTimer?.invalidate()
+        animationTimer = nil
+    }
 }
+
+extension UIImpactFeedbackGenerator {
+    static func tabSelection() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+    }
+}
+
+
+
 
 
 

@@ -1,5 +1,5 @@
 import SwiftUI
-import FirebaseCore
+import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 
@@ -157,4 +157,118 @@ class FirebaseManager: ObservableObject {
             }
         }
     }
-} 
+    
+    // Create a new event
+    func createEvent(event: Event, completion: @escaping (Bool, String?) -> Void) {
+        guard let userId = currentUser?.uid else {
+            completion(false, "No user logged in")
+            return
+        }
+        
+        let eventData: [String: Any] = [
+            "name": event.name,
+            "description": event.description,
+            "type": event.type,
+            "location": event.location,
+            "price": event.price,
+            "owner": userId,
+            "startDate": event.startDate,
+            "endDate": event.endDate,
+            "images": event.images,
+            "maxParticipants": event.participants.count,
+            "currentParticipants": 0,
+            "isTimed": event.isTimed,
+            "createdAt": Timestamp(),
+            "coordinates": event.coordinates,
+            "status": "active"
+        ]
+        
+        // Create the event document
+        Firestore.firestore().collection("events").document().setData(eventData) { error in
+            if let error = error {
+                completion(false, error.localizedDescription)
+            } else {
+                // Update user's events created count
+                self.incrementUserEventCount(userId: userId)
+                completion(true, nil)
+            }
+        }
+    }
+    
+    private func incrementUserEventCount(userId: String) {
+        let userRef = Firestore.firestore().collection("users").document(userId)
+        userRef.updateData([
+            "eventsCreated": FieldValue.increment(Int64(1))
+        ]) { error in
+            if let error = error {
+                print("Error updating user event count: \(error)")
+            }
+        }
+    }
+    
+    // Fetch user's events
+    func fetchUserEvents(completion: @escaping (Result<[Event], Error>) -> Void) {
+        guard let userId = currentUser?.uid else {
+            completion(.failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not logged in"])))
+            return
+        }
+        
+        Firestore.firestore().collection("events")
+            .whereField("owner", isEqualTo: userId)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+                
+                guard let documents = snapshot?.documents else {
+                    completion(.success([]))
+                    return
+                }
+                
+                let events = documents.compactMap { document -> Event? in
+                    let data = document.data()
+                    
+                    guard let name = data["name"] as? String,
+                          let description = data["description"] as? String,
+                          let type = data["type"] as? String,
+                          let location = data["location"] as? String,
+                          let price = data["price"] as? String,
+                          let owner = data["owner"] as? String,
+                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                          let images = data["images"] as? [String],
+                          let isTimed = data["isTimed"] as? Bool,
+                          let coordinates = data["coordinates"] as? [Double]
+                    else {
+                        return nil
+                    }
+                    
+                    // Create dummy participants array based on maxParticipants
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let participants = Array(repeating: "Participant", count: maxParticipants)
+                    
+                    return Event(
+                        name: name,
+                        description: description,
+                        type: type,
+                        views: "0",
+                        location: location,
+                        price: price,
+                        owner: owner,
+                        startDate: startDate,
+                        endDate: endDate,
+                        images: images,
+                        participants: participants,
+                        isTimed: isTimed,
+                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        coordinates: coordinates
+                    )
+                }
+                
+                completion(.success(events))
+            }
+    }
+}
+
+

@@ -1,7 +1,7 @@
 import Foundation
 
-struct Event: Identifiable {
-    let id = UUID()
+struct Event: Identifiable, Codable {
+    var id: String = UUID().uuidString
     let name: String
     let description: String
     let type: String
@@ -9,13 +9,42 @@ struct Event: Identifiable {
     let location: String
     let price: String
     let owner: String
-    let startDate: Date?
-    let endDate: Date?
+    let startDate: Date
+    let endDate: Date
     let images: [String]
     let participants: [String]
     let isTimed: Bool
     let createdAt: Date
-    let coordinates: [String]
+    let coordinates: [Double]
+    var status: String = "active"
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, type, views
+        case location, price, owner, startDate, endDate
+        case images, participants, isTimed, createdAt
+        case coordinates, status
+    }
+    
+    func toDictionary() -> [String: Any] {
+        return [
+            "id": id,
+            "name": name,
+            "description": description,
+            "type": type,
+            "views": views,
+            "location": location,
+            "price": price,
+            "owner": owner,
+            "startDate": startDate,
+            "endDate": endDate,
+            "images": images,
+            "participants": participants,
+            "isTimed": isTimed,
+            "createdAt": createdAt,
+            "coordinates": coordinates,
+            "status": status
+        ]
+    }
 }
 
 // Sample events for previews

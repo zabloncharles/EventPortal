@@ -11,7 +11,7 @@ struct ProfileView: View {
         NavigationView {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    // Profile Header
+                // Profile Header
                     ZStack(alignment: .top) {
                         // Cover Image
 //                        LinearGradient(
@@ -219,11 +219,11 @@ struct SettingsItem: Identifiable {
     let color: Color
 }
 
-struct ProfileView_Previews: PreviewProvider {
-    static var previews: some View {
-        ProfileView()
-    }
-}
+//struct ProfileView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ProfileView()
+//    }
+//}
 
 // MARK: - Profile Related Views
 
@@ -286,7 +286,28 @@ struct EditProfileView: View {
 
 struct MyEventsView: View {
     @State private var selectedSegment = 0
+    @State private var events: [Event] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var showError = false
     let segments = ["Upcoming", "Past", "Drafts"]
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    
+    var filteredEvents: [Event] {
+        let now = Date()
+        switch selectedSegment {
+        case 0: // Upcoming
+            return events.filter { $0.startDate > now }
+                .sorted { $0.startDate < $1.startDate }
+        case 1: // Past
+            return events.filter { $0.startDate <= now }
+                .sorted { $0.startDate > $1.startDate }
+        case 2: // Drafts (if you implement draft functionality)
+            return []
+        default:
+            return []
+        }
+    }
     
     var body: some View {
         VStack {
@@ -310,17 +331,74 @@ struct MyEventsView: View {
             }
             .padding()
             
-            // Events List
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(0..<5) { _ in
-                        EventCard()
-                    }
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .frame(maxHeight: .infinity)
+            } else if filteredEvents.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 60))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    
+                    Text("No \(segments[selectedSegment]) Events")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                    
+                    Text(selectedSegment == 0 ? "Create an event to get started!" : "Check back later for \(segments[selectedSegment].lowercased()) events.")
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-                .padding()
+                .frame(maxHeight: .infinity)
+            } else {
+                // Events List
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filteredEvents) { event in
+                            RegularEventCard(event: event)
+                                .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical)
+                }
             }
         }
         .navigationTitle("My Events")
+        .onAppear {
+            fetchUserEvents()
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        }
+    }
+    
+    private func fetchUserEvents() {
+        guard let currentUser = firebaseManager.currentUser else {
+            errorMessage = "Please sign in to view your events"
+            showError = true
+            isLoading = false
+            return
+        }
+        
+        firebaseManager.fetchUserEvents { result in
+            isLoading = false
+            switch result {
+            case .success(let fetchedEvents):
+                events = fetchedEvents
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
     }
 }
 
