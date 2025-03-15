@@ -6,19 +6,22 @@
 //
 
 import SwiftUI
+import Firebase
 
 @main
 struct EventAppPortalApp: App {
-    @AppStorage("isAuthenticated") var isAuthenticated = false
-  
+    
+    
+    init() {
+        FirebaseApp.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
-            if isAuthenticated {
-                MainTabView()
-            } else {
-                LoginView()
-            }
+            ContentView()
+            
         }
     }
 }
+
+

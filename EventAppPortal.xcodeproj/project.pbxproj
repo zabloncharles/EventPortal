@@ -21,6 +21,12 @@
 		F773EC7C2D79DD990009AC93 /* orbpurple.json in Resources */ = {isa = PBXBuildFile; fileRef = F773EC7B2D79DD990009AC93 /* orbpurple.json */; };
 		F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC7F2D79E1700009AC93 /* AIOrb.swift */; };
 		F7855E9F2D7D1DD700D668CD /* NotificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7855E9E2D7D1DD700D668CD /* NotificationView.swift */; };
+		F7855EA32D85195E00D668CD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F7855EA22D85195D00D668CD /* GoogleService-Info.plist */; };
+		F7855EA62D851A9F00D668CD /* FirebaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7855EA52D851A9E00D668CD /* FirebaseManager.swift */; };
+		F7855EA92D851B5100D668CD /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = F7855EA82D851B5100D668CD /* FirebaseAuth */; };
+		F7855EAB2D851B5100D668CD /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = F7855EAA2D851B5100D668CD /* FirebaseFirestore */; };
+		F7855EAD2D851B5100D668CD /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = F7855EAC2D851B5100D668CD /* FirebaseStorage */; };
+		F7855EAF2D8521B900D668CD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7855EAE2D8521B900D668CD /* ContentView.swift */; };
 		F79C82812D77564900C87783 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82772D77564900C87783 /* ProfileView.swift */; };
 		F79C82822D77564900C87783 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82782D77564900C87783 /* HomeView.swift */; };
 		F79C82832D77564900C87783 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82792D77564900C87783 /* DiscoverView.swift */; };
@@ -46,6 +52,9 @@
 		F773EC7B2D79DD990009AC93 /* orbpurple.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = orbpurple.json; sourceTree = "<group>"; };
 		F773EC7F2D79E1700009AC93 /* AIOrb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AIOrb.swift; sourceTree = "<group>"; };
 		F7855E9E2D7D1DD700D668CD /* NotificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationView.swift; sourceTree = "<group>"; };
+		F7855EA22D85195D00D668CD /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		F7855EA52D851A9E00D668CD /* FirebaseManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FirebaseManager.swift; sourceTree = "<group>"; };
+		F7855EAE2D8521B900D668CD /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F79C82772D77564900C87783 /* ProfileView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		F79C82782D77564900C87783 /* HomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F79C82792D77564900C87783 /* DiscoverView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
@@ -62,6 +71,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				F773EC742D7910CE0009AC93 /* Lottie in Frameworks */,
+				F7855EAD2D851B5100D668CD /* FirebaseStorage in Frameworks */,
+				F7855EA92D851B5100D668CD /* FirebaseAuth in Frameworks */,
+				F7855EAB2D851B5100D668CD /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,11 +99,14 @@
 		F746F4E72D766320009B68BA /* EventAppPortal */ = {
 			isa = PBXGroup;
 			children = (
+				F7855EA42D851A9E00D668CD /* Services */,
 				F773EC6F2D790FAC0009AC93 /* Components */,
 				F773EC682D788DB90009AC93 /* Models */,
 				F79C82752D77564900C87783 /* Views */,
 				F773EC652D788A380009AC93 /* Extensions */,
 				F746F4E82D766320009B68BA /* EventAppPortalApp.swift */,
+				F7855EAE2D8521B900D668CD /* ContentView.swift */,
+				F7855EA22D85195D00D668CD /* GoogleService-Info.plist */,
 				F773EC5D2D7888B50009AC93 /* Assets.xcassets */,
 				F746F4EE2D766322009B68BA /* Preview Content */,
 			);
@@ -160,6 +175,14 @@
 			path = Lottie;
 			sourceTree = "<group>";
 		};
+		F7855EA42D851A9E00D668CD /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F7855EA52D851A9E00D668CD /* FirebaseManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		F79C82752D77564900C87783 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -220,6 +243,9 @@
 			name = EventAppPortal;
 			packageProductDependencies = (
 				F773EC732D7910CE0009AC93 /* Lottie */,
+				F7855EA82D851B5100D668CD /* FirebaseAuth */,
+				F7855EAA2D851B5100D668CD /* FirebaseFirestore */,
+				F7855EAC2D851B5100D668CD /* FirebaseStorage */,
 			);
 			productName = EventAppPortal;
 			productReference = F746F4E52D766320009B68BA /* EventAppPortal.app */;
@@ -251,6 +277,7 @@
 			mainGroup = F746F4DC2D766320009B68BA;
 			packageReferences = (
 				F773EC722D7910CE0009AC93 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				F7855EA72D851B5100D668CD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = F746F4E62D766320009B68BA /* Products */;
 			projectDirPath = "";
@@ -271,6 +298,7 @@
 				F773EC762D7911650009AC93 /* locationbubble.json in Resources */,
 				F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */,
 				F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */,
+				F7855EA32D85195E00D668CD /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,8 +323,10 @@
 				F79C82812D77564900C87783 /* ProfileView.swift in Sources */,
 				F7633E332D77589E00644438 /* TabBar.swift in Sources */,
 				F773EC712D790FAC0009AC93 /* LottieView.swift in Sources */,
+				F7855EAF2D8521B900D668CD /* ContentView.swift in Sources */,
 				F79C82882D77564900C87783 /* LoginView.swift in Sources */,
 				F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */,
+				F7855EA62D851A9F00D668CD /* FirebaseManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,12 +452,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"EventAppPortal/Preview Content\"";
 				DEVELOPMENT_TEAM = RB57AZ828B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LinkedUp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -442,9 +474,12 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.eventapp.ios16.EventAppPortal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -453,12 +488,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"EventAppPortal/Preview Content\"";
 				DEVELOPMENT_TEAM = RB57AZ828B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LinkedUp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -473,9 +510,12 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = io.eventapp.ios16.EventAppPortal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -511,6 +551,14 @@
 				version = 3.5.0;
 			};
 		};
+		F7855EA72D851B5100D668CD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -518,6 +566,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F773EC722D7910CE0009AC93 /* XCRemoteSwiftPackageReference "lottie-ios" */;
 			productName = Lottie;
+		};
+		F7855EA82D851B5100D668CD /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F7855EA72D851B5100D668CD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		F7855EAA2D851B5100D668CD /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F7855EA72D851B5100D668CD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		F7855EAC2D851B5100D668CD /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F7855EA72D851B5100D668CD /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

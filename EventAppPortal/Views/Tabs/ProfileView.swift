@@ -4,7 +4,8 @@ struct ProfileView: View {
     @State private var isEditingProfile = false
     @State private var showingLogoutAlert = false
     @State private var selectedTab = "Created"
-    
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var userData: [String: Any]? = nil
     
     var body: some View {
         NavigationView {
@@ -37,20 +38,20 @@ struct ProfileView: View {
                             Spacer()
                             // Profile Info
                             VStack {
-                                Text("John Doe")
+                                Text(userData?["name"] as? String ?? "Loading...")
                                     .font(.title2)
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
                                 
                                 
-                                Text("john.doe@example.com")
+                                Text(firebaseManager.currentUser?.email ?? "")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 // Stats
                                 HStack(spacing: 40) {
-                                    StatView(number: "24", title: "Events")
-                                    StatView(number: "1.2K", title: "Followers")
-                                    StatView(number: "284", title: "Following")
+                                    StatView(number: "\(userData?["eventsCreated"] as? Int ?? 0)", title: "Events")
+                                    StatView(number: "0", title: "Followers")
+                                    StatView(number: "0", title: "Following")
                                 }
                                 .padding(.top, 10)
                             }
@@ -106,10 +107,21 @@ struct ProfileView: View {
             .alert("Sign Out", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {
-                    // TODO: Implement sign out
+                    firebaseManager.signOut()
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+        }
+        .onAppear {
+            loadUserData()
+        }
+    }
+    
+    private func loadUserData() {
+        firebaseManager.getUserData { data, error in
+            if let data = data {
+                self.userData = data
             }
         }
     }
