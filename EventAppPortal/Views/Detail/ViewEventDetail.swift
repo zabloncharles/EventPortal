@@ -1,7 +1,6 @@
 import SwiftUI
 import MapKit
-
-
+import FirebaseFirestore
 
 struct ViewEventDetail: View {
     var event: Event
@@ -13,7 +12,148 @@ struct ViewEventDetail: View {
     @State private var showPurchaseView = false
     @State private var hasTicket = false
     @State private var bookmarked = false
+    @State private var organizerName: String = "Loading..."
+    @State private var viewCount: Int = 0
     let hapticFeedback = UINotificationFeedbackGenerator()
+    @AppStorage("userID") private var userID: String = ""
+    
+    private func incrementViews() {
+        let db = Firestore.firestore()
+//        print("Attempting to increment views for event ID: \(event.id)")
+        
+        let eventRef = db.collection("events").document(event.id)
+        
+        // First get the current view count
+        eventRef.getDocument { document, error in
+            if let error = error {
+//                print("Error fetching event document: \(error)")
+                return
+            }
+            
+            if let document = document {
+//                print("Document exists: \(document.exists)")
+//                print("Document ID: \(document.documentID)")
+                if let data = document.data() {
+                    print("Document data: \(data)")
+                }
+                
+                if document.exists {
+                    // Get current views as string and convert to int
+                    let currentViews = Int(document.data()?["views"] as? String ?? "0") ?? 0
+                    self.viewCount = currentViews
+                    let newViews = currentViews + 1
+//                    print("Current views: \(currentViews), New views: \(newViews)")
+                    
+                    // Update views as string in Firestore
+                    eventRef.updateData([
+                        "views": String(newViews)
+                    ]) { error in
+                        if let error = error {
+                            print("Error updating view count: \(error)")
+                        } else {
+//                            print("Successfully updated view count to \(newViews)")
+                            DispatchQueue.main.async {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    withAnimation {
+                                        self.viewCount = newViews
+                                    }
+                                   
+                                }
+                            }
+                        }
+                    }
+                } 
+            }
+        }
+    }
+    
+    private func toggleBookmark() {
+        guard !userID.isEmpty else { 
+            print("UserID is empty")
+            return 
+        }
+        
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userID)
+        
+        // First check if the user document exists
+        userRef.getDocument { document, error in
+            if let error = error {
+                print("Error checking user document: \(error)")
+                return
+            }
+            
+            if let document = document, document.exists {
+                // Document exists, update the bookmarks array
+                if self.bookmarked {
+                    // Remove from bookmarks
+                    userRef.updateData([
+                        "bookmarkedEvents": FieldValue.arrayRemove([self.event.id])
+                    ]) { error in
+                        if let error = error {
+                            print("Error removing bookmark: \(error)")
+                        } else {
+                            DispatchQueue.main.async {
+                                self.hapticFeedback.notificationOccurred(.success)
+                                self.bookmarked = false
+                            }
+                        }
+                    }
+                } else {
+                    // Add to bookmarks
+                    userRef.updateData([
+                        "bookmarkedEvents": FieldValue.arrayUnion([self.event.id])
+                    ]) { error in
+                        if let error = error {
+                            print("Error adding bookmark: \(error)")
+                        } else {
+                            DispatchQueue.main.async {
+                                self.hapticFeedback.notificationOccurred(.success)
+                                self.bookmarked = true
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Document doesn't exist, create it with initial bookmarks array
+                userRef.setData([
+                    "bookmarkedEvents": [self.event.id]
+                ], merge: true) { error in
+                    if let error = error {
+                        print("Error creating user document: \(error)")
+                    } else {
+                        DispatchQueue.main.async {
+                            self.hapticFeedback.notificationOccurred(.success)
+                            self.bookmarked = true
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private func checkIfBookmarked() {
+        guard !userID.isEmpty else { 
+            print("UserID is empty")
+            return 
+        }
+        
+        let db = Firestore.firestore()
+        db.collection("users").document(userID).getDocument { document, error in
+            if let error = error {
+                print("Error checking bookmark status: \(error)")
+                return
+            }
+            
+            if let document = document, document.exists {
+                if let bookmarkedEvents = document.data()?["bookmarkedEvents"] as? [String] {
+                    DispatchQueue.main.async {
+                        self.bookmarked = bookmarkedEvents.contains(self.event.id)
+                    }
+                }
+            }
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -69,41 +209,63 @@ struct ViewEventDetail: View {
                                     Spacer()
                                     
                                     HStack(spacing: 4) {
-                                        Image(systemName: "eye.square")
-                                        Text("\(4)k")
+                                        Image(systemName: "eyes")
+                                        Divider().padding(.vertical)
+                                        Text(viewCount > 1000 ? String(format: "%.1fk", Double(viewCount)/1000.0) : "\(viewCount)")
                                     }
                                     .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 }
                                 // Event Type Icons
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(alignment: .top, spacing: 16) {
-                                        EventTypeIcon(icon: "display", text: "Technology")
+                                        // Event Type
+                                        EventTypeIcon(icon: {
+                                            switch event.type {
+                                            case "Concert": return "figure.dance"
+                                            case "Corporate": return "building.2.fill"
+                                            case "Marketing": return "megaphone.fill"
+                                            case "Health & Wellness": return "heart.fill"
+                                            case "Technology": return "desktopcomputer"
+                                            case "Art & Culture": return "paintbrush.fill"
+                                            case "Charity": return "heart.circle.fill"
+                                            case "Literature": return "book.fill"
+                                            case "Lifestyle": return "leaf.fill"
+                                            case "Environmental": return "leaf.arrow.triangle.circlepath"
+                                            case "Entertainment": return "music.note.list"
+                                            default: return "calendar"
+                                            }
+                                        }(), text: event.type)
                                         
                                         Rectangle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 1, height: 40)
                                         
-                                        EventTypeIcon(icon: "hand.raised.slash", text: "18+")
+                                        // Date
+                                        EventTypeIcon(
+                                            icon: "calendar",
+                                            text: formatDate(event.startDate)
+                                        )
                                         
                                         Rectangle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 1, height: 40)
                                         
-                                        EventTypeIcon(icon: "person.2", text: "Going \(event.participants.count)")
+                                        // Participants
+                                        EventTypeIcon(
+                                            icon: "person.2",
+                                            text: "Going \(event.participants.count)"
+                                        )
                                         
                                         Rectangle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 1, height: 40)
                                         
-                                        EventTypeIcon(icon: "stairs", text: "1 Floor")
-                                        
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(width: 1, height: 40)
-                                        
-                                        EventTypeIcon(icon: "hand.raised.slash", text: "18+")
+                                        // Price
+                                        EventTypeIcon(
+                                            icon: "dollarsign.circle",
+                                            text: event.price
+                                        )
                                     }
-                                    
                                 }
                                    
                                 }.padding(.vertical)
@@ -146,21 +308,22 @@ struct ViewEventDetail: View {
                             
                             // Event Facilitator
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Event Facilitator")
+                                Text("Event Organizer")
                                     .font(.title3)
                                     .fontWeight(.bold)
                                 
                                 HStack {
-                                    Image("bob") // Replace with actual facilitator image
+                                    Image(systemName: "person.circle.fill")
                                         .resizable()
                                         .scaledToFill()
                                         .frame(width: 50, height: 50)
+                                        .foregroundColor(.gray)
                                         .clipShape(Circle())
                                     
                                     VStack(alignment: .leading) {
-                                        Text("Bob")
+                                        Text(organizerName)
                                             .fontWeight(.semibold)
-                                        Text("Event Facilitator")
+                                        Text("Event Organizer")
                                             .foregroundColor(.secondary)
                                     }
                                     
@@ -187,9 +350,8 @@ struct ViewEventDetail: View {
                                     .fontWeight(.bold)
                                 
                                 LocationMapView(coordinate: CLLocationCoordinate2D(
-                                    latitude:
-                                    40.7128,
-                                    longitude:  -74.0060
+                                    latitude: event.coordinates.count >= 2 ? event.coordinates[0] : 40.7128,
+                                    longitude: event.coordinates.count >= 2 ? event.coordinates[1] : -74.0060
                                 ))
                                 .frame(height: 200)
                                 .cornerRadius(12)
@@ -197,10 +359,12 @@ struct ViewEventDetail: View {
                                 HStack {
                                     Text(event.location)
                                     Spacer()
-                                    Text("Get directions")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.blue)
+                                    if event.coordinates.count >= 2 {
+                                        Link("Get directions", destination: URL(string: "http://maps.apple.com/?ll=\(event.coordinates[0]),\(event.coordinates[1])")!)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.blue)
+                                    }
                                 }.foregroundColor(.secondary)
                                     .padding(.top, 8)
                             }
@@ -298,12 +462,31 @@ struct ViewEventDetail: View {
                 PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
             }
             .onAppear {
+                // Increment views when the view appears
+                incrementViews()
+                
                 tabBarManager.hideTab = true
                 
                 DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
-                    //
                     tabBarManager.hideTab = true
+                   
                 }
+                
+                // Fetch organizer name from Firestore
+                let db = Firestore.firestore()
+                db.collection("users").document(event.owner).getDocument { document, error in
+                    if let document = document, document.exists {
+                        organizerName = document.data()?["name"] as? String ?? "Unknown Organizer"
+                    } else {
+                        organizerName = "Unknown Organizer"
+                    }
+                }
+                
+                
+               
+                
+                // Check if event is bookmarked
+                checkIfBookmarked()
             }
             .onDisappear {
                 tabBarManager.hideTab = false
@@ -314,11 +497,17 @@ struct ViewEventDetail: View {
                 Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
                     .foregroundColor(bookmarked ? .blue : .white)
                     .onTapGesture {
-                        bookmarked.toggle()
+                        toggleBookmark()
                     }
                     .padding(10)
                     
             }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
     }
 }
 
@@ -557,6 +746,18 @@ struct PurchaseTicketView: View {
     @State private var isCardFlipped = false
     let hapticFeedback = UINotificationFeedbackGenerator()
     
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter
+    }()
+    
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+    
     var body: some View {
         NavigationView {
             ScrollView(showsIndicators: false) {
@@ -581,7 +782,7 @@ struct PurchaseTicketView: View {
                                 Text("Date")
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("Mar 15, 2024")
+                                Text(dateFormatter.string(from: event.startDate))
                                     .foregroundColor(.gray)
                             }
                             
@@ -589,7 +790,7 @@ struct PurchaseTicketView: View {
                                 Text("Time")
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("14:35")
+                                Text(timeFormatter.string(from: event.startDate))
                                     .foregroundColor(.gray)
                             }
                             
@@ -601,7 +802,7 @@ struct PurchaseTicketView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text("$29.99")
+                                Text(event.price)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
                             }

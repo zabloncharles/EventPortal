@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct ProfileView: View {
     @State private var isEditingProfile = false
@@ -6,6 +7,8 @@ struct ProfileView: View {
     @State private var selectedTab = "Created"
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var userData: [String: Any]? = nil
+    @AppStorage("userID") private var userID: String = ""
+    @State private var isResettingEvents = false
     
     var body: some View {
         NavigationView {
@@ -112,6 +115,19 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: resetAndPopulateEvents) {
+                        if isResettingEvents {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                        }
+                    }
+                    .disabled(isResettingEvents)
+                }
+            }
         }
         .onAppear {
             loadUserData()
@@ -122,6 +138,246 @@ struct ProfileView: View {
         firebaseManager.getUserData { data, error in
             if let data = data {
                 self.userData = data
+            }
+        }
+    }
+    
+    private func resetAndPopulateEvents() {
+        let db = Firestore.firestore()
+        isResettingEvents = true
+        
+        // First, delete all existing events
+        db.collection("events").getDocuments(source: .default) { (snapshot, error) in
+            if let error = error {
+                print("Error getting documents: \(error)")
+                return
+            }
+            
+            // Create a dispatch group to track all deletions
+            let deleteGroup = DispatchGroup()
+            
+            // Delete all existing documents
+            snapshot?.documents.forEach { document in
+                deleteGroup.enter()
+                document.reference.delete { error in
+                    if let error = error {
+                        print("Error deleting document: \(error)")
+                    }
+                    deleteGroup.leave()
+                }
+            }
+            
+            // After all deletions are complete, add new events
+            deleteGroup.notify(queue: .main) {
+                // Create a dispatch group for adding new events
+                let addGroup = DispatchGroup()
+                
+                // Sample events with coordinates
+                let eventsWithCoordinates = [
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Sample Team Building Retreat",
+                        description: "A weekend retreat to improve team dynamics and collaboration. Join us for an unforgettable day of music, food, and fun at the Summer Music Festival! Enjoy live performances from top artists, great food trucks, and plenty of activities for all ages.",
+                        type: "Corporate",
+                        views: "3434",
+                        location: "Soho House, New York",
+                        price: "12",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 10, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg1","bg2"],
+                        participants: ["Alice", "Bob", "Charlie", "Dana"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7247, -73.9973],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Product Launch",
+                        description: "Launching the latest version of our flagship product.",
+                        type: "Marketing",
+                        views: "544",
+                        location: "The Library, New York",
+                        price: "5",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg3","bg6"],
+                        participants: ["Eve", "Frank", "Grace"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7532, -73.9822],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Yoga Workshop",
+                        description: "An introductory yoga workshop for beginners.",
+                        type: "Health & Wellness",
+                        views: "6564",
+                        location: "The Wing, New York",
+                        price: "65",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg4","bg5"],
+                        participants: ["Hank", "Ivy", "Jack"],
+                        isTimed: false,
+                        createdAt: Date(),
+                        coordinates: [40.7398, -73.9934],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Hackathon 2025",
+                        description: "A 48-hour coding marathon to develop innovative solutions.",
+                        type: "Technology",
+                        views: "23",
+                        location: "NeueHouse, New York",
+                        price: "29.99",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg6","bg4"],
+                        participants: ["Kate", "Leo", "Mona", "Nina"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7401, -73.9969],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Art Exhibition",
+                        description: "Showcasing local artists' work for the year 2025.",
+                        type: "Art & Culture",
+                        views: "3444",
+                        location: "The Strand Bookstore, New York",
+                        price: "0",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 20, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg1","bg4"],
+                        participants: ["Olivia", "Paul"],
+                        isTimed: false,
+                        createdAt: Date(),
+                        coordinates: [40.7332, -73.9907],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Charity Gala",
+                        description: "An annual gala to raise funds for underprivileged children.",
+                        type: "Charity",
+                        views: "23232",
+                        location: "The Soho Grand Hotel, New York",
+                        price: "6",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 60, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg8","bg6"],
+                        participants: ["Quincy", "Rachel", "Sam", "Tina"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7403, -74.0028],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Book Club Meeting",
+                        description: "Monthly book discussion on contemporary literature.",
+                        type: "Literature",
+                        views: "233",
+                        location: "New York Public Library",
+                        price: "66",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 5, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg1","bg4"],
+                        participants: ["Uma", "Victor", "Wendy"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7128, -74.0060],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Cooking Class",
+                        description: "Learn how to prepare Italian dishes from a professional chef.",
+                        type: "Lifestyle",
+                        views: "12",
+                        location: "La Scuola di Eataly, New York",
+                        price: "44",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg6","bg7"],
+                        participants: ["Xander", "Yara"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7377, -73.9933],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Community Cleanup",
+                        description: "Join us in cleaning up the neighborhood park.",
+                        type: "Environmental",
+                        views: "65",
+                        location: "Bryant Park, New York",
+                        price: "89",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg3","bg5"],
+                        participants: ["Zara", "Alex", "Bella"],
+                        isTimed: false,
+                        createdAt: Date(),
+                        coordinates: [40.7549, -73.9840],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Music Festival",
+                        description: "An outdoor festival featuring local and international artists.",
+                        type: "Entertainment",
+                        views: "98",
+                        location: "Brooklyn Bowl, New York",
+                        price: "5",
+                        owner: userID,
+                        startDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: ["bg7","bg1"],
+                        participants: ["Chris", "Diane", "Eli"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7110, -73.9573],
+                        status: "active"
+                    )
+                ]
+                
+                // Add all events with coordinates
+                for event in eventsWithCoordinates {
+                    addGroup.enter()
+                    
+                    var eventData = event.toDictionary()
+                    let docRef = db.collection("events").document()
+                    eventData["id"] = docRef.documentID // Use Firestore's document ID
+                    eventData["coordinates"] = event.coordinates // Add coordinates to the dictionary
+                    
+                    docRef.setData(eventData) { error in
+                        if let error = error {
+                            print("Error adding event: \(error)")
+                        }
+                        addGroup.leave()
+                    }
+                }
+                
+                // When all events are added, update UI
+                addGroup.notify(queue: .main) {
+                    isResettingEvents = false
+                    print("All events have been reset and repopulated")
+                }
             }
         }
     }
@@ -362,7 +618,7 @@ struct MyEventsView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         ForEach(filteredEvents) { event in
-                            RegularEventCard(event: event)
+                            EventCard(event: event)
                                 .padding(.horizontal)
                         }
                     }
@@ -423,16 +679,194 @@ struct TicketsView: View {
 }
 
 struct BookmarkedView: View {
+    @State private var bookmarkedEvents: [Event] = []
+    @State private var isLoading = true
+    @AppStorage("userID") private var userID: String = ""
+    
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(0..<5) { _ in
-                    SavedEventCard()
+            if isLoading {
+                ProgressView()
+                    .padding()
+            } else if bookmarkedEvents.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "bookmark.slash")
+                        .font(.system(size: 50))
+                                .foregroundColor(.gray)
+                    Text("No Bookmarked Events")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Text("Events you bookmark will appear here")
+                        .foregroundColor(.secondary)
                 }
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(bookmarkedEvents) { event in
+                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                            BookmarkedEventCard(event: event)
+                        }
+                    }
+                }
+                .padding()
             }
-            .padding()
         }
         .navigationTitle("Bookmarked Events")
+        .onAppear {
+            fetchBookmarkedEvents()
+        }
+    }
+    
+    private func fetchBookmarkedEvents() {
+        isLoading = true
+        let db = Firestore.firestore()
+        
+        guard !userID.isEmpty else {
+            isLoading = false
+            return
+        }
+        
+        // First get the user's bookmarked event IDs
+        db.collection("users").document(userID).getDocument { document, error in
+            if let error = error {
+                print("Error fetching user document: \(error)")
+                isLoading = false
+                return
+            }
+            
+            guard let document = document,
+                  document.exists,
+                  let bookmarkedEventIds = document.get("bookmarkedEvents") as? [String] else {
+                isLoading = false
+                return
+            }
+            
+            if bookmarkedEventIds.isEmpty {
+                isLoading = false
+                return
+            }
+            
+            // Create a dispatch group to handle multiple async requests
+            let group = DispatchGroup()
+            var fetchedEvents: [Event] = []
+            
+            // Fetch each event document by its ID
+            for eventId in bookmarkedEventIds {
+                group.enter()
+                
+                let eventRef = db.collection("events").document(eventId)
+                eventRef.getDocument { (document, error) in
+                    defer { group.leave() }
+                    
+                    if let error = error {
+                        print("Error fetching event \(eventId): \(error)")
+                        return
+                    }
+                    
+                    guard let document = document,
+                          document.exists,
+                          let data = document.data() else {
+                        print("No document found for event \(eventId)")
+                        return
+                    }
+                    
+                    guard let name = data["name"] as? String,
+                          let description = data["description"] as? String,
+                          let type = data["type"] as? String,
+                          let location = data["location"] as? String,
+                          let price = data["price"] as? String,
+                          let owner = data["owner"] as? String,
+                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                          let images = data["images"] as? [String],
+                          let isTimed = data["isTimed"] as? Bool,
+                          let coordinates = data["coordinates"] as? [Double] else {
+                        print("Invalid event data for \(eventId)")
+                        return
+                    }
+                    
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let participants = Array(repeating: "Participant", count: maxParticipants)
+                    
+                    let event = Event(
+                        id: document.documentID,
+                        name: name,
+                        description: description,
+                        type: type,
+                        views: data["views"] as? String ?? "0",
+                        location: location,
+                        price: price,
+                        owner: owner,
+                        startDate: startDate,
+                        endDate: endDate,
+                        images: images,
+                        participants: participants,
+                        isTimed: isTimed,
+                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        coordinates: coordinates
+                    )
+                    
+                    DispatchQueue.main.async {
+                        fetchedEvents.append(event)
+                    }
+                }
+            }
+            
+            // When all events are fetched, update the UI
+            group.notify(queue: .main) {
+                self.bookmarkedEvents = fetchedEvents.sorted { $0.startDate < $1.startDate }
+                self.isLoading = false
+            }
+        }
+    }
+}
+
+struct BookmarkedEventCard: View {
+    let event: Event
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Event Image
+            Image(event.images[0])
+                .resizable()
+                .scaledToFill()
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.name)
+                    .font(.headline)
+                    .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                
+                Text(event.type)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.gray)
+                    Text(formatDate(event.startDate))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
     }
 }
 
@@ -562,13 +996,15 @@ struct ProfileTextEditor: View {
 }
 
 struct EventCard: View {
+    var event: Event
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Tech Conference 2024")
+                Text(event.name)
                     .font(.headline)
                 Spacer()
-                Text("Upcoming")
+                Text(event.startDate > Date() ? "Upcoming" : "Ongoing")
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -577,18 +1013,36 @@ struct EventCard: View {
                     .cornerRadius(4)
             }
             
-            Text("Mar 15, 2024 • 10:00 AM")
+            Text(formatDate(event.startDate))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             
-            Text("San Francisco Convention Center")
+            Text(event.location)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
         .padding()
-        .background(Color(.systemBackground))
+        .background(
+            ZStack {
+                if !event.images.isEmpty {
+                    Image(event.images[0])
+                        .resizable()
+                        .scaledToFill()
+                }
+                LinearGradient(colors: [.black.opacity(0.7), .clear], 
+                             startPoint: .bottom, 
+                             endPoint: .top)
+            }
+        )
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+    }
+    
+    private func formatDate(_ date: Date?) -> String {
+        guard let date = date else { return "TBD" }
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d, yyyy • h:mm a"
+        return dateFormatter.string(from: date)
     }
 }
 

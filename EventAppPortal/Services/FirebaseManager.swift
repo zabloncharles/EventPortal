@@ -8,6 +8,7 @@ class FirebaseManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUser: User?
     @Published var errorMessage = ""
+    @AppStorage("userID") private var userID: String = ""
     
     private init() {
         // Listen for auth state changes
@@ -15,6 +16,8 @@ class FirebaseManager: ObservableObject {
             DispatchQueue.main.async {
                 self?.isAuthenticated = user != nil
                 self?.currentUser = user
+                // Update userID in AppStorage
+                self?.userID = user?.uid ?? ""
             }
         }
     }
@@ -24,10 +27,13 @@ class FirebaseManager: ObservableObject {
             DispatchQueue.main.async {
                 if let error = error {
                     self?.errorMessage = error.localizedDescription
+                    self?.userID = ""
                     completion(false, error.localizedDescription)
                 } else {
-                    // Update last login timestamp
+                    // Store userID in AppStorage
                     if let userId = result?.user.uid {
+                        self?.userID = userId
+                        // Update last login timestamp
                         Firestore.firestore().collection("users").document(userId).updateData([
                             "lastLogin": Timestamp()
                         ]) { error in
@@ -106,6 +112,7 @@ class FirebaseManager: ObservableObject {
             DispatchQueue.main.async {
                 self.isAuthenticated = false
                 self.currentUser = nil
+                self.userID = "" // Clear userID from AppStorage
             }
         } catch {
             print("Error signing out: \(error)")
@@ -166,6 +173,7 @@ class FirebaseManager: ObservableObject {
         }
         
         let eventData: [String: Any] = [
+            "id": "", // This will be updated with the actual document ID
             "name": event.name,
             "description": event.description,
             "type": event.type,
@@ -184,7 +192,11 @@ class FirebaseManager: ObservableObject {
         ]
         
         // Create the event document
-        Firestore.firestore().collection("events").document().setData(eventData) { error in
+        let docRef = Firestore.firestore().collection("events").document()
+        var mutableEventData = eventData
+        mutableEventData["id"] = docRef.documentID // Set the document ID
+        
+        docRef.setData(mutableEventData) { error in
             if let error = error {
                 completion(false, error.localizedDescription)
             } else {
@@ -249,6 +261,7 @@ class FirebaseManager: ObservableObject {
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
+                        id: document.documentID, // Use the document ID here
                         name: name,
                         description: description,
                         type: type,

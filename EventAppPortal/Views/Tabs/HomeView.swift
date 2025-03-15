@@ -7,6 +7,8 @@ struct HomeView: View {
     @State private var pageAppeared = false
     @State private var startPoint: UnitPoint = .leading
     @State private var endPoint: UnitPoint = .trailing
+    @State private var searchResults: [Event] = []
+    @State private var isSearching = false
     
     // Firebase state
     @State private var popularEvents: [Event] = []
@@ -47,7 +49,7 @@ struct HomeView: View {
                 
                 popularEvents = snapshot?.documents.compactMap { document -> Event? in
                     let data = document.data()
-                    guard let name = data["name"] as? String,
+                    guard let id = data["id"] as? String,let name = data["name"] as? String,
                           let description = data["description"] as? String,
                           let type = data["type"] as? String,
                           let location = data["location"] as? String,
@@ -64,6 +66,7 @@ struct HomeView: View {
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
+                        id:id,
                         name: name,
                         description: description,
                         type: type,
@@ -97,7 +100,8 @@ struct HomeView: View {
                 
                 nearbyEvents = snapshot?.documents.compactMap { document -> Event? in
                     let data = document.data()
-                    guard let name = data["name"] as? String,
+                    guard let id = data["id"] as? String,
+                          let name = data["name"] as? String,
                           let description = data["description"] as? String,
                           let type = data["type"] as? String,
                           let location = data["location"] as? String,
@@ -114,6 +118,7 @@ struct HomeView: View {
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
+                        id:id,
                         name: name,
                         description: description,
                         type: type,
@@ -148,7 +153,8 @@ struct HomeView: View {
                 
                 recommendedEvents = snapshot?.documents.compactMap { document -> Event? in
                     let data = document.data()
-                    guard let name = data["name"] as? String,
+                    guard let id = data["id"] as? String,
+                          let name = data["name"] as? String,
                           let description = data["description"] as? String,
                           let type = data["type"] as? String,
                           let location = data["location"] as? String,
@@ -165,6 +171,7 @@ struct HomeView: View {
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
+                        id:id,
                         name: name,
                         description: description,
                         type: type,
@@ -184,8 +191,89 @@ struct HomeView: View {
             }
     }
     
+    // Search events in Firestore
+    private func searchEvents(query: String) {
+        guard !query.isEmpty else {
+            searchResults = []
+            return
+        }
+        
+        isSearching = true
+        let db = Firestore.firestore()
+        
+        // Create array of keywords from the search query
+        let keywords = query.lowercased().split(separator: " ").map(String.init)
+        
+        // Search in events collection
+        db.collection("events")
+            .whereField("status", isEqualTo: "active")
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Error searching events: \(error.localizedDescription)")
+                    errorMessage = "Failed to search events"
+                    isSearching = false
+                    return
+                }
+                
+                // Filter and sort results based on relevance
+                searchResults = snapshot?.documents.compactMap { document -> (Event, Int)? in
+                    let data = document.data()
+                    guard let id = data["id"] as? String,
+                          let name = data["name"] as? String,
+                          let description = data["description"] as? String,
+                          let type = data["type"] as? String,
+                          let location = data["location"] as? String,
+                          let price = data["price"] as? String,
+                          let owner = data["owner"] as? String,
+                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                          let images = data["images"] as? [String],
+                          let isTimed = data["isTimed"] as? Bool,
+                          let coordinates = data["coordinates"] as? [Double]
+                    else { return nil }
+                    
+                    // Calculate relevance score
+                    let searchableText = "\(name) \(description) \(type) \(location)".lowercased()
+                    let relevanceScore = keywords.reduce(0) { score, keyword in
+                        score + (searchableText.contains(keyword) ? 1 : 0)
+                    }
+                    
+                    // Only include results that match at least one keyword
+                    guard relevanceScore > 0 else { return nil }
+                    
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let participants = Array(repeating: "Participant", count: maxParticipants)
+                    
+                    let event = Event(
+                        id:id,
+                        name: name,
+                        description: description,
+                        type: type,
+                        views: data["views"] as? String ?? "0",
+                        location: location,
+                        price: price,
+                        owner: owner,
+                        startDate: startDate,
+                        endDate: endDate,
+                        images: images,
+                        participants: participants,
+                        isTimed: isTimed,
+                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        coordinates: coordinates
+                    )
+                    
+                    return (event, relevanceScore)
+                }
+                .sorted { $0.1 > $1.1 } // Sort by relevance score
+                .map { $0.0 } // Extract just the events
+                ?? []
+                
+                isSearching = false
+            }
+    }
+    
     private func EmptyStateView(title: String, message: String) -> some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .center, spacing: 10) {
             Image(systemName: "calendar.badge.exclamationmark")
                 .font(.system(size: 50))
                 .foregroundColor(.gray)
@@ -279,19 +367,46 @@ struct HomeView: View {
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(Color.dynamic, lineWidth: 2)
                                         )
+                                        .onChange(of: searchText) { query in
+                                            if !query.isEmpty {
+                                                searchEvents(query: query)
+                                            } else {
+                                                searchResults = []
+                                                isSearching = false
+                                            }
+                                        }
                                 }
                                 .padding(10)
                                 .padding(.top, 0)
                                 
                                 if searchText.isEmpty {
-                                    ForEach(["Community Cleanup", "Yoga Workshop", "Charity Gala"], id: \.self) { eventName in
-                                        NavigationLink(destination: ViewEventDetail(event: sampleEvent)) {
+                                    if isLoadingRecommended {
+                                        ProgressView()
+                                            .padding()
+                                    } else if !recommendedEvents.isEmpty {
+                                        ForEach(recommendedEvents.shuffled().prefix(3)) { event in
+                                            NavigationLink(destination: ViewEventDetail(event: event)) {
                                             VStack {
                                                 Divider()
                                                 HStack {
-                                                    Image(systemName: eventName == "Community Cleanup" ? "arrow.clockwise" :
-                                                            eventName == "Yoga Workshop" ? "heart.fill" : "heart")
-                                                    Text(eventName)
+                                                        Image(systemName: {
+                                                            switch event.type {
+                                                            case "Concert": return "figure.dance"
+                                                            case "Corporate": return "building.2.fill"
+                                                            case "Marketing": return "megaphone.fill"
+                                                            case "Health & Wellness": return "heart.fill"
+                                                            case "Technology": return "desktopcomputer"
+                                                            case "Art & Culture": return "paintbrush.fill"
+                                                            case "Charity": return "heart.circle.fill"
+                                                            case "Literature": return "book.fill"
+                                                            case "Lifestyle": return "leaf.fill"
+                                                            case "Environmental": return "leaf.arrow.triangle.circlepath"
+                                                            case "Entertainment": return "music.note.list"
+                                                            default: return "calendar"
+                                                            }
+                                                        }())
+                                                            .foregroundColor(.gray)
+                                                        Text(event.name)
                                                         .font(.callout)
                                                         .foregroundColor(.primary)
                                                     Spacer()
@@ -306,14 +421,46 @@ struct HomeView: View {
                                     }
                                 }
                             }
-                            .cornerRadius(20)
+                            }
                         }
-                        .padding(.horizontal)
+                        .cornerRadius(20)
                     }
+                    .padding(.horizontal)
                     .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
+                    if !searchText.isEmpty {
+                        VStack( spacing: 20) {
+                            if isSearching {
+                                SectionLoadingView()
+                            } else if searchResults.isEmpty {
+                              
+                                    
+                                        EmptyStateView(
+                                            title: "No Results Found",
+                                               message: "Try different keywords or browse our featured events below"
+                                    )
+                                
+                            } else {
+                                Text("Search Results")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                ScrollView(.vertical, showsIndicators: false) {
+                                    LazyVStack(spacing: 16) {
+                                        ForEach(searchResults.prefix(5)) { event in
+                                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                                RegularEventCard(event: event)
+                                                    .padding(.horizontal)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top,-20)
+                    }
                     
-                    
+                    if searchText.isEmpty {
                     VStack {
                         // Popular Events Section
                         VStack(alignment: .leading, spacing: 20) {
@@ -330,31 +477,30 @@ struct HomeView: View {
                                 }
                             }.padding(.horizontal)
                             
-                            if isLoadingPopular {
-                                SectionLoadingView()
-                            } else if popularEvents.isEmpty {
-                                EmptyStateView(
-                                    title: "No Popular Events",
-                                    message: "Be the first to create an exciting event!"
-                                )
-                            } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 16) {
-                                        ForEach(popularEvents) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                                PopularEventCard(event: event)
-                                                    .frame(width: 280)
-                                            }
+                                if isLoadingPopular {
+                                    SectionLoadingView()
+                                } else if popularEvents.isEmpty {
+                                    EmptyStateView(
+                                        title: "No Popular Events",
+                                        message: "Be the first to create an exciting event!"
+                                    )
+                                } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: 16) {
+                                            ForEach(popularEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            PopularEventCard(event: event)
+                                                .frame(width: 280)
                                         }
-                                    }.padding(.leading)
-                                        .padding(.trailing, 10)
-                                }
+                                    }
+                                }.padding(.leading)
+                                    .padding(.trailing, 10)
                             }
                         }
-                        
+                            }
                         
                         // Plans Near You Section
-                        VStack(alignment: .leading) {
+                            VStack {
                             HStack(alignment: .bottom) {
                                 VStack(alignment: .leading) {
                                     Text("Plans near you")
@@ -368,27 +514,29 @@ struct HomeView: View {
                                     Image(systemName: "figure.dance")
                                 }
                             }
-                            
-                            if isLoadingNearby {
-                                SectionLoadingView()
-                            } else if nearbyEvents.isEmpty {
-                                EmptyStateView(
-                                    title: "No Nearby Events",
-                                    message: "There are no upcoming events in your area yet."
-                                )
-                            } else {
-                                ScrollView(.vertical, showsIndicators: false) {
-                                    LazyVStack(spacing: 16) {
-                                        ForEach(nearbyEvents) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                                RegularEventCard(event: event, showdescription: false)
+                                .padding(.horizontal)
+                                
+                                if isLoadingNearby {
+                                    SectionLoadingView()
+                                } else if nearbyEvents.isEmpty {
+                                    VStack {
+                                        EmptyStateView(
+                                            title: "No Nearby Events",
+                                            message: "There are no upcoming events in your area yet."
+                                        )
+                                    }
+                                } else {
+                            ScrollView(.vertical, showsIndicators: false) {
+                                LazyVStack(spacing: 16) {
+                                            ForEach(nearbyEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                                    RegularEventCard(event: event, showdescription: false)
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        .padding(.horizontal)
                         .padding(.bottom)
                         
                         // Recommended Events
@@ -396,36 +544,37 @@ struct HomeView: View {
                             HStack {
                                 Text("Recommended Events")
                                     .font(.title3)
-                                    .fontWeight(.bold)
+                                .fontWeight(.bold)
                                 Spacer()
                                 VStack(alignment: .center) {
                                     Image(systemName: "figure.dance")
                                 }
                             }.padding(.horizontal)
                             
-                            if isLoadingRecommended {
-                                SectionLoadingView()
-                            } else if recommendedEvents.isEmpty {
-                                EmptyStateView(
-                                    title: "No Recommendations",
-                                    message: "Check back later for personalized event recommendations!"
-                                )
-                            } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 16) {
-                                        ForEach(recommendedEvents) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                                RecommendedEventCard(event: event)
-                                            }
+                                if isLoadingRecommended {
+                                    SectionLoadingView()
+                                } else if recommendedEvents.isEmpty {
+                                    EmptyStateView(
+                                        title: "No Recommendations",
+                                        message: "Check back later for personalized event recommendations!"
+                                    )
+                                } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                            ForEach(recommendedEvents) { event in
+                                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                                            RecommendedEventCard(event: event)
                                         }
                                     }
-                                }.padding(.leading)
-                            }
+                                }
+                            }.padding(.leading)
+                                }
                         }.padding(.bottom, 70)
                         
                         Spacer()
                     }
                     .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                    }
                 }
                 .padding(.bottom)
             }
@@ -435,10 +584,12 @@ struct HomeView: View {
                 withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                     pageAppeared = true
                 }
-                fetchEvents()
+                Task {
+                    await fetchEvents()
+                }
             }
             .refreshable {
-                fetchEvents()
+                await fetchEvents()
             }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") {
@@ -450,6 +601,11 @@ struct HomeView: View {
                 }
             }
         }
+    }
+    
+    struct ErrorWrapper: Identifiable {
+        let id = UUID()
+        let error: String
     }
 }
 
@@ -663,7 +819,6 @@ struct RegularEventCard: View {
         }
     }
 }
-
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
