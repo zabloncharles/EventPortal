@@ -36,11 +36,11 @@ let typeSymbols: [String: String] = [
 ]
 
 struct CreateEventView: View {
-    @State private var messages: [ChatMessage] = [
-        ChatMessage(content: "Hello! Let's create your event.\nWhat would you like to name it?", isUser: false)
-    ]
+    @State private var messages: [ChatMessage] = []
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     @State private var currentInput = ""
+    @State private var animatedPlaceholder = ""
+    @State private var isTypingPlaceholder = true
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
     @State private var currentQuestion = 0
@@ -55,6 +55,8 @@ struct CreateEventView: View {
     @State private var showingLocationSearch = false
     @State private var quickActionButtonTapped = false
     @State private var showingCategoryPicker = false
+    @State private var placeholderTimer: Timer?
+    @State private var shouldAnimatePlaceholder = true
     
     // Add computed property for live preview event
     private var previewEvent: Event {
@@ -77,10 +79,10 @@ struct CreateEventView: View {
     }
 
     private let questions = [
-        "What's the name of your event?",
-        "When will the event take place?",
+        "What would you like to call your event?",
+        "When were you planning to have this event?",
         "Where will the event be held?",
-        "Tell me about your event",
+        "What is this event about?",
         "How many people can attend?",
         "What category best describes your event?"
     ]
@@ -106,10 +108,12 @@ struct CreateEventView: View {
                    iconColor: .cyan)
     ]
 
+    private let placeholderText = "My event is called..."
+    
     var body: some View {
         NavigationView {
             ZStack {
-                Color.black.edgesIgnoringSafeArea(.all)
+                Color.dynamic.edgesIgnoringSafeArea(.all)
                 
                 VStack(spacing: 0) {
                     // Header
@@ -161,16 +165,9 @@ struct CreateEventView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(quickActions, id: \.text) { action in
-//                                QuickActionButton(
-//                                    icon: action.icon,
-//                                    text: action.text,
-//                                    description: action.description,
-//                                    iconColor: action.iconColor
-//                                )
                                 HStack {
                                     Image(systemName: action.icon)
                                     Text(action.text)
-                                    
                                 } .foregroundColor(action.iconColor)
                                     .padding(.vertical,10)
                                     .padding(.horizontal,10)
@@ -186,13 +183,17 @@ struct CreateEventView: View {
                             }
                         }
                         .padding(.horizontal)
-                    }.padding(.top,5)
+                    }
+                    .simultaneousGesture(DragGesture().onChanged { _ in
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    })
+                    .padding(.top,5)
                     
-                    //event at before chat bubble that update the information being inputed so the user can have a visual of what the card will look like when it's done
-                    RegularEventCard(event: previewEvent)
-                        .padding()
-                        .frame(height: 200)
-                        .padding(.top)
+//                    //event at before chat bubble that update the information being inputed so the user can have a visual of what the card will look like when it's done
+//                    RegularEventCard(event: previewEvent)
+//                        .padding()
+//                        .frame(height: 200)
+//                        .padding(.top)
                     
                     
                     // Chat Messages
@@ -200,7 +201,7 @@ struct CreateEventView: View {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
                               
-                                Spacer()
+                               
                                 ForEach(messages) { message in
                                     ChatBubble(message: message)
                                         .id(message.id)
@@ -222,15 +223,20 @@ struct CreateEventView: View {
                             }
                             .padding(.top)
                         }
+                        .simultaneousGesture(DragGesture().onChanged { _ in
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        })
                         .onChange(of: messages) { _ in
-                            withAnimation(.spring()) {
+                            
                                 proxy.scrollTo("bottom", anchor: .bottom)
-                            }
+                            
                         }
-                        .onChange(of: typingText) { _ in
+                        .onChange(of: currentQuestion) { _ in
+                            
                             withAnimation(.spring()) {
                                 proxy.scrollTo("bottom", anchor: .bottom)
                             }
+                            
                         }
                         .onAppear {
                             proxy.scrollTo("bottom", anchor: .bottom)
@@ -243,42 +249,49 @@ struct CreateEventView: View {
                     // Message Input
                     VStack(spacing: 0) {
                         Divider()
-                            .background(Color.gray.opacity(0.3))
+                            .background(Color.gray.opacity(0.2))
                         
                         VStack {
                            
                                 HStack(spacing: 15) {
-                                    TextField("Message AI assistant", text: $currentInput)
-                                        .padding(12)
-                                        .padding(.leading, 5)
-                                        .background(Color.gray.opacity(0.15))
-                                        .cornerRadius(25)
-                                        .foregroundColor(.white)
-                                        .onSubmit {
+                                        TextField(animatedPlaceholder, text: $currentInput)
+                                            .padding(12)
+                                            .padding(.leading, 5)
+                                            .background(Color.gray.opacity(0.15))
+                                            .cornerRadius(25)
+                                            .onAppear {
+                                                animatePlaceholder()
+                                            }
+                                            .onSubmit {
+                                                sendMessage()
+                                            }
+                                        
+                                        Button(action: {
                                             sendMessage()
+                                        }) {
+                                            Circle()
+                                                .fill(LinearGradient(gradient: Gradient(colors: [currentInput.isEmpty ? .gray : .purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                                .frame(width: 45, height: 45)
+                                                .animation(.easeInOut, value:currentInput.isEmpty)
+                                                .overlay(
+                                                    ZStack {
+                                                        Image(systemName: currentInput.isEmpty ? "arrow.up" : "arrow.up")
+                                                            .foregroundColor(.white)
+                                                        .font(.system(size: 20))
+                                                  
+                                                    }
+                                                )
                                         }
-                                    
-                                    Button(action: {
-                                        sendMessage()
-                                    }) {
-                                        Circle()
-                                            .fill(LinearGradient(gradient: Gradient(colors: [.purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                            .frame(width: 45, height: 45)
-                                            .overlay(
-                                                Image(systemName: currentInput.isEmpty ? "face.dashed" : "arrow.up")
-                                                    .foregroundColor(.white)
-                                                    .font(.system(size: 20))
-                                            )
                                     }
-                                }
                                 .padding()
+                            
                             
                         }
                     }
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        
       
         .fullScreenCover(isPresented: $showingDatePicker) {
             DatePickerView(selectedDate: $selectedDate, isPresented: $showingDatePicker, eventDetails: eventDetails) { date in
@@ -309,9 +322,14 @@ struct CreateEventView: View {
         }
         .onAppear {
             tabBarManager.hideTab = true
+            animatePlaceholder()
+            // Add initial question with typing animation
+            addAIResponse("Hello! Let's create your event.\nWhat would you like to name it?")
         }
         .onDisappear {
             tabBarManager.hideTab = false
+            placeholderTimer?.invalidate()
+            placeholderTimer = nil
         }
     }
     private func quickActionButtonTappedAnimationFunc(){
@@ -339,33 +357,46 @@ struct CreateEventView: View {
     }
     
     private func processUserInput(_ input: String) {
+        shouldAnimatePlaceholder = false // Stop the animation once user starts interacting
+        
         switch currentQuestion {
         case 0:
-            eventDetails.title = input
-            addAIResponse("Great name! When would you like to hold the event?", showCalendarAfter: true)
+                eventDetails.title = input.split(separator: " ")
+                    .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+                    .joined(separator: " ")
+            addAIResponse("Great name! When are you planning to hold this event?", showCalendarAfter: true)
+            animatedPlaceholder = "e.g., Tomorrow at 3 PM, Next Friday at 2 PM"
         case 1:
             eventDetails.date = parseDate(input) ?? Date()
+            animatedPlaceholder = "e.g., Central Park, 123 Main Street"
             addAIResponse("Perfect! Where will the event be held?") { [self] in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
                     showingLocationSearch = true
                 }
             }
         case 2:
             eventDetails.location = input
-            addAIResponse("Tell me more about what this event is about.")
+            addAIResponse("What is it about?")
+            animatedPlaceholder = "e.g., A music festival featuring local artists"
         case 3:
             eventDetails.description = input
             addAIResponse("How many people can attend this event?")
+            animatedPlaceholder = "e.g., 50, 100, 250 (enter a number)"
         case 4:
             if let participants = Int(input) {
                 eventDetails.maxParticipants = participants
-                showingCategoryPicker = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
+                    showingCategoryPicker = true
+                }
+                animatedPlaceholder = "Choose from available categories"
             } else {
                 addAIResponse("Please enter a valid number of participants.")
+                animatedPlaceholder = "Please enter a number (e.g., 50)"
                 currentQuestion -= 1
             }
         case 5:
             eventDetails.category = input
+            animatedPlaceholder = "Type 'review' to check details or 'submit' to create"
             addAIResponse("Great! I've got all the details. Let me put everything together...") { [self] in
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
                     showingReview = true
@@ -413,22 +444,52 @@ struct CreateEventView: View {
     private func handleQuickAction(_ action: QuickActionType) {
         switch action {
         case .schedule:
-            addAIResponse("Let's schedule your event! When would you like it to take place?", showCalendarAfter: true)
+            if eventDetails.date == Date() {
+                currentQuestion = 1
+                addAIResponse("Let's schedule your event! When would you like it to take place?", showCalendarAfter: true)
+            } else {
+                showingDatePicker = true
+            }
         case .location:
-            addAIResponse("Let's set the location for your event!") { [self] in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    showingLocationSearch = true
+            if eventDetails.location.isEmpty {
+                currentQuestion = 2
+                addAIResponse("Let's set the location for your event!") { [self] in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        showingLocationSearch = true
+                    }
                 }
+            } else {
+                showingLocationSearch = true
             }
         case .participants:
-            addAIResponse("How many people can attend this event?")
+            if eventDetails.maxParticipants == 0 {
+                currentQuestion = 4
+                addAIResponse("How many people can attend this event?")
+                animatedPlaceholder = "e.g., 50, 100, 250 (enter a number)"
+            } else {
+                let userMessage = ChatMessage(content: "\(eventDetails.maxParticipants)", isUser: true)
+                messages.append(userMessage)
+                processUserInput("\(eventDetails.maxParticipants)")
+            }
         case .category:
+            if eventDetails.category == eventTypes[0] {
+                currentQuestion = 5
+            }
             showingCategoryPicker = true
         case .photos:
             showImagePicker = true
         case .description:
-            addAIResponse("Tell me more about what this event is about.")
+            if eventDetails.description.isEmpty {
+                currentQuestion = 3
+                addAIResponse("Tell me more about what this event is about.")
+                animatedPlaceholder = "e.g., A music festival featuring local artists"
+            } else {
+                let userMessage = ChatMessage(content: eventDetails.description, isUser: true)
+                messages.append(userMessage)
+                processUserInput(eventDetails.description)
+            }
         }
+        shouldAnimatePlaceholder = false
     }
     
     private func handleFinalSteps(_ input: String) {
@@ -445,6 +506,52 @@ struct CreateEventView: View {
     private func parseDate(_ input: String) -> Date? {
         // Add date parsing logic
         return Date()
+    }
+    
+    private func animatePlaceholder() {
+        guard shouldAnimatePlaceholder else { return }
+        
+        // Cancel any existing timer
+        placeholderTimer?.invalidate()
+        placeholderTimer = nil
+        
+        var currentIndex = 0
+        var isDeleting = false
+        
+        placeholderTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { timer in
+            if !isDeleting {
+                // Typing
+                if currentIndex < placeholderText.count {
+                    let index = placeholderText.index(placeholderText.startIndex, offsetBy: currentIndex)
+                    animatedPlaceholder += String(placeholderText[index])
+                    currentIndex += 1
+                } else {
+                    // Finished typing, wait before deleting
+                    timer.invalidate()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        isDeleting = true
+                        self.startDeletion()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func startDeletion() {
+        guard shouldAnimatePlaceholder else { return }
+        
+        placeholderTimer?.invalidate()
+        placeholderTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            if !animatedPlaceholder.isEmpty {
+                animatedPlaceholder.removeLast()
+            } else {
+                // Finished deleting, wait before restarting
+                timer.invalidate()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self.animatePlaceholder()
+                }
+            }
+        }
     }
 }
 
@@ -506,8 +613,8 @@ struct DatePickerView: View {
                     ZStack {
                         Color.dynamic.edgesIgnoringSafeArea(.all)
                         
-                        VStack(alignment: .leading, spacing: 20) {
-                            VStack(alignment: .leading) {
+                        VStack(alignment: .center, spacing: 20) {
+                            VStack(alignment: .center) {
                              
                                 HStack {
                                     VStack(alignment: .leading) {
@@ -532,7 +639,7 @@ struct DatePickerView: View {
                             } .fontWeight(.bold)
                                 .padding(.horizontal)
                                 .padding(.top,20)
-                                .multilineTextAlignment(.leading)
+                                
                             
                           
                                 
@@ -540,10 +647,15 @@ struct DatePickerView: View {
                             
                             DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(GraphicalDatePickerStyle())
-                                .padding()
-                                .background(.gray.opacity(0.10))
+                                .padding(.horizontal,10)
+                                .padding(.vertical,5)
+                                .background(.gray.opacity(0.00))
                                 .cornerRadius(19)
-                                .padding()
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 19)
+                                        .stroke(Color.blue.opacity(0.50), lineWidth: 1)
+                                )
+                                .padding(.horizontal)
                                 .onChange(of: selectedDate) { newValue in
                                     previewEvent = Event(
                                         name: eventDetails.title.isEmpty ? "New Event" : eventDetails.title,
@@ -562,9 +674,9 @@ struct DatePickerView: View {
                                         coordinates: []
                                     )
                                     
-                                    withAnimation(.spring()) {
-                                        proxy.scrollTo("bottom", anchor: .bottom)
-                                    }
+//                                   used to show a preview of event card and scrolls to bottom if user taps a date  withAnimation(.spring()) {
+//                                        proxy.scrollTo("bottom", anchor: .bottom)
+//                                    }
                                 }
                             
                             Text("Done")
@@ -594,7 +706,7 @@ struct DatePickerView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -703,7 +815,7 @@ struct CategorySelectionView: View {
                     isPresented = false
                 })
                 .navigationBarTitleDisplayMode(.inline)
-            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .background(Color.dynamic.edgesIgnoringSafeArea(.all))
             }
         }
         
@@ -721,7 +833,7 @@ struct ChatBubble: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(message.isUser ? Color.blue.opacity(0.8) : Color.gray.opacity(0.09))
-                .foregroundColor(.white)
+               
                 .cornerRadius(20)
                 .padding(.horizontal, 16)
             
@@ -798,7 +910,17 @@ struct CreateEventView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             CreateEventView()
-            
+            LocationSearchView(isPresented: .constant(true)) { selectedLocation in
+                print("Selected location: \(selectedLocation)")
+            }
+            DatePickerView(
+                selectedDate: .constant(Date()),
+                isPresented: .constant(true),
+                eventDetails: EventDetails( description: "Team sync-up"),
+                onDateSelected: { selectedDate in
+                    print("Selected date: \(selectedDate)")
+                }
+            )
             // Preview for EventReviewView
             EventReviewView(
                 eventDetails: EventDetails(
@@ -811,7 +933,7 @@ struct CreateEventView_Previews: PreviewProvider {
                 ),
                 selectedImage: nil,
                 isPresented: .constant(true)
-            ) .preferredColorScheme(.dark)
+            )
         }
        
     }
@@ -1196,7 +1318,7 @@ struct LocationSearchView: View {
                         .padding(.bottom, isFocused ? 0 : 5)
                     .padding(.top,20)
                         
-                        Text("Provide the location details where your event will take place. This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
+                        Text("This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(isFocused ? .leading : .center)
                             .padding(.horizontal, isFocused ? 0 : 25)
@@ -1220,7 +1342,7 @@ struct LocationSearchView: View {
                     
                     if !completer.searchResults.isEmpty {
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 12) {
+                            LazyVStack(alignment: .center, spacing: 12) {
                                 ForEach(completer.searchResults.prefix(3), id: \.self) { result in
                                     Button(action: {
                                         searchLocation(result)
@@ -1230,7 +1352,7 @@ struct LocationSearchView: View {
                                             Text(result.title + ", " + result.subtitle)
                                                 .font(.callout)
                                                 .foregroundColor(.primary)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                            
                                         }
                                     }
                                     .padding(.vertical, 7)
@@ -1240,6 +1362,9 @@ struct LocationSearchView: View {
                                 }
                             }
                         }
+                        .simultaneousGesture(DragGesture().onChanged { _ in
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        })
                     }
                     
                     Spacer()
@@ -1248,13 +1373,11 @@ struct LocationSearchView: View {
                 .animation(.spring(), value: isFocused)
                 
                 if showMap {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.85))
-                        .edgesIgnoringSafeArea(.all)
+                    
                     
                     VStack {
-                        Text(confirmed ? "You have chosen \(completer.selectedAddress)" : "Please confirm the location of the event on the map below.")
-                            .foregroundColor(.white)
+                        Text("Please confirm the location of the event on the map below.")
+                           
                             .multilineTextAlignment(.center)
                         
                         Divider()
@@ -1262,25 +1385,17 @@ struct LocationSearchView: View {
                         if let region = completer.region {
                             Map(coordinateRegion: .constant(region),
                                 annotationItems: [MapPin(coordinate: region.center)]) { pin in
-                                MapMarker(coordinate: pin.coordinate, tint: .blue)
+                                MapMarker(coordinate: pin.coordinate, tint: .red)
                             }
                             .frame(height: 500)
+                            .cornerRadius(12)
                         }
                         
-                        Divider()
+                        
                         
                         if !confirmed {
                             HStack {
-                                Button("Back") {
-                                    withAnimation(.spring()) {
-                                        showMap = false
-                                    }
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.gray.opacity(0.3))
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                              
                                 
                                 Button("Confirm") {
                                     confirmed = true
@@ -1298,8 +1413,25 @@ struct LocationSearchView: View {
                                 )
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
+                                
+                                
                             }
+                            .padding(.top,10)
+                            
+                            HStack{
+                                Button("Back") {
+                                    withAnimation(.spring()) {
+                                        showMap = false
+                                    }
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.3))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }.padding(.top,5)
                         }
+                        Spacer()
                     }
                     .padding()
                     .background(Color.dynamic)
@@ -1430,7 +1562,10 @@ struct QuickActionsView: View {
         }
         .navigationTitle("Quick Actions")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .background(Color.dynamic.edgesIgnoringSafeArea(.all))
+        .simultaneousGesture(DragGesture().onChanged { _ in
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        })
     }
 }
 
@@ -1440,7 +1575,7 @@ struct TypingBubbleView: View {
     @State private var thirdDotOffset: CGFloat = 0
     
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .center, spacing: 4) {
             ForEach(0..<3) { index in
                 Circle()
                     .fill(Color.gray.opacity(0.5))
@@ -1449,10 +1584,14 @@ struct TypingBubbleView: View {
                              index == 1 ? secondDotOffset : thirdDotOffset)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .cornerRadius(16)
+        .transition(.asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        ))
+        .padding(.horizontal, 16)
         .onAppear {
             withAnimation(Animation.easeInOut(duration: 0.5).repeatForever()) {
                 firstDotOffset = -5
@@ -1472,5 +1611,6 @@ struct TypingBubbleView: View {
         }
     }
 }
+
 
 
