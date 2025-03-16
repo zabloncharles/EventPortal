@@ -13,7 +13,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/airbnb/lottie-ios.git", exact: "3.5.0"),
-        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "10.0.0")
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "10.0.0"),
+        .package(url: "https://github.com/onevcat/Kingfisher.git", from: "7.0.0")
     ],
     targets: [
         .target(
@@ -21,10 +22,11 @@ let package = Package(
             dependencies: [
                 .product(name: "Lottie", package: "lottie-ios"),
                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
-                .product(name: "FirebaseFirestore", package: "firebase-ios-sdk")
+                .product(name: "FirebaseFirestore", package: "firebase-ios-sdk"),
+                .product(name: "Kingfisher", package: "Kingfisher")
             ]),
         .testTarget(
             name: "EventAppPortalTests",
             dependencies: ["EventAppPortal"]),
     ]
-) 
+)

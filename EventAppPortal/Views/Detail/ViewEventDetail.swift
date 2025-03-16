@@ -6,6 +6,7 @@ struct ViewEventDetail: View {
     var event: Event
     @Environment(\.presentationMode) var presentationMode
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var currentPage = 0
     @State private var isDescriptionExpanded = false
     @State private var showTicket = false
@@ -163,20 +164,7 @@ struct ViewEventDetail: View {
                         // Header Image with Paging Dots
                         ZStack(alignment: .top) {
                             // Image
-                            TabView(selection: $currentPage) {
-                                ForEach(event.images.indices, id: \.self) { index in
-                                    Image(event.images[index])
-                                        .resizable()
-                                        .scaledToFill()
-                                        .tag(index)
-                                }
-                            }
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            .frame(height: 400)
-                          
-                            .background(Color.red)
-                          
-                         
+                            CompactImageViewer(imageUrls: event.images, height: 400)
                             
                             // Page Indicator
                             HStack(spacing: 8) {
@@ -1123,18 +1111,13 @@ struct ViewEventDetail_Previews: PreviewProvider {
 }
 
 struct RecommendedEventCard: View {
-    var event: Event = sampleEvent
+    var event: Event
     let colors: [Color] = [.red, .blue, .green, .orange]
+    
     var body: some View {
         VStack(alignment: .leading) {
             // Event Image
-            
-            RoundedRectangle(cornerRadius: 0)
-                .fill(Color.gray.opacity(0))
-                .frame(height: 160)
-                .background(Image(event.images[0]) // Replace with your event image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill))
+            CompactImageViewer(imageUrls: event.images, height: 160)
                 .overlay(
                     VStack {
                         HStack {
@@ -1143,18 +1126,17 @@ struct RecommendedEventCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .lineLimit(1)
-                            .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .padding(.horizontal,5)
-                            .padding(.vertical,2)
-                            .background(.ultraThinMaterial)
-                            .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
-                            .cornerRadius(15)
+                                .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .padding(.horizontal,5)
+                                .padding(.vertical,2)
+                                .background(.ultraThinMaterial)
+                                .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
+                                .cornerRadius(15)
                         }
                         Spacer()
                     }.padding()
                 )
                 .padding(.bottom,-20)
-            
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("Mar 20")
@@ -1177,29 +1159,22 @@ struct RecommendedEventCard: View {
                         .foregroundColor(.gray)
                     Spacer()
                 }
-                
-               
             }
             .padding(.horizontal, 8)
             .padding(.bottom, 12)
             .padding(.top, 12)
             .background(.ultraThinMaterial)
-            
             .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
-          
-            
         }
-        
-        .background(Image(event.images[0]) // Replace with your event image
-            .resizable()
-            .aspectRatio(contentMode: .fill).blur(radius: 40))
-        
+        .background(
+            CompactImageViewer(imageUrls: event.images, height: 200)
+                .blur(radius: 40)
+        )
         .cornerRadius(16)
         .frame(width: 200)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.dynamic.opacity(1), lineWidth: 1)
         )
-        
     }
 } 

@@ -9,6 +9,8 @@ struct ProfileView: View {
     @State private var userData: [String: Any]? = nil
     @AppStorage("userID") private var userID: String = ""
     @State private var isResettingEvents = false
+    @State private var showPhotoUpload = false
+    @State private var userPhotos: [String] = []
     
     var body: some View {
         NavigationView {
@@ -57,6 +59,18 @@ struct ProfileView: View {
                                     StatView(number: "0", title: "Following")
                                 }
                                 .padding(.top, 10)
+                                
+                                // Add Upload Photos Button
+//                                Button(action: { showPhotoUpload = true }) {
+//                                    Label("Upload Photos", systemImage: "photo.stack")
+//                                        .font(.caption)
+//                                        .padding(.horizontal, 12)
+//                                        .padding(.vertical, 6)
+//                                        .background(Color.blue)
+//                                        .foregroundColor(.white)
+//                                        .cornerRadius(15)
+//                                }
+//                                .padding(.top, 8)
                             }
                             
                         }
@@ -64,6 +78,33 @@ struct ProfileView: View {
                         .padding(.bottom, 10)
                         .padding(.horizontal,25)
                     }
+                    
+                    // Display uploaded photos grid
+//                    if !userPhotos.isEmpty {
+//                        VStack(alignment: .leading) {
+//                            Text("My Photos")
+//                                .font(.headline)
+//                                .padding(.horizontal)
+//
+//                            ScrollView(.horizontal, showsIndicators: false) {
+//                                LazyHStack(spacing: 10) {
+//                                    ForEach(userPhotos, id: \.self) { photoUrl in
+//                                        AsyncImage(url: URL(string: photoUrl)) { image in
+//                                            image
+//                                                .resizable()
+//                                                .scaledToFill()
+//                                        } placeholder: {
+//                                            ProgressView()
+//                                        }
+//                                        .frame(width: 100, height: 100)
+//                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+//                                    }
+//                                }
+//                                .padding(.horizontal)
+//                            }
+//                        }
+//                        .padding(.vertical)
+//                    }
                     
                     Divider()
                         .padding(.horizontal,25)
@@ -129,8 +170,15 @@ struct ProfileView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPhotoUpload) {
+            PhotoUploadView { urls in
+                self.userPhotos.append(contentsOf: urls)
+                savePhotosToUserProfile(urls)
+            }
+        }
         .onAppear {
             loadUserData()
+          //  loadUserPhotos()
         }
     }
     
@@ -378,6 +426,32 @@ struct ProfileView: View {
                     isResettingEvents = false
                     print("All events have been reset and repopulated")
                 }
+            }
+        }
+    }
+    
+    private func savePhotosToUserProfile(_ urls: [String]) {
+        guard !userID.isEmpty else { return }
+        
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userID)
+        
+        userRef.updateData([
+            "photos": FieldValue.arrayUnion(urls)
+        ]) { error in
+            if let error = error {
+                print("Error saving photos to profile: \(error)")
+            }
+        }
+    }
+    
+    private func loadUserPhotos() {
+        guard !userID.isEmpty else { return }
+        
+        let db = Firestore.firestore()
+        db.collection("users").document(userID).getDocument { document, error in
+            if let document = document, document.exists {
+                self.userPhotos = document.data()?["photos"] as? [String] ?? []
             }
         }
     }
@@ -828,10 +902,8 @@ struct BookmarkedEventCard: View {
     var body: some View {
         HStack(spacing: 16) {
             // Event Image
-            Image(event.images[0])
-                .resizable()
-                .scaledToFill()
-                .frame(width: 80, height: 80)
+            CompactImageViewer(imageUrls: event.images, height: 80)
+                .frame(width: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             
             VStack(alignment: .leading, spacing: 4) {
@@ -1024,11 +1096,7 @@ struct EventCard: View {
         .padding()
         .background(
             ZStack {
-                if !event.images.isEmpty {
-                    Image(event.images[0])
-                        .resizable()
-                        .scaledToFill()
-                }
+                CompactImageViewer(imageUrls: event.images, height: 200)
                 LinearGradient(colors: [.black.opacity(0.7), .clear], 
                              startPoint: .bottom, 
                              endPoint: .top)
@@ -1038,11 +1106,10 @@ struct EventCard: View {
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
     }
     
-    private func formatDate(_ date: Date?) -> String {
-        guard let date = date else { return "TBD" }
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "MMM d, yyyy • h:mm a"
-        return dateFormatter.string(from: date)
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
     }
 }
 

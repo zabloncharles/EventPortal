@@ -1,5 +1,14 @@
 import SwiftUI
 import MapKit
+import PhotosUI
+import FirebaseStorage
+import Photos
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
 
 // MARK: - Models
 enum EventTimingType {
@@ -60,6 +69,14 @@ struct CreateEventView: View {
     @State private var shouldAnimatePlaceholder = true
     @State private var clearMessages = false
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedImages: [UIImage] = []
+    @State private var selectedImageItems: [PhotosPickerItem] = []
+    @State private var uploadedImageURLs: [String] = []
+    @State private var isUploadingImages = false
+    @State private var isLoading = false
+    @State private var showSuccess = false
+    @State private var errorMessage: String?
+    @State private var showError = false
     
     // Add computed property for live preview event
     private var previewEvent: Event {
@@ -80,11 +97,12 @@ struct CreateEventView: View {
             owner: ownerName,
             startDate: eventDetails.date,
             endDate: eventDetails.date.addingTimeInterval(7200),
-            images: ["bg1"],
+            images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
             isTimed: true,
             createdAt: Date(),
-            coordinates: eventDetails.coordinates
+            coordinates: eventDetails.coordinates,
+            status: "active"
         )
     }
 
@@ -119,7 +137,7 @@ struct CreateEventView: View {
     ]
 
     private let placeholderText = "My event is called..."
-    
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -206,6 +224,17 @@ struct CreateEventView: View {
 //                        .padding(.top)
                     
                     
+                    // Image Preview Section
+                    if !selectedImages.isEmpty {
+                        selectedImagesPreview
+                        .padding(.top)
+                    }
+                    
+                    if isUploadingImages {
+                        ProgressView("Uploading images...")
+                            .padding()
+                    }
+                    
                     // Chat Messages
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -238,8 +267,8 @@ struct CreateEventView: View {
                         })
                         .onChange(of: messages) { _ in
                             generateHapticFeedback()
-                            proxy.scrollTo("bottom", anchor: .bottom)
-                        }
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
                         .onChange(of: currentQuestion) { _ in
                             generateHapticFeedback()
                             withAnimation(.spring()) {
@@ -260,44 +289,75 @@ struct CreateEventView: View {
                     
                     // Message Input
                     VStack(spacing: 0) {
+                        if showImagePicker {
+                            PhotosPicker(
+                                selection: $selectedImageItems,
+                                maxSelectionCount: 3,
+                                matching: .images
+                            ) {
+                                HStack {
+                                    Image(systemName: "photo.stack")
+                                    Text("\(selectedImages.count)/3 Images")
+                                }
+                                .foregroundColor(.white)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(10)
+                            }
+                            .onChange(of: selectedImageItems) { newItems in
+                                Task {
+                                    selectedImages = []
+                                    for item in newItems {
+                                        if let data = try? await item.loadTransferable(type: Data.self),
+                                           let image = UIImage(data: data) {
+                                            selectedImages.append(image)
+                                        }
+                                    }
+                                    
+                                    if !selectedImages.isEmpty {
+                                        // Proceed directly to review
+                                        handleFinalSteps("")
+                                        showImagePicker = false // Hide the picker after selection
+                                    }
+                                }
+                            }
+                            .padding(.bottom)
+                        }
+                        
                         Divider()
                             .background(Color.gray.opacity(0.2))
                         
                         VStack {
-                           
                                 HStack(spacing: 15) {
-                                        TextField(animatedPlaceholder, text: $currentInput)
-                                            .padding(12)
-                                            .padding(.leading, 5)
-                                            .background(Color.gray.opacity(0.15))
-                                            .cornerRadius(25)
-                                            .onAppear {
-                                                animatePlaceholder()
-                                            }
-                                            .onSubmit {
-                                                sendMessage()
-                                            }
-                                        
-                                        Button(action: {
-                                            sendMessage()
-                                        }) {
-                                            Circle()
-                                                .fill(LinearGradient(gradient: Gradient(colors: [currentInput.isEmpty ? .gray : .purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                                                .frame(width: 45, height: 45)
-                                                .animation(.easeInOut, value:currentInput.isEmpty)
-                                                .overlay(
-                                                    ZStack {
-                                                        Image(systemName: currentInput.isEmpty ? "arrow.up" : "arrow.up")
-                                                            .foregroundColor(.white)
-                                                        .font(.system(size: 20))
-                                                  
-                                                    }
-                                                )
-                                        }
+                                TextField(animatedPlaceholder, text: $currentInput)
+                                        .padding(12)
+                                        .padding(.leading, 5)
+                                        .background(Color.gray.opacity(0.15))
+                                        .cornerRadius(25)
+                                    .onAppear {
+                                        animatePlaceholder()
                                     }
+                                        .onSubmit {
+                                            sendMessage()
+                                        }
+                                    
+                                    Button(action: {
+                                        sendMessage()
+                                    }) {
+                                        Circle()
+                                        .fill(LinearGradient(gradient: Gradient(colors: [currentInput.isEmpty ? .gray : .purple, .blue]), startPoint: .topLeading, endPoint: .bottomTrailing))
+                                            .frame(width: 45, height: 45)
+                                        .animation(.easeInOut, value:currentInput.isEmpty)
+                                            .overlay(
+                                            ZStack {
+                                                Image(systemName: currentInput.isEmpty ? "arrow.up" : "arrow.up")
+                                                    .foregroundColor(.white)
+                                                    .font(.system(size: 20))
+                                            }
+                                            )
+                                    }
+                                }
                                 .padding()
-                            
-                            
                         }
                     }
                 }
@@ -400,7 +460,7 @@ struct CreateEventView: View {
             if let participants = Int(input) {
                 eventDetails.maxParticipants = participants
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
-                    showingCategoryPicker = true
+                showingCategoryPicker = true
                 }
                 animatedPlaceholder = "Choose from available categories"
             } else {
@@ -410,12 +470,15 @@ struct CreateEventView: View {
             }
         case 5:
             eventDetails.category = input
-            animatedPlaceholder = "Type 'review' to check details or 'submit' to create"
-            addAIResponse("Great! I've got all the details. Let me put everything together...") { [self] in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.9) {
-                    showingReview = true
+            addAIResponse("Great! Now let's add some photos to showcase your event.") { [self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    withAnimation {
+                        showImagePicker = true
+                    }
                 }
             }
+            animatedPlaceholder = "Select photos to continue"
+            // After photos are selected, handleFinalSteps will be called automatically
         default:
             handleFinalSteps(input)
         }
@@ -460,17 +523,17 @@ struct CreateEventView: View {
         case .schedule:
             if eventDetails.date == Date() {
                 currentQuestion = 1
-                addAIResponse("Let's schedule your event! When would you like it to take place?", showCalendarAfter: true)
+            addAIResponse("Let's schedule your event! When would you like it to take place?", showCalendarAfter: true)
             } else {
                 showingDatePicker = true
             }
         case .location:
             if eventDetails.location.isEmpty {
                 currentQuestion = 2
-                addAIResponse("Let's set the location for your event!") { [self] in
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        showingLocationSearch = true
-                    }
+            addAIResponse("Let's set the location for your event!") { [self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showingLocationSearch = true
+                }
                 }
             } else {
                 showingLocationSearch = true
@@ -478,7 +541,7 @@ struct CreateEventView: View {
         case .participants:
             if eventDetails.maxParticipants == 0 {
                 currentQuestion = 4
-                addAIResponse("How many people can attend this event?")
+            addAIResponse("How many people can attend this event?")
                 animatedPlaceholder = "e.g., 50, 100, 250 (enter a number)"
             } else {
                 let userMessage = ChatMessage(content: "\(eventDetails.maxParticipants)", isUser: true)
@@ -491,29 +554,40 @@ struct CreateEventView: View {
             }
             showingCategoryPicker = true
         case .photos:
+            withAnimation {
             showImagePicker = true
+                addAIResponse("Select up to 3 images for your event")
+            }
         case .description:
             if eventDetails.description.isEmpty {
                 currentQuestion = 3
-                addAIResponse("Tell me more about what this event is about.")
+            addAIResponse("Tell me more about what this event is about.")
                 animatedPlaceholder = "e.g., A music festival featuring local artists"
             } else {
                 let userMessage = ChatMessage(content: eventDetails.description, isUser: true)
                 messages.append(userMessage)
                 processUserInput(eventDetails.description)
-            }
+        }
         }
         shouldAnimatePlaceholder = false
     }
     
     private func handleFinalSteps(_ input: String) {
-        if input.lowercased().contains("review") {
+        // If there are images, upload them first
+        if !selectedImages.isEmpty {
+            Task {
+                // Upload images first if there are any
+                let imageUrls = await uploadImagesToFirebase()
+                eventDetails.images = imageUrls
+                
+                // Show the review view after images are uploaded
+                DispatchQueue.main.async {
             showingReview = true
-        } else if input.lowercased().contains("submit") {
-            // TODO: Handle event submission
-            addAIResponse("Event has been created successfully! You can view it in the events list.")
+                }
+            }
         } else {
-            addAIResponse("Would you like to review the event details or submit the event?")
+            // If no images, just show the review view
+            showingReview = true
         }
     }
     
@@ -573,6 +647,132 @@ struct CreateEventView: View {
         generator.prepare()
         generator.impactOccurred()
     }
+    
+    private func uploadImagesToFirebase() async -> [String] {
+        var imageUrls: [String] = []
+        let storage = Storage.storage()
+        let storageRef = storage.reference(forURL: "gs://eventportal-37f4b.firebasestorage.app")
+        
+        for (index, image) in selectedImages.enumerated() {
+            guard let imageData = image.jpegData(compressionQuality: 0.5) else { continue }
+            
+            let imageName = "\(UUID().uuidString)_\(index).jpg"
+            let imageRef = storageRef.child("event_images/\(imageName)")
+            
+            do {
+                let _ = try await imageRef.putDataAsync(imageData)
+                let downloadURL = try await imageRef.downloadURL()
+                imageUrls.append(downloadURL.absoluteString)
+            } catch {
+                print("Error uploading image: \(error)")
+            }
+        }
+        
+        return imageUrls
+    }
+    
+    private func createEvent() {
+        isLoading = true
+        
+        Task {
+            // Upload images first if there are any
+            let imageUrls = selectedImages.isEmpty ? ["bg1"] : await uploadImagesToFirebase()
+            
+            let event = Event(
+                name: eventDetails.title,
+                description: eventDetails.description,
+                type: eventDetails.category,
+                views: "0",
+                location: eventDetails.location,
+                price: "Free",
+                owner: firebaseManager.currentUser?.uid ?? "",
+                startDate: eventDetails.date,
+                endDate: eventDetails.date.addingTimeInterval(7200),
+                images: imageUrls,
+                participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                isTimed: true,
+                createdAt: Date(),
+                coordinates: eventDetails.coordinates,
+                status: "active"
+            )
+            
+            firebaseManager.createEvent(event: event) { success, error in
+                isLoading = false
+                if success {
+                    withAnimation {
+                        showSuccess = true
+                    }
+                } else {
+                    errorMessage = error ?? "Failed to create event"
+                    showError = true
+                }
+            }
+        }
+    }
+    
+    private var imagePickerButton: some View {
+        PhotosPicker(
+            selection: $selectedImageItems,
+            maxSelectionCount: 3,
+            matching: .images
+        ) {
+            HStack {
+                Image(systemName: "photo.stack")
+                Text("\(selectedImages.count)/3 Images")
+            }
+            .foregroundColor(.white)
+            .padding()
+            .background(Color.blue)
+            .cornerRadius(10)
+        }
+        .onChange(of: selectedImageItems) { newItems in
+            Task {
+                selectedImages = []
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        selectedImages.append(image)
+                    }
+                }
+                
+                if !selectedImages.isEmpty {
+                    await uploadImagesToFirebase()
+                }
+            }
+        }
+    }
+    
+    private var selectedImagesPreview: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(0..<selectedImages.count, id: \.self) { index in
+                    Image(uiImage: selectedImages[index])
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            Button(action: {
+                                selectedImages.remove(at: index)
+                                selectedImageItems.remove(at: index)
+                                if let url = uploadedImageURLs[safe: index] {
+                                    uploadedImageURLs.remove(at: index)
+                                    eventDetails.images.remove(at: index)
+                                }
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .background(Color.black.opacity(0.7))
+                                    .clipShape(Circle())
+                            }
+                            .padding(5),
+                            alignment: .topTrailing
+                        )
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
 }
 
 enum QuickActionType {
@@ -606,14 +806,14 @@ struct DatePickerView: View {
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text("Select a date and time")
-                                            .font(.title3)
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    gradient: Gradient(colors: [Color.purple, .blue]),
-                                                    startPoint: .leading,
-                                                    endPoint: .trailing
-                                                )
+                                                .font(.title3)
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
                                             )
+                                        )
                                         Text("Provide the date and time that the event take place")
                                             .foregroundColor(.secondary)
                                     }
@@ -621,8 +821,8 @@ struct DatePickerView: View {
                                 }
                             }
                             .fontWeight(.bold)
-                            .padding(.horizontal)
-                            .padding(.top,20)
+                                .padding(.horizontal)
+                                .padding(.top,20)
                             
                             DatePicker("Select Date", selection: $selectedDate, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(GraphicalDatePickerStyle())
@@ -637,23 +837,23 @@ struct DatePickerView: View {
                                 .padding(.horizontal)
                             
                             Text("Done")
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.purple, .blue]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .blue]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
                                 )
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                                 .onTapGesture {
-                                    onDateSelected(selectedDate)
-                                    isPresented = false
+                                onDateSelected(selectedDate)
+                                isPresented = false
                                 }
-                                .padding()
-                                .id("bottom")
+                            .padding()
+                            .id("bottom")
                         }
                     }
                     .navigationTitle("Select Date")
@@ -686,6 +886,7 @@ struct EventDetails {
     var maxParticipants = 0
     var category: String = eventTypes[0]
     var coordinates: [Double] = []
+    var images: [String] = []
 }
 
 struct CategorySelectionView: View {
@@ -711,64 +912,64 @@ struct CategorySelectionView: View {
             ZStack {
                 Color.dynamic
                     .edgesIgnoringSafeArea(.all)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Select Event Category")
-                            .font(.title3)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.purple, .blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Select Event Category")
+                        .font(.title3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
-                            .padding(.top)
-                        
-                        Text("Choose a category that best describes your event")
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 15) {
-                            ForEach(eventTypes, id: \.self) { type in
-                                Button(action: {
-                                    onCategorySelected(type)
-                                    isPresented = false
-                                }) {
-                                    HStack {
-                                        Image(systemName: typeSymbols[type] ?? "questionmark")
-                                            .font(.system(size: 16))
-                                        Text(type)
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.8)
-                                    }
-                                    .foregroundColor(typeColors[type] ?? .white)
-                                    .padding(.vertical, 12)
-                                    .padding(.horizontal, 16)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(10)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(typeColors[type] ?? .white, lineWidth: 1)
-                                            .opacity(0.3)
-                                    )
+                        )
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                        .padding(.top)
+                    
+                    Text("Choose a category that best describes your event")
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 15) {
+                        ForEach(eventTypes, id: \.self) { type in
+                            Button(action: {
+                                onCategorySelected(type)
+                                isPresented = false
+                            }) {
+                                HStack {
+                                    Image(systemName: typeSymbols[type] ?? "questionmark")
+                                        .font(.system(size: 16))
+                                    Text(type)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
                                 }
+                                .foregroundColor(typeColors[type] ?? .white)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(typeColors[type] ?? .white, lineWidth: 1)
+                                        .opacity(0.3)
+                                )
                             }
                         }
-                        .padding()
                     }
+                    .padding()
                 }
-                .navigationBarItems(trailing: Button("Cancel") {
-                    isPresented = false
-                })
-                .navigationBarTitleDisplayMode(.inline)
-            .background(Color.dynamic.edgesIgnoringSafeArea(.all))
             }
+            .navigationBarItems(trailing: Button("Cancel") {
+                isPresented = false
+            })
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color.dynamic.edgesIgnoringSafeArea(.all))
+        }
         }
         
     }
@@ -902,7 +1103,47 @@ struct EventReviewView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     
-   
+    private func createEvent() {
+        isLoading = true
+        
+        Task {
+            do {
+                let event = Event(
+                    name: eventDetails.title,
+                    description: eventDetails.description,
+                    type: eventDetails.category,
+                    views: "0",
+                    location: eventDetails.location,
+                    price: "Free",
+                    owner: firebaseManager.currentUser?.uid ?? "",
+                    startDate: eventDetails.date,
+                    endDate: eventDetails.date.addingTimeInterval(7200),
+                    images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
+                    participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                    isTimed: true,
+                    createdAt: Date(),
+                    coordinates: eventDetails.coordinates,
+                    status: "active"
+                )
+                
+                firebaseManager.createEvent(event: event) { success, error in
+                    isLoading = false
+                    if success {
+                        withAnimation {
+                            showSuccess = true
+                        }
+                    } else {
+                        errorMessage = error ?? "Failed to create event"
+                        showError = true
+                    }
+                }
+            } catch {
+                isLoading = false
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
     
     // Update the computed property for preview event
     private var previewEvent: Event {
@@ -923,24 +1164,25 @@ struct EventReviewView: View {
             owner: ownerName,
             startDate: eventDetails.date,
             endDate: eventDetails.date.addingTimeInterval(7200),
-            images: ["bg1"],
+            images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
             isTimed: true,
             createdAt: Date(),
-            coordinates: eventDetails.coordinates
+            coordinates: eventDetails.coordinates,
+            status: "active"
         )
     }
     
     // Update the map region to use actual coordinates if available
     private var region: MKCoordinateRegion {
         if eventDetails.coordinates.count >= 2 {
-            return MKCoordinateRegion(
+                return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(
                     latitude: eventDetails.coordinates[0],
                     longitude: eventDetails.coordinates[1]
                 ),
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            )
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
         }
         // Default to San Francisco if no valid coordinates
         return MKCoordinateRegion(
@@ -959,41 +1201,6 @@ struct EventReviewView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d, yyyy"
         return formatter.string(from: date)
-    }
-    
-    private func createEvent() {
-        isLoading = true
-        
-       
-        
-        let event = Event(
-            name: eventDetails.title,
-            description: eventDetails.description,
-            type: eventDetails.category,
-            views: "0",
-            location: eventDetails.location,
-            price: "Free",
-            owner: "ownerName",
-            startDate: eventDetails.date,
-            endDate: eventDetails.date.addingTimeInterval(7200),
-            images: ["bg1"],
-            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-            isTimed: true,
-            createdAt: Date(),
-            coordinates: eventDetails.coordinates
-        )
-        
-        firebaseManager.createEvent(event: event) { success, error in
-            isLoading = false
-            if success {
-                withAnimation {
-                    showSuccess = true
-                }
-            } else {
-                errorMessage = error ?? "Failed to create event"
-                showError = true
-            }
-        }
     }
     
     var body: some View {
@@ -1058,7 +1265,7 @@ struct EventReviewView: View {
                                 
                                 Image(systemName: "arrow.right")
                                     .font(.title2)
-                                    
+                                
                                 
                                 VStack(alignment: .center, spacing: 5) {
                                     Text(formatTimeOnly(eventDetails.date.addingTimeInterval(7200)))
@@ -1112,7 +1319,7 @@ struct EventReviewView: View {
                                         ReviewSection(title: "Event", content: "Ongoing")
                                             .lineLimit(2)
                                         Spacer()
-                                        
+                                         
                                     }
                                     
                                     HStack {
@@ -1188,7 +1395,7 @@ struct EventReviewView: View {
                         Button(action: {
                             if showSuccess {
                                 clearMessages = true
-                                isPresented = false
+                                        isPresented = false
                                 
                                 
                             } else {
@@ -1242,7 +1449,7 @@ struct EventReviewView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage ?? "An unknown error occurred")
-            }
+        }
         }
     }
 }

@@ -533,7 +533,7 @@ struct HomeView: View {
                                                     RegularEventCard(event: event, showdescription: false)
                                                 }
                                             }
-                                        }
+                                }.padding(.horizontal)
                                     }
                                 }
                             }
@@ -616,7 +616,13 @@ struct PopularEventCard: View {
     var body: some View {
         VStack {
             ZStack {
-                LinearGradient(colors: [.black, .clear], startPoint: .bottomLeading, endPoint: .topTrailing)
+                // Replace single image with CompactImageViewer
+                CompactImageViewer(imageUrls: event.images, height: 180)
+                    .overlay(
+                        LinearGradient(colors: [.black, .clear], 
+                                     startPoint: .bottomLeading, 
+                                     endPoint: .topTrailing)
+                    )
                 
                 ZStack {
                     VStack(alignment: .leading) {
@@ -714,7 +720,13 @@ struct RegularEventCard: View {
     var body: some View {
         VStack {
             ZStack {
-                LinearGradient(colors: [.black, .black.opacity(0.40), .black.opacity(0.60)], startPoint: .bottomLeading, endPoint: .topTrailing)
+                // Replace single image with CompactImageViewer
+                CompactImageViewer(imageUrls: event.images, height: 200)
+                    .overlay(
+                        LinearGradient(colors: [.black, .black.opacity(0.40), .black.opacity(0.60)], 
+                                     startPoint: .bottomLeading, 
+                                     endPoint: .topTrailing)
+                    )
                 
                 ZStack {
                     VStack(alignment: .leading) {
@@ -793,11 +805,6 @@ struct RegularEventCard: View {
                     .padding()
                 }
             }
-            .background(
-                Image(event.images[0])
-                    .resizable()
-                    .scaledToFill()
-            )
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
                     .stroke(Color.dynamic.opacity(0.20), lineWidth: 1)

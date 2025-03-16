@@ -10,7 +10,7 @@ import Firebase
 
 @main
 struct EventAppPortalApp: App {
-    
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     
     init() {
         FirebaseApp.configure()
@@ -19,7 +19,7 @@ struct EventAppPortalApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-            
+                .environmentObject(FirebaseManager.shared)
         }
     }
 }
