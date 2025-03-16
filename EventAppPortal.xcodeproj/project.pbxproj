@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		F71515592D86795E001D55C3 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F71515582D86795E001D55C3 /* Kingfisher */; };
 		F715155B2D868E26001D55C3 /* PhotoUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155A2D868E26001D55C3 /* PhotoUploadView.swift */; };
+		F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */; };
 		F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F746F4E82D766320009B68BA /* EventAppPortalApp.swift */; };
 		F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EF2D766322009B68BA /* Preview Assets.xcassets */; };
 		F7633E332D77589E00644438 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7633E322D77589E00644438 /* TabBar.swift */; };
@@ -43,6 +44,7 @@
 
 /* Begin PBXFileReference section */
 		F715155A2D868E26001D55C3 /* PhotoUploadView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PhotoUploadView.swift; path = EventAppPortal/Views/Components/PhotoUploadView.swift; sourceTree = SOURCE_ROOT; };
+		F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventImageUpdateView.swift; sourceTree = "<group>"; };
 		F746F4E52D766320009B68BA /* EventAppPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventAppPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F746F4E82D766320009B68BA /* EventAppPortalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventAppPortalApp.swift; sourceTree = "<group>"; };
 		F746F4EF2D766322009B68BA /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 		F773EC6F2D790FAC0009AC93 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */,
 				F773EC822D79EDC60009AC93 /* Resources */,
 				F773EC702D790FAC0009AC93 /* LottieView.swift */,
 				F773EC7F2D79E1700009AC93 /* AIOrb.swift */,
@@ -332,6 +335,7 @@
 				F79C82872D77564900C87783 /* RegistrationView.swift in Sources */,
 				F773EC6A2D788DB90009AC93 /* Event.swift in Sources */,
 				F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */,
+				F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */,
 				F79C82842D77564900C87783 /* CreateEventView.swift in Sources */,
 				F79C82852D77564900C87783 /* MainTabView.swift in Sources */,
 				F773EC6E2D78A99F0009AC93 /* ViewEventDetail.swift in Sources */,

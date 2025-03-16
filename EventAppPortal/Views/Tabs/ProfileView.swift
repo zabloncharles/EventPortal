@@ -11,6 +11,7 @@ struct ProfileView: View {
     @State private var isResettingEvents = false
     @State private var showPhotoUpload = false
     @State private var userPhotos: [String] = []
+    @State private var showEventImageUpdate = false
     
     var body: some View {
         NavigationView {
@@ -117,13 +118,20 @@ struct ProfileView: View {
                             SettingsItem(icon: "bookmark.circle.fill", title: "Bookmarked", color: .green),
                             SettingsItem(icon: "bell.fill", title: "Notifications", color: .purple),
                             SettingsItem(icon: "lock.fill", title: "Privacy", color: .green)
-                        ])
+                        ], showEventImageUpdate: $showEventImageUpdate)
                         
                         SettingsCard(title: "Support", items: [
                             SettingsItem(icon: "questionmark.circle.fill", title: "Help Center", color: .orange),
                             SettingsItem(icon: "envelope.fill", title: "Contact Us", color: .pink),
                             SettingsItem(icon: "star.fill", title: "Rate App", color: .yellow)
-                        ])
+                        ], showEventImageUpdate: $showEventImageUpdate)
+                        
+                        // Add Admin Tools section if user is admin
+                        if firebaseManager.currentUser?.email == "zabloncharles@gmail.com" {
+                            SettingsCard(title: "Admin Tools", items: [
+                                SettingsItem(icon: "photo.stack", title: "Update Event Images", color: .purple)
+                            ], showEventImageUpdate: $showEventImageUpdate)
+                        }
                         
                         // Sign Out Button
                         Button(action: { showingLogoutAlert = true }) {
@@ -175,6 +183,9 @@ struct ProfileView: View {
                 self.userPhotos.append(contentsOf: urls)
                 savePhotosToUserProfile(urls)
             }
+        }
+        .sheet(isPresented: $showEventImageUpdate) {
+            EventImageUpdateView()
         }
         .onAppear {
             loadUserData()
@@ -476,6 +487,7 @@ struct StatView: View {
 struct SettingsCard: View {
     let title: String
     let items: [SettingsItem]
+    @Binding var showEventImageUpdate: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -518,6 +530,10 @@ struct SettingsCard: View {
     @ViewBuilder
     private func destinationView(for title: String) -> some View {
         switch title {
+        case "Update Event Images":
+            Button(action: { showEventImageUpdate = true }) {
+                Text(title)
+            }
         case "Edit Profile":
             EditProfileView()
         case "My Events":
