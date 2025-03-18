@@ -81,6 +81,7 @@ struct PhotoUploadView: View {
             }
             .navigationTitle("Upload Photos")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cancel") {

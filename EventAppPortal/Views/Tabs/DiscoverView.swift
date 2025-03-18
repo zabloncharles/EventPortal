@@ -1,12 +1,47 @@
 import SwiftUI
+import FirebaseFirestore
+
+enum FilterType: String, CaseIterable, Identifiable {
+    case all = "All"
+    case concert = "Concert"
+    case corporate = "Corporate"
+    case marketing = "Marketing"
+    case healthWellness = "Health & Wellness"
+    case technology = "Technology"
+    case artCulture = "Art & Culture"
+    case charity = "Charity"
+    case literature = "Literature"
+    case lifestyle = "Lifestyle"
+    case environmental = "Environmental"
+    case entertainment = "Entertainment"
+    
+    var id: String { self.rawValue }
+    
+    var icon: String {
+        switch self {
+        case .all: return "square.grid.2x2.fill"
+        case .concert: return "figure.dance"
+        case .corporate: return "building.2.fill"
+        case .marketing: return "megaphone.fill"
+        case .healthWellness: return "heart.fill"
+        case .technology: return "desktopcomputer"
+        case .artCulture: return "paintbrush.fill"
+        case .charity: return "heart.circle.fill"
+        case .literature: return "book.fill"
+        case .lifestyle: return "leaf.fill"
+        case .environmental: return "leaf.arrow.triangle.circlepath"
+        case .entertainment: return "music.note.list"
+        }
+    }
+}
 
 class FilterModel: ObservableObject {
-    @Published var filteredEvents: [Event] = sampleEvents
+    @Published var filteredEvents: [Event] = []
     @Published var activeFilters: EventFilters = EventFilters()
     
     func applyFilters(filters: EventFilters) {
         activeFilters = filters
-        filteredEvents = sampleEvents.filter { event in
+        filteredEvents = filteredEvents.filter { event in
             var matches = true
             
             // Type filter
@@ -66,6 +101,12 @@ struct DiscoverView: View {
     @State private var selectedLocation = "Lombok, Indonesia"
     @State private var selectedFilter: FilterType = .all
     @State private var isSearching = false
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    @State private var showError = false
+    @State private var showLocationSettings = false
+    @StateObject private var locationManager = LocationManager()
+    @AppStorage("userID") private var userID: String = ""
     
     var filteredSearchResults: [Event] {
         guard !searchText.isEmpty else { return [] }
@@ -87,10 +128,10 @@ struct DiscoverView: View {
                                 .font(.caption)
                                 .foregroundColor(.gray)
                             Button(action: {
-                                // Location picker action
+                                showLocationSettings = true
                             }) {
                                 HStack {
-                                    Text(selectedLocation)
+                                    Text(locationManager.locationString.split(separator: ",")[0])
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                     Image(systemName: "chevron.down")
@@ -200,49 +241,57 @@ struct DiscoverView: View {
                         }
                         
                         // Nearby Destination
-                        VStack(alignment: .leading) {
-                            HStack {
-                                Text("Nearby Destination")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                Spacer()
-                                Button("See all") {
-                                    // See all action
+                        if !filterModel.filteredEvents.isEmpty {
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Text("Nearby Destination")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                    Button("See all") {
+                                        // See all action
+                                    }
+                                    .foregroundColor(.gray)
                                 }
-                                .foregroundColor(.gray)
+                                .padding(.horizontal)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 16) {
+                                        ForEach(Array(filterModel.filteredEvents.prefix(3)), id: \.name) { event in
+                                            RecommendedEventCard(event: event)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
                             }
-                            .padding(.horizontal)
-                            
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                    ForEach(Array(filterModel.filteredEvents.prefix(3)), id: \.name) { event in
-                                        RecommendedEventCard(event: event)
+                        }
+                        
+                        if filterModel.filteredEvents.isEmpty {
+                            noeventsview
+                        }
+                        
+                        // Recommendation
+                        if !filterModel.filteredEvents.isEmpty {
+                            VStack(alignment: .leading) {
+                                HStack {
+                                    Text("Recommendation")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                    Spacer()
+                                    Button("See all") {
+                                        // See all action
+                                    }
+                                    .foregroundColor(.gray)
+                                }
+                                .padding(.horizontal)
+                                
+                                VStack(spacing: 16) {
+                                    ForEach(Array(filterModel.filteredEvents.suffix(3)), id: \.name) { event in
+                                        RegularEventCard(event: event)
                                     }
                                 }
                                 .padding(.horizontal)
                             }
-                        }
-                        
-                        // Recommendation
-                        VStack(alignment: .leading) {
-                            HStack {
-                                Text("Recommendation")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                Spacer()
-                                Button("See all") {
-                                    // See all action
-                                }
-                                .foregroundColor(.gray)
-                            }
-                            .padding(.horizontal)
-                            
-                            VStack(spacing: 16) {
-                                ForEach(Array(filterModel.filteredEvents.suffix(3)), id: \.name) { event in
-                                    RegularEventCard(event: event)
-                                }
-                            }
-                            .padding(.horizontal)
                         }
                     }
                 }
@@ -251,79 +300,168 @@ struct DiscoverView: View {
             }
             .navigationTitle("Discover")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .sheet(isPresented: $showLocationSettings) {
+                LocationSettingsView(locationManager: locationManager, userId: userID)
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "An unknown error occurred")
+            }
+            .onAppear {
+                fetchEvents()
+                locationManager.fetchUserLocation(userId: userID)
+            }
         }
     }
-}
-
-struct SearchResultRow: View {
-    let event: Event
     
-    var body: some View {
-        NavigationLink(destination: ViewEventDetail(event: event)) {
-            HStack(spacing: 12) {
-                Image(event.images[0])
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .cornerRadius(8)
+    var noeventsview: some View {
+        
+            VStack(alignment: .center, spacing: 10.0) {
+                LottieView(filename: "Ghost", loop: true)
+                    .frame(height: 220)
+                    .padding(.top, 0)
+                    .offset(y:30)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.name)
-                        .font(.headline)
-                    
-                    Text(event.location)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                    
+                Text("Opps! No events yet")
+                    .font(.headline)
+                
+                Text("Nothing to see here. Events are more intentional on here so don't worry, They'll come in very soon.")
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 25)
+                
+                Button {
+                    //reload events
+                    fetchEvents()
+                } label: {
                     HStack {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.blue)
-                        Text(event.startDate.formatted(date: .abbreviated, time: .omitted))
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        
-                        Image(systemName: "person.2")
-                            .foregroundColor(.blue)
-                        Text("\(event.participants.count) going")
-                            .font(.caption)
-                            .foregroundColor(.gray)
+                        Text("Try Searching Again!")
+                            .font(.body)
+                            .fontWeight(.semibold)
                     }
+                    .padding(.horizontal, 15)
+                    .padding(.vertical, 10)
+                    .background(Color.gray.opacity(0.40))
+                    .cornerRadius(30)
+                }
+
+            }
+            .padding(.horizontal, 20)
+            
+        
+    }
+    
+    private func fetchEvents() {
+        
+        isLoading = true
+        let db = Firestore.firestore()
+        
+        db.collection("events")
+            .whereField("status", isEqualTo: "active")
+            .getDocuments { snapshot, error in
+                isLoading = false
+                
+                if let error = error {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                    return
                 }
                 
-                Spacer()
+                guard let documents = snapshot?.documents else {
+                    errorMessage = "No events found"
+                    showError = true
+                    return
+                }
                 
-                Text(event.price)
-                    .font(.headline)
-                    .foregroundColor(.blue)
+                let fetchedEvents = documents.compactMap { document -> Event? in
+                    let data = document.data()
+                    
+                    guard let name = data["name"] as? String,
+                          let description = data["description"] as? String,
+                          let type = data["type"] as? String,
+                          let location = data["location"] as? String,
+                          let price = data["price"] as? String,
+                          let owner = data["owner"] as? String,
+                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                          let images = data["images"] as? [String],
+                          let isTimed = data["isTimed"] as? Bool,
+                          let coordinates = data["coordinates"] as? [Double] else {
+                        return nil
+                    }
+                    
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let participants = Array(repeating: "Participant", count: maxParticipants)
+                    
+                    return Event(
+                        id: document.documentID,
+                        name: name,
+                        description: description,
+                        type: type,
+                        views: data["views"] as? String ?? "0",
+                        location: location,
+                        price: price,
+                        owner: owner,
+                        startDate: startDate,
+                        endDate: endDate,
+                        images: images,
+                        participants: participants,
+                        isTimed: isTimed,
+                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                        coordinates: coordinates
+                    )
+                }
+                
+                // Update the filter model with fetched events
+                filterModel.filteredEvents = fetchedEvents
+                filterModel.applyFilters(filters: filterModel.activeFilters)
             }
-            .padding()
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-            .padding(.horizontal)
-        }
     }
 }
 
-enum FilterType: String, CaseIterable, Identifiable {
-    case all = "All"
-    case technology = "Technology"
-    case music = "Music"
-    case sports = "Sports"
-    case art = "Art"
-    case food = "Food"
-    case business = "Business"
+// MARK: - Supporting Views
+
+struct SearchBar: View {
+    @Binding var text: String
     
-    var id: String { self.rawValue }
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search events...", text: $text)
+                .textFieldStyle(PlainTextFieldStyle())
+            
+            if !text.isEmpty {
+                Button(action: { text = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(8)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+}
+
+struct CategoryButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
     
-    var icon: String {
-        switch self {
-        case .all: return "square.grid.2x2.fill"
-        case .technology: return "laptopcomputer"
-        case .music: return "music.note"
-        case .sports: return "sportscourt.fill"
-        case .art: return "paintpalette.fill"
-        case .food: return "fork.knife"
-        case .business: return "briefcase.fill"
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.blue : Color(uiColor: .secondarySystemBackground))
+                .cornerRadius(20)
         }
     }
 }
@@ -335,20 +473,293 @@ struct FilterButton: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: filter.icon)
-                    .foregroundColor(isSelected ? .white : .primary)
-                Text(filter.rawValue)
+            Text(filter.rawValue)
                 .font(.subheadline)
-                .fontWeight(.medium)
-            }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.blue : Color(uiColor: .secondarySystemBackground))
                 .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.blue : Color(uiColor: .secondarySystemBackground))
                 .cornerRadius(20)
         }
     }
+}
+
+struct SearchResultRow: View {
+    let event: Event
+    
+    var body: some View {
+        NavigationLink(destination: ViewEventDetail(event: event)) {
+            HStack(spacing: 12) {
+                AsyncImage(url: URL(string: event.images[0])) { image in
+                    image
+                .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Color.gray.opacity(0.3)
+                }
+                .frame(width: 60, height: 60)
+                .cornerRadius(8)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                    Text(event.name)
+                    .font(.headline)
+                
+                    Text(event.location)
+                        .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                HStack {
+                    Image(systemName: "calendar")
+                            .foregroundColor(.blue)
+                        Text(event.startDate.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption)
+                            .foregroundColor(.gray)
+                        
+                        Image(systemName: "person.2")
+                            .foregroundColor(.blue)
+                        Text("\(event.participants.count) going")
+                        .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                
+                Spacer()
+                
+                Text(event.price)
+                    .font(.headline)
+                .foregroundColor(.blue)
+            }
+            .padding()
+            .background(Color(UIColor.secondarySystemBackground))
+            .cornerRadius(12)
+            .padding(.horizontal)
+        }
+    }
+}
+
+struct DateFilterView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedFilter: DateFilter
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(DateFilter.allCases, id: \.self) { filter in
+                    Button(action: {
+                        selectedFilter = filter
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(filter.rawValue)
+                            Spacer()
+                            if selectedFilter == filter {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Date Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PriceFilterView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedFilter: PriceFilter
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(PriceFilter.allCases, id: \.self) { filter in
+                    Button(action: {
+                        selectedFilter = filter
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(filter.rawValue)
+                            Spacer()
+                            if selectedFilter == filter {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Price Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct CategoryFilterView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedCategory: String?
+    let categories: [String]
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(categories, id: \.self) { category in
+                    Button(action: {
+                        selectedCategory = category
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(category)
+                            Spacer()
+                            if selectedCategory == category {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Category Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct LocationFilterView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedLocation: String?
+    let locations: [String]
+    
+    var body: some View {
+        NavigationView {
+            List {
+                Button(action: {
+                    selectedLocation = nil
+                    dismiss()
+                }) {
+                    HStack {
+                        Text("All Locations")
+                        Spacer()
+                        if selectedLocation == nil {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.blue)
+                        }
+                    }
+                }
+                
+                ForEach(locations, id: \.self) { location in
+                    Button(action: {
+                        selectedLocation = location
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(location)
+                            Spacer()
+                            if selectedLocation == location {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Location Filter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct SortOptionsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedOption: SortOption
+    
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(SortOption.allCases, id: \.self) { option in
+                    Button(action: {
+                        selectedOption = option
+                        dismiss()
+                    }) {
+                        HStack {
+                            Text(option.rawValue)
+                            Spacer()
+                            if selectedOption == option {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Sort By")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+enum DateFilter: String, CaseIterable {
+    case all = "All Dates"
+    case today = "Today"
+    case thisWeek = "This Week"
+    case thisMonth = "This Month"
+    case upcoming = "Upcoming"
+}
+
+enum PriceFilter: String, CaseIterable {
+    case all = "All Prices"
+    case free = "Free"
+    case under10 = "Under $10"
+    case under25 = "Under $25"
+    case under50 = "Under $50"
+}
+
+enum SortOption: String, CaseIterable {
+    case newest = "Newest First"
+    case oldest = "Oldest First"
+    case priceLowToHigh = "Price: Low to High"
+    case priceHighToLow = "Price: High to Low"
+    case mostPopular = "Most Popular"
 }
 
 let sampleEvent = sampleEvents[0] // Keep the original reference for backward compatibility
@@ -514,6 +925,7 @@ struct FilterView: View {
         }
         .navigationTitle("Filters")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button("Apply") {

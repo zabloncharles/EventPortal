@@ -10,9 +10,14 @@
 		F71515592D86795E001D55C3 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F71515582D86795E001D55C3 /* Kingfisher */; };
 		F715155B2D868E26001D55C3 /* PhotoUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155A2D868E26001D55C3 /* PhotoUploadView.swift */; };
 		F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */; };
+		F715155F2D86A0E7001D55C3 /* EventRecommendationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */; };
+		F71515612D86A15F001D55C3 /* RecommendedEventsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71515602D86A15F001D55C3 /* RecommendedEventsViewModel.swift */; };
+		F71515632D86A26F001D55C3 /* RecommendedEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */; };
+		F746526A2D884FB2002CE163 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74652692D884FB2002CE163 /* LocationManager.swift */; };
 		F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F746F4E82D766320009B68BA /* EventAppPortalApp.swift */; };
 		F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EF2D766322009B68BA /* Preview Assets.xcassets */; };
 		F7633E332D77589E00644438 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7633E322D77589E00644438 /* TabBar.swift */; };
+		F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */ = {isa = PBXBuildFile; fileRef = F764BB322D89CDC7002F53E3 /* Ghost.json */; };
 		F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F773EC5D2D7888B50009AC93 /* Assets.xcassets */; };
 		F773EC672D788A600009AC93 /* ColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC662D788A600009AC93 /* ColorExtension.swift */; };
 		F773EC6A2D788DB90009AC93 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC692D788DB90009AC93 /* Event.swift */; };
@@ -45,10 +50,16 @@
 /* Begin PBXFileReference section */
 		F715155A2D868E26001D55C3 /* PhotoUploadView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = PhotoUploadView.swift; path = EventAppPortal/Views/Components/PhotoUploadView.swift; sourceTree = SOURCE_ROOT; };
 		F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventImageUpdateView.swift; sourceTree = "<group>"; };
+		F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventRecommendationService.swift; sourceTree = "<group>"; };
+		F71515602D86A15F001D55C3 /* RecommendedEventsViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = RecommendedEventsViewModel.swift; path = EventAppPortal/ViewModels/RecommendedEventsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecommendedEventsView.swift; sourceTree = "<group>"; };
+		F74652692D884FB2002CE163 /* LocationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LocationManager.swift; path = EventAppPortal/Models/LocationManager.swift; sourceTree = SOURCE_ROOT; };
+		F746526B2D884FFF002CE163 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F746F4E52D766320009B68BA /* EventAppPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventAppPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F746F4E82D766320009B68BA /* EventAppPortalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventAppPortalApp.swift; sourceTree = "<group>"; };
 		F746F4EF2D766322009B68BA /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		F7633E322D77589E00644438 /* TabBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBar.swift; sourceTree = "<group>"; };
+		F764BB322D89CDC7002F53E3 /* Ghost.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = Ghost.json; sourceTree = "<group>"; };
 		F773EC5D2D7888B50009AC93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F773EC662D788A600009AC93 /* ColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtension.swift; sourceTree = "<group>"; };
 		F773EC692D788DB90009AC93 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
@@ -109,6 +120,7 @@
 		F746F4E72D766320009B68BA /* EventAppPortal */ = {
 			isa = PBXGroup;
 			children = (
+				F746526B2D884FFF002CE163 /* Info.plist */,
 				F7855EA42D851A9E00D668CD /* Services */,
 				F773EC6F2D790FAC0009AC93 /* Components */,
 				F773EC682D788DB90009AC93 /* Models */,
@@ -142,6 +154,7 @@
 		F773EC682D788DB90009AC93 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				F71515602D86A15F001D55C3 /* RecommendedEventsViewModel.swift */,
 				F773EC692D788DB90009AC93 /* Event.swift */,
 			);
 			path = Models;
@@ -150,6 +163,7 @@
 		F773EC6F2D790FAC0009AC93 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */,
 				F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */,
 				F773EC822D79EDC60009AC93 /* Resources */,
 				F773EC702D790FAC0009AC93 /* LottieView.swift */,
@@ -173,6 +187,7 @@
 			children = (
 				F773EC752D7911650009AC93 /* locationbubble.json */,
 				F773EC772D7915C30009AC93 /* robotai.json */,
+				F764BB322D89CDC7002F53E3 /* Ghost.json */,
 				F773EC7B2D79DD990009AC93 /* orbpurple.json */,
 			);
 			path = Lottie;
@@ -181,6 +196,8 @@
 		F7855EA42D851A9E00D668CD /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				F74652692D884FB2002CE163 /* LocationManager.swift */,
+				F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */,
 				F79545242D8673C10053ED72 /* ImageViewer.swift */,
 				F79545222D8673AA0053ED72 /* CompactImageViewer.swift */,
 				F7855EA52D851A9E00D668CD /* FirebaseManager.swift */,
@@ -312,6 +329,7 @@
 				F773EC782D7915C30009AC93 /* robotai.json in Resources */,
 				F773EC7C2D79DD990009AC93 /* orbpurple.json in Resources */,
 				F773EC762D7911650009AC93 /* locationbubble.json in Resources */,
+				F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */,
 				F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */,
 				F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */,
 				F7855EA32D85195E00D668CD /* GoogleService-Info.plist in Resources */,
@@ -327,16 +345,20 @@
 			files = (
 				F79C82822D77564900C87783 /* HomeView.swift in Sources */,
 				F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */,
+				F71515632D86A26F001D55C3 /* RecommendedEventsView.swift in Sources */,
 				F79C82832D77564900C87783 /* DiscoverView.swift in Sources */,
 				F7855E9F2D7D1DD700D668CD /* NotificationView.swift in Sources */,
 				F79545232D8673AA0053ED72 /* CompactImageViewer.swift in Sources */,
 				F773EC672D788A600009AC93 /* ColorExtension.swift in Sources */,
+				F71515612D86A15F001D55C3 /* RecommendedEventsViewModel.swift in Sources */,
 				F715155B2D868E26001D55C3 /* PhotoUploadView.swift in Sources */,
 				F79C82872D77564900C87783 /* RegistrationView.swift in Sources */,
 				F773EC6A2D788DB90009AC93 /* Event.swift in Sources */,
 				F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */,
+				F746526A2D884FB2002CE163 /* LocationManager.swift in Sources */,
 				F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */,
 				F79C82842D77564900C87783 /* CreateEventView.swift in Sources */,
+				F715155F2D86A0E7001D55C3 /* EventRecommendationService.swift in Sources */,
 				F79C82852D77564900C87783 /* MainTabView.swift in Sources */,
 				F773EC6E2D78A99F0009AC93 /* ViewEventDetail.swift in Sources */,
 				F79C82812D77564900C87783 /* ProfileView.swift in Sources */,
@@ -479,8 +501,10 @@
 				DEVELOPMENT_TEAM = RB57AZ828B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EventAppPortal/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedUp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to show you nearby events and update your profile location.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -515,8 +539,10 @@
 				DEVELOPMENT_TEAM = RB57AZ828B;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EventAppPortal/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = LinkedUp;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to show you nearby events and update your profile location.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

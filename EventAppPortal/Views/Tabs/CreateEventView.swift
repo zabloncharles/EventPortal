@@ -858,6 +858,7 @@ struct DatePickerView: View {
                     }
                     .navigationTitle("Select Date")
                     .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(Color.dynamic)
                     .navigationBarItems(trailing: Button("Cancel") {
                         isPresented = false
                     })
@@ -968,6 +969,7 @@ struct CategorySelectionView: View {
                 isPresented = false
             })
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
             .background(Color.dynamic.edgesIgnoringSafeArea(.all))
         }
         }
@@ -1441,6 +1443,7 @@ struct EventReviewView: View {
             }
             .navigationTitle("Event Pass")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
             .navigationBarItems(trailing: Button(showSuccess ? "" : "Edit") {
                 isPresented = false
                 
@@ -1630,6 +1633,7 @@ struct LocationSearchView: View {
                 }
             }.navigationTitle("Select Location")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(Color.dynamic)
                 .navigationBarItems(trailing: Button("Cancel") {
                     isPresented = false
                 })
@@ -1750,6 +1754,7 @@ struct QuickActionsView: View {
         }
         .navigationTitle("Quick Actions")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
         .background(Color.dynamic.edgesIgnoringSafeArea(.all))
         .simultaneousGesture(DragGesture().onChanged { _ in
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

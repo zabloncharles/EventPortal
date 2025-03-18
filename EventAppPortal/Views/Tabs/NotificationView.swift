@@ -209,6 +209,7 @@ struct NotificationView: View {
             .background(Color.dynamic)
             .navigationTitle("Notification")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
         }
     }
     

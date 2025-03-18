@@ -17,6 +17,7 @@ struct ViewEventDetail: View {
     @State private var viewCount: Int = 0
     let hapticFeedback = UINotificationFeedbackGenerator()
     @AppStorage("userID") private var userID: String = ""
+    @StateObject private var viewModel = RecommendedEventsViewModel()
     
     private func incrementViews() {
         let db = Firestore.firestore()
@@ -349,35 +350,59 @@ struct ViewEventDetail: View {
                                     Spacer()
                                     if event.coordinates.count >= 2 {
                                         Link("Get directions", destination: URL(string: "http://maps.apple.com/?ll=\(event.coordinates[0]),\(event.coordinates[1])")!)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.blue)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.blue)
                                     }
                                 }.foregroundColor(.secondary)
                                     .padding(.top, 8)
                             }
                             
-                            // Recommended Events
+                            // Add Recommended Events Section
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Recommended Events")
+                                Text("Similar Events")
                                     .font(.title3)
                                     .fontWeight(.bold)
                                 
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 16) {
-                                        ForEach(sampleEvents) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                if viewModel.isLoading {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Spacer()
+                                    }
+                                    .frame(height: 200)
+                                } else if viewModel.error != nil {
+                                    // Show error message
+                                    Text("Unable to load recommendations")
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                } else if viewModel.recommendedEvents.isEmpty {
+                                    Text("No similar events found")
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                } else {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        LazyHStack(spacing: 16) {
+                                            ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
                                                 RecommendedEventCard(event: event)
+                                                    .onAppear {
+                                                        self.viewModel.recordEventInteraction(event, type: .view)
+                                                    }
                                             }
                                         }
+                                        .padding(.horizontal)
                                     }
+                                    .frame(height: 280)
                                 }
+                            }
+                            .onAppear {
+                                print("Loading recommended events...")
+                                self.viewModel.loadRecommendedEvents()
                             }
                         }
                         .padding()
-                        
-                        
-                    }.padding(.bottom,130) //makes sure the bottom bar is not covering content in this vstack scroll section
+                    }
                 }
                 .ignoresSafeArea()
             .navigationBarHidden(true)
@@ -481,6 +506,7 @@ struct ViewEventDetail: View {
         }
         }.navigationTitle(event.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
             .toolbar {
                 Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
                     .foregroundColor(bookmarked ? .blue : .white)
@@ -959,6 +985,7 @@ struct PurchaseTicketView: View {
             .background(Color.dynamic)
             .navigationTitle("Purchase Ticket")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.dynamic)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationBarItems(trailing: Button("Cancel") {
                 isPresented = false
@@ -1126,12 +1153,12 @@ struct RecommendedEventCard: View {
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                                 .lineLimit(1)
-                                .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .padding(.horizontal,5)
-                                .padding(.vertical,2)
-                                .background(.ultraThinMaterial)
-                                .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
-                                .cornerRadius(15)
+                            .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .padding(.horizontal,5)
+                            .padding(.vertical,2)
+                            .background(.ultraThinMaterial)
+                            .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
+                            .cornerRadius(15)
                         }
                         Spacer()
                     }.padding()
@@ -1176,5 +1203,78 @@ struct RecommendedEventCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.dynamic.opacity(1), lineWidth: 1)
         )
+    }
+}
+
+// Private card view for recommended events
+private struct RecommendedEventCardView: View {
+    let event: Event
+    
+    var body: some View {
+        NavigationLink(destination: ViewEventDetail(event: self.event)) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Event Image
+                if let firstImage = self.event.images.first {
+                    AsyncImage(url: URL(string: firstImage)) { phase in
+                        switch phase {
+                        case .empty:
+                            Rectangle()
+                                .foregroundColor(.gray.opacity(0.2))
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        case .failure:
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .frame(width: 240, height: 135)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    // Event Type
+                    Text(self.event.type)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundColor(.blue)
+                        .clipShape(Capsule())
+                    
+                    // Event Name
+                    Text(self.event.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    // Date and Location
+                    HStack(spacing: 8) {
+                        // Date
+                        Label(self.event.startDate.formatted(date: .abbreviated, time: .shortened),
+                              systemImage: "calendar")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        // Participants
+                        Label("\(self.event.participants.count)",
+                              systemImage: "person.2")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.horizontal, 8)
+            }
+            .frame(width: 240)
+            .background(Color(.systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 } 

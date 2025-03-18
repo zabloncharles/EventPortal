@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseFirestore
+import CoreLocation
 
 struct ProfileView: View {
     @State private var isEditingProfile = false
@@ -12,6 +13,8 @@ struct ProfileView: View {
     @State private var showPhotoUpload = false
     @State private var userPhotos: [String] = []
     @State private var showEventImageUpdate = false
+    @StateObject private var locationManager = LocationManager()
+    @State private var showLocationSettings = false
     
     var body: some View {
         NavigationView {
@@ -30,8 +33,8 @@ struct ProfileView: View {
                         HStack {
                             // Profile Image
                             Image(systemName: "person.crop.circle.fill")
-                                .resizable()
-                                .scaledToFit()
+                            .resizable()
+                            .scaledToFit()
                                 .frame(width: 100, height: 100)
                                 .foregroundStyle(.white)
                                 .background(Circle().fill(.white.opacity(0.2)).blur(radius: 10))
@@ -39,19 +42,19 @@ struct ProfileView: View {
                                     Circle()
                                         .stroke(.white.opacity(0.6), lineWidth: 4)
                                 )
-                                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                                .shadow(color: .invert.opacity(0.1), radius: 10, x: 0, y: 5)
                             
                             Spacer()
                             // Profile Info
                             VStack {
                                 Text(userData?["name"] as? String ?? "Loading...")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                .font(.title2)
+                                .fontWeight(.bold)
                                     .foregroundColor(.primary)
                                 
                                 
                                 Text(firebaseManager.currentUser?.email ?? "")
-                                    .font(.subheadline)
+                                .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 // Stats
                                 HStack(spacing: 40) {
@@ -119,6 +122,33 @@ struct ProfileView: View {
                             SettingsItem(icon: "bell.fill", title: "Notifications", color: .purple),
                             SettingsItem(icon: "lock.fill", title: "Privacy", color: .green)
                         ], showEventImageUpdate: $showEventImageUpdate)
+                        // Add this section to your existing settings or create a new one
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Location")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            Button(action: {
+                                showLocationSettings = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "location.fill")
+                                        .foregroundColor(.blue)
+                                    Text("Update Location")
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(userData?["locationString"] as? String ?? "Not Set")
+                                        .foregroundColor(.gray)
+                                        .lineLimit(1)
+                                    Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                                .padding()
+                                .background(Color(.systemBackground))
+                                .cornerRadius(12)
+                                .shadow(color: Color.invert.opacity(0.05), radius: 5, x: 0, y: 2)
+                            }
+                        }
+                        
                         
                         SettingsCard(title: "Support", items: [
                             SettingsItem(icon: "questionmark.circle.fill", title: "Help Center", color: .orange),
@@ -152,9 +182,12 @@ struct ProfileView: View {
                         .padding(.top)
                     }
                     .padding()
+                    
+                    
                 }.padding(.bottom, 70) //to not hide the tabbar
             }.navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(Color.dynamic)
             
             .alert("Sign Out", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
@@ -186,6 +219,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showEventImageUpdate) {
             EventImageUpdateView()
+        }
+        .sheet(isPresented: $showLocationSettings) {
+            LocationSettingsView(locationManager: locationManager, userId: userID, locationString:userData?["locationString"] as? String ?? "Not Set")
         }
         .onAppear {
             loadUserData()
@@ -523,7 +559,7 @@ struct SettingsCard: View {
             }
             .background(Color(.systemBackground))
             .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+            .shadow(color: Color.invert.opacity(0.05), radius: 5, x: 0, y: 2)
         }
     }
     
@@ -593,7 +629,7 @@ struct EditProfileView: View {
                             .foregroundColor(.blue)
                         
                         Circle()
-                            .fill(Color.black.opacity(0.4))
+                            .fill(Color.invert.opacity(0.4))
                             .frame(width: 100, height: 100)
                             .overlay(
                                 Image(systemName: "camera.fill")
@@ -610,7 +646,7 @@ struct EditProfileView: View {
                 }
                 .padding()
                 
-                Button(action: {
+                    Button(action: {
                     // Save changes
                     dismiss()
                 }) {
@@ -627,6 +663,7 @@ struct EditProfileView: View {
         }
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
     }
 }
 
@@ -722,7 +759,7 @@ struct MyEventsView: View {
         }
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
-        } message: {
+            } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
     }
@@ -948,7 +985,7 @@ struct BookmarkedEventCard: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.invert.opacity(0.1), radius: 5, x: 0, y: 2)
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -1113,13 +1150,13 @@ struct EventCard: View {
         .background(
             ZStack {
                 CompactImageViewer(imageUrls: event.images, height: 200)
-                LinearGradient(colors: [.black.opacity(0.7), .clear], 
+                LinearGradient(colors: [.invert.opacity(0.7), .clear],
                              startPoint: .bottom, 
                              endPoint: .top)
             }
         )
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.invert.opacity(0.1), radius: 5, x: 0, y: 2)
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -1194,7 +1231,7 @@ struct TicketCard: View {
         }
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.invert.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -1232,7 +1269,7 @@ struct SavedEventCard: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.invert.opacity(0.1), radius: 5, x: 0, y: 2)
     }
 }
 
@@ -1320,6 +1357,7 @@ struct PrivacyPolicyView: View {
         }
         .navigationTitle("Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
     }
 }
 
@@ -1366,6 +1404,7 @@ struct TermsOfServiceView: View {
         }
         .navigationTitle("Terms of Service")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
     }
 }
 
@@ -1422,6 +1461,7 @@ struct DataUsageView: View {
         }
         .navigationTitle("Data Usage")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic)
     }
 }
 
@@ -1462,4 +1502,99 @@ struct DataUsageRow: View {
         .cornerRadius(10)
     }
 }
+
+struct LocationSettingsView: View {
+    @ObservedObject var locationManager: LocationManager
+    @Environment(\.presentationMode) var presentationMode
+    var userId: String = ""
+    var locationString : String = "Not Set"
+    @State var oldLocation = ""
+    var body: some View {
+        ZStack {
+            Color.dynamic.edgesIgnoringSafeArea(.all)
+            NavigationView {
+                Form {
+                    Text("Select Your Location")
+                        .font(.title3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .fontWeight(.bold)
+                    
+                    Text("Your location will be utilized to tailor event recommendations and provide personalized experiences.")
+                        .foregroundColor(.secondary)
+                    Section(header: Text("Current Location")) {
+                        if locationManager.isLoading {
+                            HStack {
+                                Spacer()
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle())
+                                Spacer()
+                            }
+                        } else {
+                            Text(locationManager.locationString)
+                        }
+                    }
+                    
+                    Section {
+                        Button(action: {
+                            switch locationManager.authorizationStatus {
+                            case .notDetermined:
+                                locationManager.requestPermission()
+                            case .authorizedWhenInUse, .authorizedAlways:
+                                locationManager.requestLocation()
+                            default:
+                                // Open settings if permission denied
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(url)
+                                }
+                            }
+                        }) {
+                            HStack {
+                                Spacer()
+                                Image(systemName: "location.fill")
+                                Text(locationButtonText)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+                .toolbarBackground(Color.dynamic)
+                .navigationTitle("Update Location")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(trailing: Button("Done") {
+                    presentationMode.wrappedValue.dismiss()
+                })
+                .onAppear {
+                    //fetch current location from firebase
+                    locationManager.fetchUserLocation(userId: userId)
+                    oldLocation = locationManager.locationString
+                }
+            }
+        }.onDisappear{
+            
+            if oldLocation != locationManager.locationString {
+                locationManager.updateUserLocation(userId: userId)
+            }
+            presentationMode.wrappedValue.dismiss()
+        }
+    }
+    
+    var locationButtonText: String {
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            return "Request Location Permission"
+        case .restricted, .denied:
+            return "Open Settings to Enable Location"
+        default:
+            return "Update Current Location"
+        }
+    }
+}
+
+
 

@@ -33,14 +33,18 @@ class FirebaseManager: ObservableObject {
                     // Store userID in AppStorage
                     if let userId = result?.user.uid {
                         self?.userID = userId
+                        
                         // Update last login timestamp
-                        Firestore.firestore().collection("users").document(userId).updateData([
-                            "lastLogin": Timestamp()
-                        ]) { error in
-                            if let error = error {
-                                print("Error updating last login: \(error)")
-                            }
-                        }
+//                        Firestore.firestore().collection("users").document(userId).updateData([
+//                            "lastLogin": Timestamp()
+//                        ]) { error in
+//                            if let error = error {
+//                                print("Error updating last login: \(error)")
+//                            }
+//                        }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        self?.isAuthenticated = true
                     }
                     self?.errorMessage = ""
                     completion(true, nil)
