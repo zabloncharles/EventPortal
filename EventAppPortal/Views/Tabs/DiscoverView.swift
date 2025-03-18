@@ -40,46 +40,81 @@ class FilterModel: ObservableObject {
     @Published var activeFilters: EventFilters = EventFilters()
     
     func applyFilters(filters: EventFilters) {
-        activeFilters = filters
-        filteredEvents = filteredEvents.filter { event in
-            var matches = true
-            
-            // Type filter
-            if filters.selectedType != "All" {
-                matches = matches && event.type == filters.selectedType
+        print("Applying filters: \(filters)")
+        print("Total events before filtering: \(filteredEvents.count)")
+        
+        var filtered = filteredEvents
+        
+        // Apply type filter
+        if filters.selectedType != "All" {
+            filtered = filtered.filter { $0.type == filters.selectedType }
+            print("After type filter: \(filtered.count) events")
+            print("Filtered by type: \(filters.selectedType)")
+        }
+        
+        // Apply location filter
+        if filters.selectedLocation != "All" {
+            filtered = filtered.filter { $0.location == filters.selectedLocation }
+            print("After location filter: \(filtered.count) events")
+            print("Filtered by location: \(filters.selectedLocation)")
+        }
+        
+        // Apply price range filter
+        filtered = filtered.filter { event in
+            if event.price.lowercased() == "free" {
+                return true
             }
-            
-            // Location filter
-            if filters.selectedLocation != "All" {
-                matches = matches && event.location == filters.selectedLocation
+            if let price = Double(event.price) {
+                let isInRange = price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
+                if !isInRange {
+                    print("Event '\(event.name)' filtered out due to price: \(price) not in range \(filters.priceRange)")
+                }
+                return isInRange
             }
+            print("Event '\(event.name)' filtered out due to invalid price format: \(event.price)")
+            return false
+        }
+        print("After price filter: \(filtered.count) events")
+        print("Price range: \(filters.priceRange)")
+        
+        // Apply date range filter - more inclusive approach
+        filtered = filtered.filter { event in
+            // Check if event overlaps with the filter date range
+            let eventStartsBeforeFilterEnds = event.startDate <= filters.endDate
+            let eventEndsAfterFilterStarts = event.endDate >= filters.startDate
             
-            // Price filter
-            let price = Double(event.price.replacingOccurrences(of: "$", with: "")) ?? 0
-            matches = matches && price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
+            let isInRange = eventStartsBeforeFilterEnds && eventEndsAfterFilterStarts
             
-            // Date filter
-            let eventDate = event.startDate
-            matches = matches && eventDate >= filters.startDate && eventDate <= filters.endDate
-            
-            // Timed events
-            if filters.showTimedEventsOnly {
-                matches = matches && event.isTimed
+            if !isInRange {
+                print("Event '\(event.name)' filtered out due to date range: \(event.startDate) to \(event.endDate) not overlapping with filter range \(filters.startDate) to \(filters.endDate)")
             }
-            
-            // Participants
-            matches = matches && event.participants.count >= filters.minParticipants
-            
-            // Search text
-            if !filters.searchText.isEmpty {
-                matches = matches && (
-                    event.name.localizedCaseInsensitiveContains(filters.searchText) ||
-                    event.location.localizedCaseInsensitiveContains(filters.searchText) ||
-                    event.type.localizedCaseInsensitiveContains(filters.searchText)
-                )
+            return isInRange
+        }
+        print("After date filter: \(filtered.count) events")
+        print("Date range: \(filters.startDate) to \(filters.endDate)")
+        
+        // Apply timed events filter
+        if filters.showTimedEventsOnly {
+            filtered = filtered.filter { $0.isTimed }
+            print("After timed events filter: \(filtered.count) events")
+        }
+        
+        // Apply participants filter
+        if filters.minParticipants > 0 {
+            filtered = filtered.filter { $0.participants.count >= filters.minParticipants }
+            print("After participants filter: \(filtered.count) events")
+            print("Minimum participants: \(filters.minParticipants)")
+        }
+        
+        filteredEvents = filtered
+        print("Final filtered events count: \(filteredEvents.count)")
+        
+        // Print details of remaining events
+        if filteredEvents.isEmpty {
+            print("No events remain after filtering. Original events:")
+            for event in filteredEvents {
+                print("- \(event.name): Type=\(event.type), Location=\(event.location), Price=\(event.price), StartDate=\(event.startDate), EndDate=\(event.endDate)")
             }
-            
-            return matches
         }
     }
 }
@@ -88,9 +123,9 @@ struct EventFilters {
     var searchText: String = ""
     var selectedType: String = "All"
     var selectedLocation: String = "All"
-    var priceRange: ClosedRange<Double> = 200...1400
+    var priceRange: ClosedRange<Double> = 0...1000
     var startDate: Date = Date()
-    var endDate: Date = Date().addingTimeInterval(7*24*60*60)
+    var endDate: Date = Date().addingTimeInterval(30*24*60*60)
     var showTimedEventsOnly: Bool = false
     var minParticipants: Int = 0
 }
@@ -107,6 +142,7 @@ struct DiscoverView: View {
     @State private var showLocationSettings = false
     @StateObject private var locationManager = LocationManager()
     @AppStorage("userID") private var userID: String = ""
+    @State private var pageAppeared = false
     
     var filteredSearchResults: [Event] {
         guard !searchText.isEmpty else { return [] }
@@ -131,7 +167,7 @@ struct DiscoverView: View {
                                 showLocationSettings = true
                             }) {
                                 HStack {
-                                    Text(locationManager.locationString.split(separator: ",")[0])
+                                    Text(locationManager.locationString.split(separator: ",")[0] == "Not Set" ? "loading.." : locationManager.locationString.split(separator: ",")[0])
                                         .font(.title3)
                                         .fontWeight(.semibold)
                                     Image(systemName: "chevron.down")
@@ -159,6 +195,7 @@ struct DiscoverView: View {
                         }
                     }
                     .padding(.horizontal)
+                    .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
                     // Search Bar
                     HStack {
@@ -178,10 +215,12 @@ struct DiscoverView: View {
                             }
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical,15)
                     .background(Color(UIColor.secondarySystemBackground))
                     .cornerRadius(12)
                     .padding(.horizontal)
+                    .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
                     if isSearching {
                         // Search Results Section
@@ -211,37 +250,61 @@ struct DiscoverView: View {
                             }
                         }
                         .padding(.top)
+                        .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                     } else {
-                        // Regular Content
-                        // Filters
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(FilterType.allCases) { filter in
-                                    FilterButton(
-                                        filter: filter,
-                                        isSelected: selectedFilter == filter,
-                                        action: { 
-                                            selectedFilter = filter
-                                            let filters = EventFilters(
-                                                searchText: searchText,
-                                                selectedType: filter.rawValue,
-                                                selectedLocation: filterModel.activeFilters.selectedLocation,
-                                                priceRange: filterModel.activeFilters.priceRange,
-                                                startDate: filterModel.activeFilters.startDate,
-                                                endDate: filterModel.activeFilters.endDate,
-                                                showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
-                                                minParticipants: filterModel.activeFilters.minParticipants
-                                            )
-                                            filterModel.applyFilters(filters: filters)
-                                        }
-                                    )
-                                }
+                        if isLoading {
+                            VStack(spacing: 20) {
+                                ProgressView()
+                                    .scaleEffect(1.5)
+                                Text("Loading events...")
+                                    .foregroundColor(isLoading ? .gray : Color.dynamic)
                             }
-                            .padding(.horizontal)
-                        }
-                        
-                        // Nearby Destination
-                        if !filterModel.filteredEvents.isEmpty {
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 40)
+                        } else if filterModel.filteredEvents.isEmpty {
+                            VStack(spacing: 20) {
+                                Image(systemName: "calendar.badge.exclamationmark")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.gray)
+                                Text("No Events Available")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                Text("Check back later for new events")
+                                    .foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.top, 40)
+                            .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                        } else {
+                            // Regular Content
+                            // Filters
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(FilterType.allCases) { filter in
+                                        FilterButton(
+                                            filter: filter,
+                                            isSelected: selectedFilter == filter,
+                                            action: { 
+                                                selectedFilter = filter
+                                                let filters = EventFilters(
+                                                    searchText: searchText,
+                                                    selectedType: filter.rawValue,
+                                                    selectedLocation: filterModel.activeFilters.selectedLocation,
+                                                    priceRange: filterModel.activeFilters.priceRange,
+                                                    startDate: filterModel.activeFilters.startDate,
+                                                    endDate: filterModel.activeFilters.endDate,
+                                                    showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
+                                                    minParticipants: filterModel.activeFilters.minParticipants
+                                                )
+                                                filterModel.applyFilters(filters: filters)
+                                            }
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
+                            } .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                            
+                            // Nearby Destination
                             VStack(alignment: .leading) {
                                 HStack {
                                     Text("Nearby Destination")
@@ -263,15 +326,9 @@ struct DiscoverView: View {
                                     }
                                     .padding(.horizontal)
                                 }
-                            }
-                        }
-                        
-                        if filterModel.filteredEvents.isEmpty {
-                            noeventsview
-                        }
-                        
-                        // Recommendation
-                        if !filterModel.filteredEvents.isEmpty {
+                            } .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                            
+                            // Recommendation
                             VStack(alignment: .leading) {
                                 HStack {
                                     Text("Recommendation")
@@ -291,7 +348,7 @@ struct DiscoverView: View {
                                     }
                                 }
                                 .padding(.horizontal)
-                            }
+                            } .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                         }
                     }
                 }
@@ -310,8 +367,14 @@ struct DiscoverView: View {
                 Text(errorMessage ?? "An unknown error occurred")
             }
             .onAppear {
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                    pageAppeared = true
+                }
                 fetchEvents()
                 locationManager.fetchUserLocation(userId: userID)
+            }
+            .refreshable {
+                fetchEvents()
             }
         }
     }
@@ -354,9 +417,10 @@ struct DiscoverView: View {
     }
     
     private func fetchEvents() {
-        
         isLoading = true
         let db = Firestore.firestore()
+        
+        print("Starting to fetch events from Firebase...")
         
         db.collection("events")
             .whereField("status", isEqualTo: "active")
@@ -364,16 +428,20 @@ struct DiscoverView: View {
                 isLoading = false
                 
                 if let error = error {
+                    print("Error fetching events: \(error.localizedDescription)")
                     errorMessage = error.localizedDescription
                     showError = true
                     return
                 }
                 
                 guard let documents = snapshot?.documents else {
+                    print("No documents found in events collection")
                     errorMessage = "No events found"
                     showError = true
                     return
                 }
+                
+                print("Found \(documents.count) documents in events collection")
                 
                 let fetchedEvents = documents.compactMap { document -> Event? in
                     let data = document.data()
@@ -389,6 +457,7 @@ struct DiscoverView: View {
                           let images = data["images"] as? [String],
                           let isTimed = data["isTimed"] as? Bool,
                           let coordinates = data["coordinates"] as? [Double] else {
+                        print("Failed to parse event data for document: \(document.documentID)")
                         return nil
                     }
                     
@@ -414,9 +483,13 @@ struct DiscoverView: View {
                     )
                 }
                 
+                print("Successfully parsed \(fetchedEvents.count) events")
+                
                 // Update the filter model with fetched events
                 filterModel.filteredEvents = fetchedEvents
                 filterModel.applyFilters(filters: filterModel.activeFilters)
+                
+                print("Updated filter model with \(filterModel.filteredEvents.count) filtered events")
             }
     }
 }
@@ -775,9 +848,9 @@ struct FilterView: View {
     @State private var searchText = ""
     @State private var selectedType = "All"
     @State private var selectedLocation = "All"
-    @State private var priceRange: ClosedRange<Double> = 200...1400
+    @State private var priceRange: ClosedRange<Double> = 0...1000
     @State private var startDate: Date = Date()
-    @State private var endDate: Date = Date().addingTimeInterval(7*24*60*60)
+    @State private var endDate: Date = Date().addingTimeInterval(30*24*60*60)
     @State private var showTimedEventsOnly = false
     @State private var minParticipants = 0
     

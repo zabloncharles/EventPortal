@@ -5,30 +5,55 @@ struct CompactImageViewer: View {
     let imageUrls: [String]
     let height: CGFloat
     @State private var currentIndex = 0
+    let scroll : Bool = true
     
     var body: some View {
         ZStack {
-            TabView(selection: $currentIndex) {
-                ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
-                    KFImage(URL(string: url))
-                        .placeholder {
-                            ProgressView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(Color.gray.opacity(0.1))
-                        }
-                        .onFailure { error in
-                            Image(systemName: "photo.fill")
-                                .font(.largeTitle)
-                                .foregroundColor(.gray)
-                        }
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: height)
-                        .clipped()
-                        .tag(index)
+            if scroll {
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
+                        KFImage(URL(string: url))
+                            .placeholder {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(Color.gray.opacity(0.1))
+                            }
+                            .onFailure { error in
+                                Image(systemName: "photo.fill")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.gray)
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: height)
+                            .clipped()
+                            .tag(index)
+                    }
                 }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+            } else {
+                
+                    
+                KFImage(URL(string: imageUrls[0] ))
+                            .placeholder {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .background(Color.gray.opacity(0.1))
+                            }
+                            .onFailure { error in
+                                Image(systemName: "photo.fill")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.gray)
+                            }
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: height)
+                            .clipped()
+                           
+                    
+                
+                
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             
             // Image counter overlay
 //            if imageUrls.count > 1 {
