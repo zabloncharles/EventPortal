@@ -18,6 +18,8 @@ struct ViewEventDetail: View {
     let hapticFeedback = UINotificationFeedbackGenerator()
     @AppStorage("userID") private var userID: String = ""
     @StateObject private var viewModel = RecommendedEventsViewModel()
+    @State private var pageAppeared = false
+    @State private var bottomBarAppeared = false
     
     private func incrementViews() {
         let db = Firestore.firestore()
@@ -165,7 +167,7 @@ struct ViewEventDetail: View {
                         // Header Image with Paging Dots
                         ZStack(alignment: .top) {
                             // Image
-                            CompactImageViewer(imageUrls: event.images, height: 400)
+                            CompactImageViewer(imageUrls: event.images, height: 400, scroll:true)
                             
                             // Page Indicator
                             HStack(spacing: 8) {
@@ -358,50 +360,61 @@ struct ViewEventDetail: View {
                                     .padding(.top, 8)
                             }
                             
-                            // Add Recommended Events Section
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Similar Events")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                
-                                if viewModel.isLoading {
-                                    HStack {
-                                        Spacer()
-                                        ProgressView()
-                                            .scaleEffect(0.8)
-                                        Spacer()
-                                    }
-                                    .frame(height: 200)
-                                } else if viewModel.error != nil {
-                                    // Show error message
-                                    Text("Unable to load recommendations")
-                                        .foregroundColor(.gray)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                } else if viewModel.recommendedEvents.isEmpty {
-                                    Text("No similar events found")
-                                        .foregroundColor(.gray)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                } else {
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        LazyHStack(spacing: 16) {
-                                            ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
-                                                RecommendedEventCard(event: event)
-                                                    .onAppear {
-                                                        self.viewModel.recordEventInteraction(event, type: .view)
-                                                    }
-                                            }
-                                        }
-                                        .padding(.horizontal)
-                                    }
-                                    .frame(height: 280)
-                                }
-                            }
-                            .onAppear {
-                                print("Loading recommended events...")
-                                self.viewModel.loadRecommendedEvents()
-                            }
+                           
                         }
                         .padding()
+                        .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                        
+                        // Add Recommended Events Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Similar Events")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+                            
+                            if viewModel.isLoading {
+                                HStack {
+                                    Spacer()
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Spacer()
+                                }
+                                .frame(height: 200)
+                                .padding(.bottom,120)
+                            } else if viewModel.error != nil {
+                                // Show error message
+                                Text("Unable to load recommendations")
+                                    .foregroundColor(.gray)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.bottom,120)
+                            } else if viewModel.recommendedEvents.isEmpty {
+                                Text("No similar events found")
+                                    .foregroundColor(.gray)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.bottom,120)
+                            } else {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 16) {
+                                        ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
+                                            
+                                            NavigationLink {
+                                                ViewEventDetail(event: event)
+                                            } label: {
+                                               
+                                                RecommendedEventCard(event: event)
+                                                    
+                                            }
+                                        }
+                                    }.padding(.horizontal)
+                                    
+                                }.padding(.bottom,120)
+                                
+                            }
+                        }
+                        .onAppear {
+                            print("Loading recommended events...")
+                            self.viewModel.loadRecommendedEvents()
+                        }
                     }
                 }
                 .ignoresSafeArea()
@@ -468,32 +481,40 @@ struct ViewEventDetail: View {
                         )
                     }.background(Color.dynamic.opacity(showTicket ? 0 : 0.99))
                         .background(.ultraThinMaterial)
-                }
+                }.offset(y: !bottomBarAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
             }
                 .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPurchaseView) {
                 PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
             }
             .onAppear {
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                    pageAppeared = true
+                    DispatchQueue.main.asyncAfter(deadline:.now() + 0.5) {
+                        bottomBarAppeared = true
+                    }
+                }
                 // Increment views when the view appears
                 incrementViews()
-                
+                //Record this event as an activity of the user
+                self.viewModel.recordEventInteraction(event, type: .view)
+                //hide tabbar
                 tabBarManager.hideTab = true
-                
+                //hide tabbar again a second time
                 DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
                     tabBarManager.hideTab = true
                    
                 }
                 
                 // Fetch organizer name from Firestore
-                let db = Firestore.firestore()
-                db.collection("users").document(event.owner).getDocument { document, error in
-                    if let document = document, document.exists {
-                        organizerName = document.data()?["name"] as? String ?? "Unknown Organizer"
-                    } else {
-                        organizerName = "Unknown Organizer"
-                    }
-                }
+//                let db = Firestore.firestore()
+//                db.collection("users").document(event.owner).getDocument { document, error in
+//                    if let document = document, document.exists {
+//                        organizerName = document.data()?["name"] as? String ?? "Unknown Organizer"
+//                    } else {
+//                        organizerName = "Unknown Organizer"
+//                    }
+//                }
                 
                 
                
@@ -1144,7 +1165,7 @@ struct RecommendedEventCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             // Event Image
-            CompactImageViewer(imageUrls: event.images, height: 160)
+            CompactImageViewer(imageUrls: event.images, height: 160 , scroll:false)
                 .overlay(
                     VStack {
                         HStack {

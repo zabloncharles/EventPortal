@@ -5,11 +5,11 @@ struct CompactImageViewer: View {
     let imageUrls: [String]
     let height: CGFloat
     @State private var currentIndex = 0
-    let scroll : Bool = true
+    var scroll : Bool = true
     
     var body: some View {
         ZStack {
-            if scroll {
+          
                 TabView(selection: $currentIndex) {
                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
                         KFImage(URL(string: url))
@@ -30,30 +30,12 @@ struct CompactImageViewer: View {
                             .tag(index)
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-            } else {
-                
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: scroll ? .never : .automatic))
+                .overlay {
                     
-                KFImage(URL(string: imageUrls[0] ))
-                            .placeholder {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background(Color.gray.opacity(0.1))
-                            }
-                            .onFailure { error in
-                                Image(systemName: "photo.fill")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
-                            }
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: height)
-                            .clipped()
-                           
-                    
-                
-                
-            }
+                    scroll ? Color.clear :
+                    Color.gray.opacity(0.02)
+                }
             
             // Image counter overlay
 //            if imageUrls.count > 1 {

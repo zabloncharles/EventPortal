@@ -50,7 +50,7 @@ struct Event: Identifiable, Codable {
 // Sample events for previews
 let sampleEvents = [
     Event(
-        name: "Summer Music Festival",
+        name: "Summer Music Festival-",
         description: "A day of amazing music and entertainment. Join us for the biggest summer festival of the year. Join us for a day of fun and celebration in our annual music festival right here in new york city.",
         type: "Entertainment",
         views: "0",

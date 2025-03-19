@@ -38,72 +38,77 @@ enum FilterType: String, CaseIterable, Identifiable {
 class FilterModel: ObservableObject {
     @Published var filteredEvents: [Event] = []
     @Published var activeFilters: EventFilters = EventFilters()
+    private var allEvents: [Event] = [] // Store all events
     
     func applyFilters(filters: EventFilters) {
         print("Applying filters: \(filters)")
-        print("Total events before filtering: \(filteredEvents.count)")
+        print("Total events before filtering: \(allEvents.count)")
         
-        var filtered = filteredEvents
+        // Start with all events
+        var filtered = allEvents
         
         // Apply type filter
         if filters.selectedType != "All" {
-            filtered = filtered.filter { $0.type == filters.selectedType }
-            print("After type filter: \(filtered.count) events")
-            print("Filtered by type: \(filters.selectedType)")
-        }
-        
-        // Apply location filter
-        if filters.selectedLocation != "All" {
-            filtered = filtered.filter { $0.location == filters.selectedLocation }
-            print("After location filter: \(filtered.count) events")
-            print("Filtered by location: \(filters.selectedLocation)")
-        }
-        
-        // Apply price range filter
-        filtered = filtered.filter { event in
-            if event.price.lowercased() == "free" {
-                return true
+            print("Filtering by type: \(filters.selectedType)")
+            filtered = filtered.filter { event in
+                let matches = event.type == filters.selectedType
+                if !matches {
+                    print("Event '\(event.name)' filtered out due to type mismatch: \(event.type) != \(filters.selectedType)")
+                }
+                return matches
             }
-            if let price = Double(event.price) {
-                let isInRange = price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
+            print("After type filter: \(filtered.count) events")
+        }
+        
+        // Only apply other filters if we have events after type filtering
+        if !filtered.isEmpty {
+            // Apply location filter
+            if filters.selectedLocation != "All" {
+                filtered = filtered.filter { $0.location == filters.selectedLocation }
+                print("After location filter: \(filtered.count) events")
+            }
+            
+            // Apply price range filter
+            filtered = filtered.filter { event in
+                if event.price.lowercased() == "free" {
+                    return true
+                }
+                if let price = Double(event.price) {
+                    let isInRange = price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
+                    if !isInRange {
+                        print("Event '\(event.name)' filtered out due to price: \(price) not in range \(filters.priceRange)")
+                    }
+                    return isInRange
+                }
+                print("Event '\(event.name)' filtered out due to invalid price format: \(event.price)")
+                return false
+            }
+            print("After price filter: \(filtered.count) events")
+            
+            // Apply date range filter
+            filtered = filtered.filter { event in
+                let eventStartsBeforeFilterEnds = event.startDate <= filters.endDate
+                let eventEndsAfterFilterStarts = event.endDate >= filters.startDate
+                let isInRange = eventStartsBeforeFilterEnds && eventEndsAfterFilterStarts
+                
                 if !isInRange {
-                    print("Event '\(event.name)' filtered out due to price: \(price) not in range \(filters.priceRange)")
+                    print("Event '\(event.name)' filtered out due to date range")
                 }
                 return isInRange
             }
-            print("Event '\(event.name)' filtered out due to invalid price format: \(event.price)")
-            return false
-        }
-        print("After price filter: \(filtered.count) events")
-        print("Price range: \(filters.priceRange)")
-        
-        // Apply date range filter - more inclusive approach
-        filtered = filtered.filter { event in
-            // Check if event overlaps with the filter date range
-            let eventStartsBeforeFilterEnds = event.startDate <= filters.endDate
-            let eventEndsAfterFilterStarts = event.endDate >= filters.startDate
+            print("After date filter: \(filtered.count) events")
             
-            let isInRange = eventStartsBeforeFilterEnds && eventEndsAfterFilterStarts
-            
-            if !isInRange {
-                print("Event '\(event.name)' filtered out due to date range: \(event.startDate) to \(event.endDate) not overlapping with filter range \(filters.startDate) to \(filters.endDate)")
+            // Apply timed events filter
+            if filters.showTimedEventsOnly {
+                filtered = filtered.filter { $0.isTimed }
+                print("After timed events filter: \(filtered.count) events")
             }
-            return isInRange
-        }
-        print("After date filter: \(filtered.count) events")
-        print("Date range: \(filters.startDate) to \(filters.endDate)")
-        
-        // Apply timed events filter
-        if filters.showTimedEventsOnly {
-            filtered = filtered.filter { $0.isTimed }
-            print("After timed events filter: \(filtered.count) events")
-        }
-        
-        // Apply participants filter
-        if filters.minParticipants > 0 {
-            filtered = filtered.filter { $0.participants.count >= filters.minParticipants }
-            print("After participants filter: \(filtered.count) events")
-            print("Minimum participants: \(filters.minParticipants)")
+            
+            // Apply participants filter
+            if filters.minParticipants > 0 {
+                filtered = filtered.filter { $0.participants.count >= filters.minParticipants }
+                print("After participants filter: \(filtered.count) events")
+            }
         }
         
         filteredEvents = filtered
@@ -112,10 +117,16 @@ class FilterModel: ObservableObject {
         // Print details of remaining events
         if filteredEvents.isEmpty {
             print("No events remain after filtering. Original events:")
-            for event in filteredEvents {
-                print("- \(event.name): Type=\(event.type), Location=\(event.location), Price=\(event.price), StartDate=\(event.startDate), EndDate=\(event.endDate)")
+            for event in allEvents {
+                print("- \(event.name): Type=\(event.type), Location=\(event.location), Price=\(event.price)")
             }
         }
+    }
+    
+    // Update this method to store all events
+    func updateEvents(_ events: [Event]) {
+        allEvents = events
+        filteredEvents = events
     }
 }
 
@@ -222,6 +233,47 @@ struct DiscoverView: View {
                     .padding(.horizontal)
                     .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
+                    // Filters
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(FilterType.allCases) { filter in
+                                FilterButton(
+                                    filter: filter,
+                                    isSelected: selectedFilter == filter,
+                                    action: { 
+                                        print("Selected filter: \(filter.rawValue)")
+                                        selectedFilter = filter
+                                        
+                                        // Create new filters with the selected type
+                                        let filters = EventFilters(
+                                            searchText: searchText,
+                                            selectedType: filter.rawValue,
+                                            selectedLocation: filterModel.activeFilters.selectedLocation,
+                                            priceRange: filterModel.activeFilters.priceRange,
+                                            startDate: filterModel.activeFilters.startDate,
+                                            endDate: filterModel.activeFilters.endDate,
+                                            showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
+                                            minParticipants: filterModel.activeFilters.minParticipants
+                                        )
+                                        
+                                        // Apply filters
+                                        filterModel.applyFilters(filters: filters)
+                                        
+                                        // Print debug information
+                                        print("Current filter state:")
+                                        print("- Selected type: \(filter.rawValue)")
+                                        print("- Total events: \(filterModel.filteredEvents.count)")
+                                        print("- Available event types: \(Set(filterModel.filteredEvents.map { $0.type }))")
+                                    }
+                                )
+                                //Give it a seamless look
+                                Divider().padding(.vertical)
+                            }
+                        }
+                        .padding(.horizontal)
+                    } .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                    
+                    
                     if isSearching {
                         // Search Results Section
                         VStack(alignment: .leading, spacing: 16) {
@@ -251,6 +303,8 @@ struct DiscoverView: View {
                         }
                         .padding(.top)
                         .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                        
+                        
                     } else {
                         if isLoading {
                             VStack(spacing: 20) {
@@ -277,33 +331,7 @@ struct DiscoverView: View {
                             .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                         } else {
                             // Regular Content
-                            // Filters
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(FilterType.allCases) { filter in
-                                        FilterButton(
-                                            filter: filter,
-                                            isSelected: selectedFilter == filter,
-                                            action: { 
-                                                selectedFilter = filter
-                                                let filters = EventFilters(
-                                                    searchText: searchText,
-                                                    selectedType: filter.rawValue,
-                                                    selectedLocation: filterModel.activeFilters.selectedLocation,
-                                                    priceRange: filterModel.activeFilters.priceRange,
-                                                    startDate: filterModel.activeFilters.startDate,
-                                                    endDate: filterModel.activeFilters.endDate,
-                                                    showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
-                                                    minParticipants: filterModel.activeFilters.minParticipants
-                                                )
-                                                filterModel.applyFilters(filters: filters)
-                                            }
-                                        )
-                                    }
-                                }
-                                .padding(.horizontal)
-                            } .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
-                            
+                          
                             // Nearby Destination
                             VStack(alignment: .leading) {
                                 HStack {
@@ -315,13 +343,22 @@ struct DiscoverView: View {
                                         // See all action
                                     }
                                     .foregroundColor(.gray)
-                                }
-                                .padding(.horizontal)
-                                
+                    }
+                    .padding(.horizontal)
+                    
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 16) {
                                         ForEach(Array(filterModel.filteredEvents.prefix(3)), id: \.name) { event in
-                                            RecommendedEventCard(event: event)
+                                            
+                                            
+                                            NavigationLink {
+                                                //Show event detail view
+                                                ViewEventDetail(event: event)
+                                            } label: {
+                                                RecommendedEventCard(event: event)
+                                            }
+
+                                           
                                         }
                                     }
                                     .padding(.horizontal)
@@ -344,7 +381,12 @@ struct DiscoverView: View {
                                 
                                 VStack(spacing: 16) {
                                     ForEach(Array(filterModel.filteredEvents.suffix(3)), id: \.name) { event in
-                                        RegularEventCard(event: event)
+                                        NavigationLink {
+                                            //Show event detail view
+                                            ViewEventDetail(event: event)
+                                        } label: {
+                                            RegularEventCard(event: event)
+                                        }
                                     }
                                 }
                                 .padding(.horizontal)
@@ -370,11 +412,11 @@ struct DiscoverView: View {
                 withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                     pageAppeared = true
                 }
-                fetchEvents()
+                fetchDiscoverEvents()
                 locationManager.fetchUserLocation(userId: userID)
             }
             .refreshable {
-                fetchEvents()
+                fetchDiscoverEvents()
             }
         }
     }
@@ -397,7 +439,7 @@ struct DiscoverView: View {
                 
                 Button {
                     //reload events
-                    fetchEvents()
+                    fetchDiscoverEvents()
                 } label: {
                     HStack {
                         Text("Try Searching Again!")
@@ -416,7 +458,7 @@ struct DiscoverView: View {
         
     }
     
-    private func fetchEvents() {
+    private func fetchDiscoverEvents() {
         isLoading = true
         let db = Firestore.firestore()
         
@@ -484,10 +526,25 @@ struct DiscoverView: View {
                 }
                 
                 print("Successfully parsed \(fetchedEvents.count) events")
+                print("Available event types: \(Set(fetchedEvents.map { $0.type }))")
                 
                 // Update the filter model with fetched events
-                filterModel.filteredEvents = fetchedEvents
-                filterModel.applyFilters(filters: filterModel.activeFilters)
+                filterModel.updateEvents(fetchedEvents)
+                
+                // Create current filters
+                let currentFilters = EventFilters(
+                    searchText: searchText,
+                    selectedType: selectedFilter.rawValue,
+                    selectedLocation: filterModel.activeFilters.selectedLocation,
+                    priceRange: filterModel.activeFilters.priceRange,
+                    startDate: filterModel.activeFilters.startDate,
+                    endDate: filterModel.activeFilters.endDate,
+                    showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
+                    minParticipants: filterModel.activeFilters.minParticipants
+                )
+                
+                // Apply filters
+                filterModel.applyFilters(filters: currentFilters)
                 
                 print("Updated filter model with \(filterModel.filteredEvents.count) filtered events")
             }
@@ -549,10 +606,10 @@ struct FilterButton: View {
             Text(filter.rawValue)
                 .font(.subheadline)
                 .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(isSelected ? Color.blue : Color(uiColor: .secondarySystemBackground))
-                .cornerRadius(20)
+                .cornerRadius(10)
         }
     }
 }
@@ -855,23 +912,14 @@ struct FilterView: View {
     @State private var minParticipants = 0
     
     @ObservedObject var filterModel: FilterModel
-    
-    let eventTypes = ["All", "Technology", "Music", "Sports", "Art", "Food", "Business"]
+
+    let eventTypes = ["All", "Concert", "Corporate", "Marketing", "Health & Wellness", "Technology", "Art & Culture","Charity","Literature","Lifestyle","Environmental"]
     let locations = ["All", "New York", "Los Angeles", "Miami", "Chicago", "Houston"]
     
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Search Bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
-                    TextField("Search events...", text: $searchText)
-                }
-                .padding()
-                .background(Color(UIColor.secondarySystemBackground))
-                .cornerRadius(12)
-            
+              
                 // Event Type Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Event Type")

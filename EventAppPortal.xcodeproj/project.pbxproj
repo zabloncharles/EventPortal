@@ -163,6 +163,8 @@
 		F773EC6F2D790FAC0009AC93 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				F79545242D8673C10053ED72 /* ImageViewer.swift */,
+				F79545222D8673AA0053ED72 /* CompactImageViewer.swift */,
 				F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */,
 				F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */,
 				F773EC822D79EDC60009AC93 /* Resources */,
@@ -198,8 +200,6 @@
 			children = (
 				F74652692D884FB2002CE163 /* LocationManager.swift */,
 				F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */,
-				F79545242D8673C10053ED72 /* ImageViewer.swift */,
-				F79545222D8673AA0053ED72 /* CompactImageViewer.swift */,
 				F7855EA52D851A9E00D668CD /* FirebaseManager.swift */,
 			);
 			path = Services;
