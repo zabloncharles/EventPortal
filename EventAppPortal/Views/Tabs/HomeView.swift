@@ -74,13 +74,16 @@ struct HomeView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: data["organizerName"] as? String ?? owner,
+                        shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                 } ?? []
             }
@@ -126,13 +129,16 @@ struct HomeView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: data["organizerName"] as? String ?? owner,
+                        shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                 }
                 .filter { $0.startDate > Date() }
@@ -179,13 +185,16 @@ struct HomeView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: data["organizerName"] as? String ?? owner,
+                        shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                 } ?? []
             }
@@ -253,13 +262,16 @@ struct HomeView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: data["organizerName"] as? String ?? owner,
+                        shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                     
                     return (event, relevanceScore)
@@ -532,7 +544,7 @@ struct HomeView: View {
                                         NavigationLink(destination: ViewEventDetail(event: event)) {
                                                     RegularEventCard(event: event, showdescription: false)
                                                 }
-                                            }
+                                        }
                                 }.padding(.horizontal)
                                     }
                                 }

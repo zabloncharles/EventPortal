@@ -9,6 +9,8 @@ struct Event: Identifiable, Codable {
     let location: String
     let price: String
     let owner: String
+    let organizerName: String
+    let shareContactInfo: Bool
     let startDate: Date
     let endDate: Date
     let images: [String]
@@ -22,7 +24,7 @@ struct Event: Identifiable, Codable {
         case id, name, description, type, views
         case location, price, owner, startDate, endDate
         case images, participants, isTimed, createdAt
-        case coordinates, status
+        case coordinates, status, organizerName, shareContactInfo
     }
     
     func toDictionary() -> [String: Any] {
@@ -35,6 +37,8 @@ struct Event: Identifiable, Codable {
             "location": location,
             "price": price,
             "owner": owner,
+            "organizerName": organizerName,
+            "shareContactInfo": shareContactInfo,
             "startDate": startDate,
             "endDate": endDate,
             "images": images,
@@ -57,6 +61,8 @@ let sampleEvents = [
         location: "Central Park, New York",
         price: "Free",
         owner: "Current User",
+        organizerName: "Event Productions Inc",
+        shareContactInfo: true,
         startDate: Date(),
         endDate: Date().addingTimeInterval(86400),
         images: ["bg1","bg2"],
@@ -73,6 +79,8 @@ let sampleEvents = [
         location: "Silicon Valley Convention Center",
         price: "$299",
         owner: "TechCorp Events",
+        organizerName: "TechCorp Events",
+        shareContactInfo: false,
         startDate: Date().addingTimeInterval(604800), // One week from now
         endDate: Date().addingTimeInterval(604800 + 172800), // Two days duration
         images: ["bg3","bg4"],
@@ -89,6 +97,8 @@ let sampleEvents = [
         location: "Mountain View Resort, Colorado",
         price: "$499",
         owner: "Mindful Living Co",
+        organizerName: "Mindful Living Co",
+        shareContactInfo: true,
         startDate: Date().addingTimeInterval(1209600), // Two weeks from now
         endDate: Date().addingTimeInterval(1209600 + 172800),
         images: ["bg5","bg1"],
@@ -105,6 +115,8 @@ let sampleEvents = [
         location: "Napa Valley, California",
         price: "$150",
         owner: "Gourmet Events International",
+        organizerName: "Gourmet Events International",
+        shareContactInfo: true,
         startDate: Date().addingTimeInterval(1814400), // Three weeks from now
         endDate: Date().addingTimeInterval(1814400 + 172800),
         images: ["bg2","bg4"],
@@ -121,6 +133,8 @@ let sampleEvents = [
         location: "Modern Art Museum, Chicago",
         price: "$75",
         owner: "Chicago Arts Foundation",
+        organizerName: "Chicago Arts Foundation",
+        shareContactInfo: false,
         startDate: Date().addingTimeInterval(432000), // Five days from now
         endDate: Date().addingTimeInterval(432000 + 14400), // 4-hour event
         images: ["bg3","bg5"],
@@ -137,6 +151,8 @@ let sampleEvents = [
         location: "Innovation Hub, Boston",
         price: "$50",
         owner: "Startup Boston",
+        organizerName: "Startup Boston",
+        shareContactInfo: true,
         startDate: Date().addingTimeInterval(345600), // Four days from now
         endDate: Date().addingTimeInterval(345600 + 10800), // 3-hour event
         images: ["bg4","bg1"],

@@ -271,182 +271,193 @@ struct ProfileView: View {
                 let eventsWithCoordinates = [
                     Event(
                         id: UUID().uuidString,
-                        name: "Sample Team Building Retreat",
-                        description: "A weekend retreat to improve team dynamics and collaboration. Join us for an unforgettable day of music, food, and fun at the Summer Music Festival! Enjoy live performances from top artists, great food trucks, and plenty of activities for all ages.",
-                        type: "Corporate",
-                        views: "3434",
-                        location: "Soho House, New York",
-                        price: "12",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .day, value: 10, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg1","bg2"],
-                        participants: ["Alice", "Bob", "Charlie", "Dana"],
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [40.7247, -73.9973],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Product Launch",
-                        description: "Launching the latest version of our flagship product.",
-                        type: "Marketing",
-                        views: "544",
-                        location: "The Library, New York",
-                        price: "5",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .month, value: 1, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg3","bg6"],
-                        participants: ["Eve", "Frank", "Grace"],
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [40.7532, -73.9822],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Yoga Workshop",
-                        description: "An introductory yoga workshop for beginners.",
+                        name: "Mindful Meditation Retreat",
+                        description: "A weekend retreat focused on mindfulness and meditation techniques.",
                         type: "Health & Wellness",
-                        views: "6564",
-                        location: "The Wing, New York",
-                        price: "65",
+                        views: "3421",
+                        location: "Omega Institute, Rhinebeck, NY",
+                        price: "299",
                         owner: userID,
+                        organizerName: "Mindful Living Institute",
+                        shareContactInfo: true,
                         startDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date(),
                         endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg4","bg5"],
-                        participants: ["Hank", "Ivy", "Jack"],
-                        isTimed: false,
-                        createdAt: Date(),
-                        coordinates: [40.7398, -73.9934],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Hackathon 2025",
-                        description: "A 48-hour coding marathon to develop innovative solutions.",
-                        type: "Technology",
-                        views: "23",
-                        location: "NeueHouse, New York",
-                        price: "29.99",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg6","bg4"],
-                        participants: ["Kate", "Leo", "Mona", "Nina"],
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F2F720906-BD3E-4863-9027-61CD0B972EBA.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F402C3BB5-0DAB-4891-A9ED-D20E0B8003A2.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F4F46F970-5D24-4C96-96BC-A02305ADC54C.jpg?alt=media"
+                        ],
+                        participants: ["Sarah", "Michael", "Emma"],
                         isTimed: true,
                         createdAt: Date(),
-                        coordinates: [40.7401, -73.9969],
+                        coordinates: [41.9267, -73.9529],
                         status: "active"
                     ),
                     Event(
                         id: UUID().uuidString,
-                        name: "Art Exhibition",
-                        description: "Showcasing local artists' work for the year 2025.",
-                        type: "Art & Culture",
-                        views: "3444",
-                        location: "The Strand Bookstore, New York",
-                        price: "0",
+                        name: "Tech Startup Summit",
+                        description: "Annual gathering of tech entrepreneurs and investors.",
+                        type: "Technology",
+                        views: "8923",
+                        location: "Jersey City Convention Center, NJ",
+                        price: "199.99",
                         owner: userID,
+                        organizerName: "TechCorp Events",
+                        shareContactInfo: false,
+                        startDate: Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F6417351D-3D27-451A-BF49-7DA6CA5AEE8A.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F72D3E6FC-A588-4D97-B212-6B3124AD0E7A.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F8CF99259-8B17-4EA1-B4E4-DC695B46263F.jpg?alt=media"
+                        ],
+                        participants: ["David", "Lisa", "James", "Sophie"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7282, -74.0776],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Contemporary Art Fair",
+                        description: "Showcasing cutting-edge contemporary artists from the tri-state area.",
+                        type: "Art & Culture",
+                        views: "5678",
+                        location: "Brooklyn Expo Center, NY",
+                        price: "45",
+                        owner: userID,
+                        organizerName: "Brooklyn Arts Collective",
+                        shareContactInfo: true,
                         startDate: Calendar.current.date(byAdding: .day, value: 20, to: Date()) ?? Date(),
                         endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg1","bg4"],
-                        participants: ["Olivia", "Paul"],
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F17D48597-59B3-44BA-BB7A-BFD8CB8470D0.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F584E12C8-72C2-4803-87F8-534F57D07113.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F5D77FCBD-AFCB-4ABE-A7D6-D8DB82543DBF.jpg?alt=media"
+                        ],
+                        participants: ["Rachel", "Tom"],
                         isTimed: false,
+                        createdAt: Date(),
+                        coordinates: [40.7182, -73.9584],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Food Bank Fundraiser",
+                        description: "Annual gala to support local food banks and hunger relief programs.",
+                        type: "Charity",
+                        views: "12345",
+                        location: "The Liberty Science Center, Jersey City, NJ",
+                        price: "150",
+                        owner: userID,
+                        organizerName: "Community Food Bank",
+                        shareContactInfo: true,
+                        startDate: Calendar.current.date(byAdding: .day, value: 60, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F4F46F970-5D24-4C96-96BC-A02305ADC54C.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FE9DDCA07-4D22-44AC-B09F-74E21B668B1F.jpg?alt=media"
+                        ],
+                        participants: ["Alex", "Maria", "John", "Patricia"],
+                        isTimed: true,
+                        createdAt: Date(),
+                        coordinates: [40.7447, -74.0644],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Literary Festival",
+                        description: "Celebration of local authors and literary works.",
+                        type: "Literature",
+                        views: "2345",
+                        location: "The Strand Bookstore, NY",
+                        price: "25",
+                        owner: userID,
+                        organizerName: "The Strand Bookstore",
+                        shareContactInfo: false,
+                        startDate: Calendar.current.date(byAdding: .day, value: 5, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F708E9A54-5D27-4B5D-ABB0-CF80A73CF888.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FABED16FB-B847-4028-B65C-AD9B752CB9F8.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FFBDEF039-6AE5-480A-BA21-6A614BE3162E.jpg?alt=media"
+                        ],
+                        participants: ["William", "Elizabeth", "Henry"],
+                        isTimed: true,
                         createdAt: Date(),
                         coordinates: [40.7332, -73.9907],
                         status: "active"
                     ),
                     Event(
                         id: UUID().uuidString,
-                        name: "Charity Gala",
-                        description: "An annual gala to raise funds for underprivileged children.",
-                        type: "Charity",
-                        views: "23232",
-                        location: "The Soho Grand Hotel, New York",
-                        price: "6",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .day, value: 60, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg8","bg6"],
-                        participants: ["Quincy", "Rachel", "Sam", "Tina"],
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [40.7403, -74.0028],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Book Club Meeting",
-                        description: "Monthly book discussion on contemporary literature.",
-                        type: "Literature",
-                        views: "233",
-                        location: "New York Public Library",
-                        price: "66",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .day, value: 5, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg1","bg4"],
-                        participants: ["Uma", "Victor", "Wendy"],
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [40.7128, -74.0060],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Cooking Class",
-                        description: "Learn how to prepare Italian dishes from a professional chef.",
+                        name: "Farm-to-Table Cooking Workshop",
+                        description: "Learn to cook with fresh, local ingredients from nearby farms.",
                         type: "Lifestyle",
-                        views: "12",
-                        location: "La Scuola di Eataly, New York",
-                        price: "44",
-                        owner: userID,
-                        startDate: Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date(),
-                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg6","bg7"],
-                        participants: ["Xander", "Yara"],
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [40.7377, -73.9933],
-                        status: "active"
-                    ),
-                    Event(
-                        id: UUID().uuidString,
-                        name: "Community Cleanup",
-                        description: "Join us in cleaning up the neighborhood park.",
-                        type: "Environmental",
-                        views: "65",
-                        location: "Bryant Park, New York",
+                        views: "876",
+                        location: "Montclair Farmers Market, NJ",
                         price: "89",
                         owner: userID,
-                        startDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        organizerName: "Local Food Co-op",
+                        shareContactInfo: true,
+                        startDate: Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date(),
                         endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg3","bg5"],
-                        participants: ["Zara", "Alex", "Bella"],
-                        isTimed: false,
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F17D48597-59B3-44BA-BB7A-BFD8CB8470D0.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F422B072E-0B69-49FE-A8D7-5CA429CED980.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FA7DD13B0-A303-482B-A538-4EB5E57567A3.jpg?alt=media"
+                        ],
+                        participants: ["Oliver", "Sophia"],
+                        isTimed: true,
                         createdAt: Date(),
-                        coordinates: [40.7549, -73.9840],
+                        coordinates: [40.8120, -74.2127],
                         status: "active"
                     ),
                     Event(
                         id: UUID().uuidString,
-                        name: "Music Festival",
-                        description: "An outdoor festival featuring local and international artists.",
-                        type: "Entertainment",
-                        views: "98",
-                        location: "Brooklyn Bowl, New York",
-                        price: "5",
+                        name: "Beach Cleanup Day",
+                        description: "Join us in cleaning up our local beaches and protecting marine life.",
+                        type: "Environmental",
+                        views: "4321",
+                        location: "Asbury Park Beach, NJ",
+                        price: "0",
                         owner: userID,
+                        organizerName: "Ocean Conservation Society",
+                        shareContactInfo: true,
+                        startDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F17D48597-59B3-44BA-BB7A-BFD8CB8470D0.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F315D458E-CBEE-40BC-935E-8CABCA093EB4.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F7BC972D4-8264-4C4E-B419-C072980D28B1.jpg?alt=media"
+                        ],
+                        participants: ["Lucas", "Isabella", "Noah"],
+                        isTimed: false,
+                        createdAt: Date(),
+                        coordinates: [40.2204, -74.0121],
+                        status: "active"
+                    ),
+                    Event(
+                        id: UUID().uuidString,
+                        name: "Jazz & Blues Festival",
+                        description: "A weekend of live jazz and blues performances from top artists.",
+                        type: "Entertainment",
+                        views: "9876",
+                        location: "Prospect Park Bandshell, Brooklyn, NY",
+                        price: "75",
+                        owner: userID,
+                        organizerName: "Brooklyn Music Productions",
+                        shareContactInfo: true,
                         startDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
                         endDate: Calendar.current.date(byAdding: .day, value: 45, to: Date()) ?? Date(),
-                        images: ["bg7","bg1"],
-                        participants: ["Chris", "Diane", "Eli"],
+                        images: [
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F0C974F1D-B873-4F1E-9F87-9FC3DF679AF1.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F422B072E-0B69-49FE-A8D7-5CA429CED980.jpg?alt=media",
+                            "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F5D77FCBD-AFCB-4ABE-A7D6-D8DB82543DBF.jpg?alt=media"
+                        ],
+                        participants: ["Charlie", "Diana", "Edward"],
                         isTimed: true,
                         createdAt: Date(),
-                        coordinates: [40.7110, -73.9573],
+                        coordinates: [40.6629, -73.9690],
                         status: "active"
                     )
                 ]
@@ -701,7 +712,7 @@ struct MyEventsView: View {
                         Text(segments[index])
                             .fontWeight(selectedSegment == index ? .semibold : .regular)
                             .foregroundColor(selectedSegment == index ? .primary : .secondary)
-                            .padding(.vertical, 8)
+                    .padding(.vertical, 8)
                             .padding(.horizontal, 16)
                             .background(
                                 selectedSegment == index ?
@@ -925,13 +936,16 @@ struct BookmarkedView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: data["organizerName"] as? String ?? "",
+                        shareContactInfo: data["shareContactInfo"] as? Bool ?? true,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                     
                     DispatchQueue.main.async {
@@ -974,6 +988,12 @@ struct BookmarkedEventCard: View {
                     Text(formatDate(event.startDate))
                         .font(.caption)
                         .foregroundColor(.gray)
+                }
+                
+                if event.shareContactInfo {
+                    Text("Organizer: \(event.organizerName)")
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 }
             }
             
@@ -1540,8 +1560,8 @@ struct LocationSettingsView: View {
                         }
                     }
                     
-                    Section {
-                        Button(action: {
+                Section {
+                    Button(action: {
                             switch locationManager.authorizationStatus {
                             case .notDetermined:
                                 locationManager.requestPermission()

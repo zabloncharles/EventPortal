@@ -93,13 +93,15 @@ struct CreateEventView: View {
             type: eventDetails.category,
             views: "0",
             location: eventDetails.location,
-            price: "Free",
+            price: eventDetails.price,
             owner: ownerName,
+            organizerName: ownerName,
+            shareContactInfo: eventDetails.shareContactInfo,
             startDate: eventDetails.date,
-            endDate: eventDetails.date.addingTimeInterval(7200),
+            endDate: eventDetails.isTimed ? eventDetails.date.addingTimeInterval(7200) : eventDetails.date,
             images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-            isTimed: true,
+            isTimed: eventDetails.isTimed,
             createdAt: Date(),
             coordinates: eventDetails.coordinates,
             status: "active"
@@ -675,37 +677,49 @@ struct CreateEventView: View {
         isLoading = true
         
         Task {
-            // Upload images first if there are any
-            let imageUrls = selectedImages.isEmpty ? ["bg1"] : await uploadImagesToFirebase()
-            
-            let event = Event(
-                name: eventDetails.title,
-                description: eventDetails.description,
-                type: eventDetails.category,
-                views: "0",
-                location: eventDetails.location,
-                price: "Free",
-                owner: firebaseManager.currentUser?.uid ?? "",
-                startDate: eventDetails.date,
-                endDate: eventDetails.date.addingTimeInterval(7200),
-                images: imageUrls,
-                participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-                isTimed: true,
-                createdAt: Date(),
-                coordinates: eventDetails.coordinates,
-                status: "active"
-            )
-            
-            firebaseManager.createEvent(event: event) { success, error in
-                isLoading = false
-                if success {
-                    withAnimation {
-                        showSuccess = true
+            do {
+                let ownerName: String = {
+                    if let user = firebaseManager.currentUser {
+                        return user.displayName ?? user.email ?? "Anonymous"
                     }
-                } else {
-                    errorMessage = error ?? "Failed to create event"
-                    showError = true
+                    return "Anonymous"
+                }()
+                
+                let event = Event(
+                    name: eventDetails.title,
+                    description: eventDetails.description,
+                    type: eventDetails.category,
+                    views: "0",
+                    location: eventDetails.location,
+                    price: eventDetails.price,
+                    owner: firebaseManager.currentUser?.uid ?? "",
+                    organizerName: ownerName,
+                    shareContactInfo: eventDetails.shareContactInfo,
+                    startDate: eventDetails.date,
+                    endDate: eventDetails.date.addingTimeInterval(7200),
+                    images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
+                    participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                    isTimed: eventDetails.isTimed,
+                    createdAt: Date(),
+                    coordinates: eventDetails.coordinates,
+                    status: "active"
+                )
+                
+                firebaseManager.createEvent(event: event) { success, error in
+                    isLoading = false
+                    if success {
+                        withAnimation {
+                            showSuccess = true
+                        }
+                    } else {
+                        errorMessage = error ?? "Failed to create event"
+                        showError = true
+                    }
                 }
+            } catch {
+                isLoading = false
+                errorMessage = error.localizedDescription
+                showError = true
             }
         }
     }
@@ -880,14 +894,17 @@ struct ChatMessage: Identifiable, Equatable {
 }
 
 struct EventDetails {
-    var title = ""
-    var date = Date()
-    var location = ""
-    var description = ""
-    var maxParticipants = 0
-    var category: String = eventTypes[0]
-    var coordinates: [Double] = []
+    var title: String = ""
+    var description: String = ""
+    var category: String = ""
+    var location: String = ""
+    var date: Date = Date()
+    var maxParticipants: Int = 0
     var images: [String] = []
+    var coordinates: [Double] = []
+    var price: String = "Free"
+    var isTimed: Bool = true
+    var shareContactInfo: Bool = true
 }
 
 struct CategorySelectionView: View {
@@ -1110,19 +1127,28 @@ struct EventReviewView: View {
         
         Task {
             do {
+                let ownerName: String = {
+                    if let user = firebaseManager.currentUser {
+                        return user.displayName ?? user.email ?? "Anonymous"
+                    }
+                    return "Anonymous"
+                }()
+                
                 let event = Event(
                     name: eventDetails.title,
                     description: eventDetails.description,
                     type: eventDetails.category,
                     views: "0",
                     location: eventDetails.location,
-                    price: "Free",
+                    price: eventDetails.price,
                     owner: firebaseManager.currentUser?.uid ?? "",
+                    organizerName: ownerName,
+                    shareContactInfo: eventDetails.shareContactInfo,
                     startDate: eventDetails.date,
                     endDate: eventDetails.date.addingTimeInterval(7200),
                     images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
                     participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-                    isTimed: true,
+                    isTimed: eventDetails.isTimed,
                     createdAt: Date(),
                     coordinates: eventDetails.coordinates,
                     status: "active"
@@ -1162,13 +1188,15 @@ struct EventReviewView: View {
             type: eventDetails.category,
             views: "0",
             location: eventDetails.location,
-            price: "Free",
+            price: eventDetails.price,
             owner: ownerName,
+            organizerName: ownerName,
+            shareContactInfo: eventDetails.shareContactInfo,
             startDate: eventDetails.date,
             endDate: eventDetails.date.addingTimeInterval(7200),
             images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
-            isTimed: true,
+            isTimed: eventDetails.isTimed,
             createdAt: Date(),
             coordinates: eventDetails.coordinates,
             status: "active"

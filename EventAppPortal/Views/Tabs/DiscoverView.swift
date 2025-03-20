@@ -494,11 +494,14 @@ struct DiscoverView: View {
                           let location = data["location"] as? String,
                           let price = data["price"] as? String,
                           let owner = data["owner"] as? String,
+                          let organizerName = data["organizerName"] as? String,
+                          let shareContactInfo = data["shareContactInfo"] as? Bool,
                           let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
                           let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
                           let images = data["images"] as? [String],
                           let isTimed = data["isTimed"] as? Bool,
-                          let coordinates = data["coordinates"] as? [Double] else {
+                          let coordinates = data["coordinates"] as? [Double],
+                          let status = data["status"] as? String else {
                         print("Failed to parse event data for document: \(document.documentID)")
                         return nil
                     }
@@ -507,7 +510,6 @@ struct DiscoverView: View {
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
-                        id: document.documentID,
                         name: name,
                         description: description,
                         type: type,
@@ -515,13 +517,16 @@ struct DiscoverView: View {
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: organizerName,
+                        shareContactInfo: shareContactInfo,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: status
                     )
                 }
                 

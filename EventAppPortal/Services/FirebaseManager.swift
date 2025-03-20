@@ -184,6 +184,8 @@ class FirebaseManager: ObservableObject {
             "location": event.location,
             "price": event.price,
             "owner": userId,
+            "organizerName": event.organizerName,
+            "shareContactInfo": event.shareContactInfo,
             "startDate": event.startDate,
             "endDate": event.endDate,
             "images": event.images,
@@ -255,31 +257,34 @@ class FirebaseManager: ObservableObject {
                           let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
                           let images = data["images"] as? [String],
                           let isTimed = data["isTimed"] as? Bool,
-                          let coordinates = data["coordinates"] as? [Double]
-                    else {
+                          let coordinates = data["coordinates"] as? [Double],
+                          let organizerName = data["organizerName"] as? String,
+                          let shareContactInfo = data["shareContactInfo"] as? Bool else {
                         return nil
                     }
                     
-                    // Create dummy participants array based on maxParticipants
                     let maxParticipants = data["maxParticipants"] as? Int ?? 0
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
-                        id: document.documentID, // Use the document ID here
+                        id: document.documentID,
                         name: name,
                         description: description,
                         type: type,
-                        views: "0",
+                        views: data["views"] as? String ?? "0",
                         location: location,
                         price: price,
                         owner: owner,
+                        organizerName: organizerName,
+                        shareContactInfo: shareContactInfo,
                         startDate: startDate,
                         endDate: endDate,
                         images: images,
                         participants: participants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates
+                        coordinates: coordinates,
+                        status: data["status"] as? String ?? "active"
                     )
                 }
                 

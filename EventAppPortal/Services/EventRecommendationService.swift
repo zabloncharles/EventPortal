@@ -235,6 +235,8 @@ extension Event {
         self.location = data["location"] as? String ?? ""
         self.price = data["price"] as? String ?? ""
         self.owner = data["owner"] as? String ?? ""
+        self.organizerName = data["organizerName"] as? String ?? ""
+        self.shareContactInfo = data["shareContactInfo"] as? Bool ?? false
         self.startDate = (data["startDate"] as? Timestamp)?.dateValue() ?? Date()
         self.endDate = (data["endDate"] as? Timestamp)?.dateValue() ?? Date()
         self.images = data["images"] as? [String] ?? []
