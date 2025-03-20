@@ -288,6 +288,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F4F46F970-5D24-4C96-96BC-A02305ADC54C.jpg?alt=media"
                         ],
                         participants: ["Sarah", "Michael", "Emma"],
+                        maxParticipants: 50,
                         isTimed: true,
                         createdAt: Date(),
                         coordinates: [41.9267, -73.9529],
@@ -312,6 +313,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F8CF99259-8B17-4EA1-B4E4-DC695B46263F.jpg?alt=media"
                         ],
                         participants: ["David", "Lisa", "James", "Sophie"],
+                        maxParticipants: 100,
                         isTimed: true,
                         createdAt: Date(),
                         coordinates: [40.7282, -74.0776],
@@ -336,6 +338,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F5D77FCBD-AFCB-4ABE-A7D6-D8DB82543DBF.jpg?alt=media"
                         ],
                         participants: ["Rachel", "Tom"],
+                        maxParticipants: 30,
                         isTimed: false,
                         createdAt: Date(),
                         coordinates: [40.7182, -73.9584],
@@ -359,6 +362,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FE9DDCA07-4D22-44AC-B09F-74E21B668B1F.jpg?alt=media"
                         ],
                         participants: ["Alex", "Maria", "John", "Patricia"],
+                        maxParticipants: 80,
                         isTimed: true,
                         createdAt: Date(),
                         coordinates: [40.7447, -74.0644],
@@ -383,7 +387,8 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FFBDEF039-6AE5-480A-BA21-6A614BE3162E.jpg?alt=media"
                         ],
                         participants: ["William", "Elizabeth", "Henry"],
-                        isTimed: true,
+                        maxParticipants: 60,
+                        isTimed: false,
                         createdAt: Date(),
                         coordinates: [40.7332, -73.9907],
                         status: "active"
@@ -407,6 +412,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2FA7DD13B0-A303-482B-A538-4EB5E57567A3.jpg?alt=media"
                         ],
                         participants: ["Oliver", "Sophia"],
+                        maxParticipants: 40,
                         isTimed: true,
                         createdAt: Date(),
                         coordinates: [40.8120, -74.2127],
@@ -431,6 +437,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F7BC972D4-8264-4C4E-B419-C072980D28B1.jpg?alt=media"
                         ],
                         participants: ["Lucas", "Isabella", "Noah"],
+                        maxParticipants: 70,
                         isTimed: false,
                         createdAt: Date(),
                         coordinates: [40.2204, -74.0121],
@@ -455,6 +462,7 @@ struct ProfileView: View {
                             "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F5D77FCBD-AFCB-4ABE-A7D6-D8DB82543DBF.jpg?alt=media"
                         ],
                         participants: ["Charlie", "Diana", "Edward"],
+                        maxParticipants: 50,
                         isTimed: true,
                         createdAt: Date(),
                         coordinates: [40.6629, -73.9690],
@@ -942,6 +950,7 @@ struct BookmarkedView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,

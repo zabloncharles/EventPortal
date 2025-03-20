@@ -20,6 +20,10 @@ struct ViewEventDetail: View {
     @StateObject private var viewModel = RecommendedEventsViewModel()
     @State private var pageAppeared = false
     @State private var bottomBarAppeared = false
+    @State private var isPurchasing = false
+    @State private var purchaseError: String?
+    @State private var showPurchaseError = false
+    @State private var showPurchaseSuccess = false
     
     private func incrementViews() {
         let db = Firestore.firestore()
@@ -157,6 +161,49 @@ struct ViewEventDetail: View {
                 }
             }
         }
+    }
+    
+    private func checkIfUserHasTicket() {
+        guard !userID.isEmpty else { return }
+        
+        let db = Firestore.firestore()
+        db.collection("events").document(event.id).getDocument { document, error in
+            if let error = error {
+                print("Error checking ticket status: \(error)")
+                return
+            }
+            
+            if let document = document, document.exists {
+                if let participants = document.data()?["participants"] as? [String] {
+                    DispatchQueue.main.async {
+                        self.hasTicket = participants.contains(userID)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func purchaseTicket() {
+        isPurchasing = true
+        firebaseManager.purchaseTicket(eventId: event.id) { success, error in
+            isPurchasing = false
+            if success {
+                showPurchaseSuccess = true
+                hasTicket = true
+                hapticFeedback.notificationOccurred(.success)
+            } else {
+                purchaseError = error ?? "Failed to purchase ticket"
+                showPurchaseError = true
+                hapticFeedback.notificationOccurred(.error)
+            }
+        }
+    }
+    
+    private func checkTicketStatus() {
+        guard let userId = firebaseManager.currentUser?.uid else { return }
+        
+        // Check if the user is in the event's participants list
+        hasTicket = event.participants.contains(userId)
     }
     
     var body: some View {
@@ -366,10 +413,10 @@ struct ViewEventDetail: View {
                         .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                         
                         // Add Recommended Events Section
-                        VStack(alignment: .leading, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 16) {
                             Text("Similar Events")
-                                .font(.title3)
-                                .fontWeight(.bold)
+                                    .font(.title3)
+                                    .fontWeight(.bold)
                                 .padding(.horizontal)
                             
                             if viewModel.isLoading {
@@ -409,13 +456,13 @@ struct ViewEventDetail: View {
                                     
                                 }.padding(.bottom,120)
                                 
-                            }
-                        }
+                                    }
+                                }
                         .onAppear {
                             print("Loading recommended events...")
                             self.viewModel.loadRecommendedEvents()
+                            }
                         }
-                    }
                 }
                 .ignoresSafeArea()
             .navigationBarHidden(true)
@@ -456,16 +503,14 @@ struct ViewEventDetail: View {
                             
                             Button(action: {
                                 hapticFeedback.notificationOccurred(.success)
-                                withAnimation(.spring()) {
-                                    if hasTicket {
-                                        showTicket.toggle()
-                                    } else {
-                                        showPurchaseView.toggle()
-                                    }
+                                if hasTicket {
+                                    showTicket.toggle()
+                                } else {
+                                    showPurchaseView.toggle()
                                 }
                             }) {
-                                Text(hasTicket ? (showTicket ? "Hide Ticket" : "View Ticket") : "Buy Ticket")
-                                    .fontWeight(.semibold)
+                                Text(hasTicket ?  "\(showTicket ? "Hide Ticket" : "View Ticket")"   : "Purchase")
+                                    .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 24)
                                     .padding(.vertical, 12)
@@ -521,6 +566,8 @@ struct ViewEventDetail: View {
                 
                 // Check if event is bookmarked
                 checkIfBookmarked()
+                checkIfUserHasTicket()
+                checkTicketStatus()
             }
             .onDisappear {
                 tabBarManager.hideTab = false
@@ -537,6 +584,27 @@ struct ViewEventDetail: View {
                     .padding(10)
                     
             }
+            .alert("Purchase Error", isPresented: $showPurchaseError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(purchaseError ?? "An error occurred")
+            }
+            .alert("Success", isPresented: $showPurchaseSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your ticket has been purchased successfully!")
+            }
+            .overlay(
+                Group {
+                    if isPurchasing {
+                        ProgressView("Purchasing ticket...")
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .cornerRadius(10)
+                            .shadow(radius: 10)
+                    }
+                }
+            )
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -779,7 +847,10 @@ struct PurchaseTicketView: View {
     @State private var cardCVV = ""
     @State private var cardHolderName = ""
     @State private var isCardFlipped = false
+    @State private var showError = false
+    @State private var errorMessage: String?
     let hapticFeedback = UINotificationFeedbackGenerator()
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -977,11 +1048,49 @@ struct PurchaseTicketView: View {
                         isProcessing = true
                         hapticFeedback.notificationOccurred(.success)
                         
-                        // Simulate payment processing
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        // Validate card details if credit card is selected
+                        if selectedPaymentMethod == 0 {
+                            if cardNumber.isEmpty || cardExpiry.isEmpty || cardCVV.isEmpty || cardHolderName.isEmpty {
+                                errorMessage = "Please fill in all card details"
+                                showError = true
                             isProcessing = false
+                                hapticFeedback.notificationOccurred(.error)
+                                return
+                            }
+                            
+                            // Basic validation
+                            if cardNumber.replacingOccurrences(of: " ", with: "").count != 16 {
+                                errorMessage = "Invalid card number"
+                                showError = true
+                                isProcessing = false
+                                hapticFeedback.notificationOccurred(.error)
+                                return
+                            }
+                            
+                            if cardCVV.count != 3 {
+                                errorMessage = "Invalid CVV"
+                                showError = true
+                                isProcessing = false
+                                hapticFeedback.notificationOccurred(.error)
+                                return
+                            }
+                        }
+                        
+                        // Process the ticket purchase through Firebase
+                        firebaseManager.purchaseTicket(eventId: event.id) { success, error in
+                            DispatchQueue.main.async {
+                                isProcessing = false
+                                
+                                if success {
+                                    hapticFeedback.notificationOccurred(.success)
                             hasTicket = true
                             isPresented = false
+                                } else {
+                                    errorMessage = error ?? "Failed to purchase ticket"
+                                    showError = true
+                                    hapticFeedback.notificationOccurred(.error)
+                                }
+                            }
                         }
                     }) {
                         HStack {
@@ -1015,7 +1124,11 @@ struct PurchaseTicketView: View {
            
         }
         .preferredColorScheme(.dark)
-        
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "An error occurred")
+        }
     }
 }
 

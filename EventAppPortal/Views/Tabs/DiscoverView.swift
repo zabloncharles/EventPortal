@@ -523,6 +523,7 @@ struct DiscoverView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,

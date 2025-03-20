@@ -241,6 +241,7 @@ extension Event {
         self.endDate = (data["endDate"] as? Timestamp)?.dateValue() ?? Date()
         self.images = data["images"] as? [String] ?? []
         self.participants = data["participants"] as? [String] ?? []
+        self.maxParticipants = data["maxParticipants"] as? Int ?? 100
         self.isTimed = data["isTimed"] as? Bool ?? false
         self.createdAt = (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
         self.coordinates = data["coordinates"] as? [Double] ?? []

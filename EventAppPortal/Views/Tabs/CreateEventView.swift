@@ -100,7 +100,8 @@ struct CreateEventView: View {
             startDate: eventDetails.date,
             endDate: eventDetails.isTimed ? eventDetails.date.addingTimeInterval(7200) : eventDetails.date,
             images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
-            participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            participants: [],
+            maxParticipants: eventDetails.maxParticipants,
             isTimed: eventDetails.isTimed,
             createdAt: Date(),
             coordinates: eventDetails.coordinates,
@@ -699,6 +700,7 @@ struct CreateEventView: View {
                     endDate: eventDetails.date.addingTimeInterval(7200),
                     images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
                     participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                    maxParticipants: eventDetails.maxParticipants,
                     isTimed: eventDetails.isTimed,
                     createdAt: Date(),
                     coordinates: eventDetails.coordinates,
@@ -899,7 +901,7 @@ struct EventDetails {
     var category: String = ""
     var location: String = ""
     var date: Date = Date()
-    var maxParticipants: Int = 0
+    var maxParticipants: Int = 100
     var images: [String] = []
     var coordinates: [Double] = []
     var price: String = "Free"
@@ -1148,6 +1150,7 @@ struct EventReviewView: View {
                     endDate: eventDetails.date.addingTimeInterval(7200),
                     images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
                     participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+                    maxParticipants: eventDetails.maxParticipants,
                     isTimed: eventDetails.isTimed,
                     createdAt: Date(),
                     coordinates: eventDetails.coordinates,
@@ -1196,6 +1199,7 @@ struct EventReviewView: View {
             endDate: eventDetails.date.addingTimeInterval(7200),
             images: eventDetails.images.isEmpty ? ["bg1"] : eventDetails.images,
             participants: Array(repeating: "Participant", count: eventDetails.maxParticipants),
+            maxParticipants: eventDetails.maxParticipants,
             isTimed: eventDetails.isTimed,
             createdAt: Date(),
             coordinates: eventDetails.coordinates,

@@ -189,8 +189,8 @@ class FirebaseManager: ObservableObject {
             "startDate": event.startDate,
             "endDate": event.endDate,
             "images": event.images,
-            "maxParticipants": event.participants.count,
-            "currentParticipants": 0,
+            "maxParticipants": event.maxParticipants,
+            "participants": [],
             "isTimed": event.isTimed,
             "createdAt": Timestamp(),
             "coordinates": event.coordinates,
@@ -259,12 +259,12 @@ class FirebaseManager: ObservableObject {
                           let isTimed = data["isTimed"] as? Bool,
                           let coordinates = data["coordinates"] as? [Double],
                           let organizerName = data["organizerName"] as? String,
-                          let shareContactInfo = data["shareContactInfo"] as? Bool else {
+                          let shareContactInfo = data["shareContactInfo"] as? Bool,
+                          let maxParticipants = data["maxParticipants"] as? Int else {
                         return nil
                     }
                     
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
-                    let participants = Array(repeating: "Participant", count: maxParticipants)
+                    let participants = data["participants"] as? [String] ?? []
                     
                     return Event(
                         id: document.documentID,
@@ -281,6 +281,7 @@ class FirebaseManager: ObservableObject {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,
@@ -290,6 +291,80 @@ class FirebaseManager: ObservableObject {
                 
                 completion(.success(events))
             }
+    }
+    
+    func purchaseTicket(eventId: String, completion: @escaping (Bool, String?) -> Void) {
+        guard let userId = currentUser?.uid else {
+            completion(false, "No user logged in")
+            return
+        }
+        
+        let db = Firestore.firestore()
+        let eventRef = db.collection("events").document(eventId)
+        
+        // Start a transaction to ensure data consistency
+        db.runTransaction({ (transaction, errorPointer) -> Any? in
+            let eventDocument: DocumentSnapshot
+            do {
+                try eventDocument = transaction.getDocument(eventRef)
+            } catch let fetchError as NSError {
+                errorPointer?.pointee = fetchError
+                return nil
+            }
+            
+            guard let eventData = eventDocument.data() else {
+                let error = NSError(domain: "AppErrorDomain", code: -1, userInfo: [NSLocalizedDescriptionKey: "Event data not found"])
+                errorPointer?.pointee = error
+                return nil
+            }
+            
+            // Check if user already has a ticket
+            let participants = eventData["participants"] as? [String] ?? []
+            if participants.contains(userId) {
+                let error = NSError(domain: "AppErrorDomain", code: -1, userInfo: [NSLocalizedDescriptionKey: "You already have a ticket for this event"])
+                errorPointer?.pointee = error
+                return nil
+            }
+            
+            // Check if event is full
+            let maxParticipants = eventData["maxParticipants"] as? Int ?? 0
+            
+            if participants.count >= maxParticipants {
+                let error = NSError(domain: "AppErrorDomain", code: -1, userInfo: [NSLocalizedDescriptionKey: "Event is full. Maximum capacity is \(maxParticipants)"])
+                errorPointer?.pointee = error
+                return nil
+            }
+            
+            // Create ticket document
+            let ticketRef = db.collection("tickets").document()
+            let ticketData: [String: Any] = [
+                "id": ticketRef.documentID,
+                "eventId": eventId,
+                "userId": userId,
+                "purchaseDate": Timestamp(),
+                "status": "active"
+            ]
+            
+            // Update event document
+            transaction.setData(ticketData, forDocument: ticketRef)
+            transaction.updateData([
+                "participants": FieldValue.arrayUnion([userId])
+            ], forDocument: eventRef)
+            
+            // Update user's tickets
+            let userRef = db.collection("users").document(userId)
+            transaction.updateData([
+                "tickets": FieldValue.arrayUnion([ticketRef.documentID])
+            ], forDocument: userRef)
+            
+            return nil
+        }) { (_, error) in
+            if let error = error {
+                completion(false, error.localizedDescription)
+            } else {
+                completion(true, nil)
+            }
+        }
     }
 }
 

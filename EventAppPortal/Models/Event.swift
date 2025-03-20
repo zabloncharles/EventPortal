@@ -15,6 +15,7 @@ struct Event: Identifiable, Codable {
     let endDate: Date
     let images: [String]
     let participants: [String]
+    let maxParticipants: Int
     let isTimed: Bool
     let createdAt: Date
     let coordinates: [Double]
@@ -25,6 +26,7 @@ struct Event: Identifiable, Codable {
         case location, price, owner, startDate, endDate
         case images, participants, isTimed, createdAt
         case coordinates, status, organizerName, shareContactInfo
+        case maxParticipants
     }
     
     func toDictionary() -> [String: Any] {
@@ -43,6 +45,7 @@ struct Event: Identifiable, Codable {
             "endDate": endDate,
             "images": images,
             "participants": participants,
+            "maxParticipants": maxParticipants,
             "isTimed": isTimed,
             "createdAt": createdAt,
             "coordinates": coordinates,
@@ -67,6 +70,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(86400),
         images: ["bg1","bg2"],
         participants: ["John", "Jane", "Mike", "Sarah"],
+        maxParticipants: 100,
         isTimed: true,
         createdAt: Date(),
         coordinates: []
@@ -85,6 +89,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(604800 + 172800), // Two days duration
         images: ["bg3","bg4"],
         participants: ["Alex", "Emma", "David", "Lisa", "Tom"],
+        maxParticipants: 200,
         isTimed: true,
         createdAt: Date().addingTimeInterval(-86400),
         coordinates: []
@@ -103,6 +108,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(1209600 + 172800),
         images: ["bg5","bg1"],
         participants: ["Sophie", "James", "Maria", "Robert"],
+        maxParticipants: 50,
         isTimed: true,
         createdAt: Date().addingTimeInterval(-172800),
         coordinates: []
@@ -121,6 +127,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(1814400 + 172800),
         images: ["bg2","bg4"],
         participants: ["Gordon", "Julia", "Pierre", "Isabella", "Marco", "Chen"],
+        maxParticipants: 300,
         isTimed: true,
         createdAt: Date().addingTimeInterval(-259200),
         coordinates: []
@@ -139,6 +146,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(432000 + 14400), // 4-hour event
         images: ["bg3","bg5"],
         participants: ["Vincent", "Frida", "Pablo", "Georgia"],
+        maxParticipants: 150,
         isTimed: true,
         createdAt: Date().addingTimeInterval(-432000),
         coordinates: []
@@ -157,6 +165,7 @@ let sampleEvents = [
         endDate: Date().addingTimeInterval(345600 + 10800), // 3-hour event
         images: ["bg4","bg1"],
         participants: ["Steve", "Mark", "Elon", "Sheryl", "Jeff"],
+        maxParticipants: 100,
         isTimed: true,
         createdAt: Date().addingTimeInterval(-518400),
         coordinates: []

@@ -62,11 +62,11 @@ struct HomeView: View {
                           let coordinates = data["coordinates"] as? [Double]
                     else { return nil }
                     
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 100
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
-                        id:id,
+                        id: id,
                         name: name,
                         description: description,
                         type: type,
@@ -80,6 +80,7 @@ struct HomeView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,
@@ -117,11 +118,11 @@ struct HomeView: View {
                           let coordinates = data["coordinates"] as? [Double]
                     else { return nil }
                     
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 100
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
-                        id:id,
+                        id: id,
                         name: name,
                         description: description,
                         type: type,
@@ -135,6 +136,7 @@ struct HomeView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,
@@ -173,11 +175,11 @@ struct HomeView: View {
                           let coordinates = data["coordinates"] as? [Double]
                     else { return nil }
                     
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 100
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     return Event(
-                        id:id,
+                        id: id,
                         name: name,
                         description: description,
                         type: type,
@@ -191,6 +193,7 @@ struct HomeView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,
@@ -250,11 +253,11 @@ struct HomeView: View {
                     // Only include results that match at least one keyword
                     guard relevanceScore > 0 else { return nil }
                     
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                    let maxParticipants = data["maxParticipants"] as? Int ?? 100
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
                     let event = Event(
-                        id:id,
+                        id: id,
                         name: name,
                         description: description,
                         type: type,
@@ -268,6 +271,7 @@ struct HomeView: View {
                         endDate: endDate,
                         images: images,
                         participants: participants,
+                        maxParticipants: maxParticipants,
                         isTimed: isTimed,
                         createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
                         coordinates: coordinates,
