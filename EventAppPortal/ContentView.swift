@@ -9,13 +9,40 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var firebaseManager: FirebaseManager
-    
+    @AppStorage("userID") private var userID: String = ""
+    @State var appeared = true
+    @State var hideLoadingView = false
     var body: some View {
-        Group {
+        ZStack {
             if firebaseManager.isAuthenticated {
-                MainTabView()
+               MainTabView()
+                
+                    .scaleEffect(!appeared ? 1 : 0.9)
             } else {
                 LoginView()
+                    .scaleEffect(!appeared ? 1 : 0.9)
+            }
+            
+            //Loading screen of the logo
+            if !hideLoadingView {
+                ZStack {
+                    Color.dynamic.edgesIgnoringSafeArea(.all)
+                    LogoLoadingView()
+                        .onAppear{
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                withAnimation(.spring()) {
+                                    appeared = false
+                                }
+                               
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                                withAnimation {
+                                    hideLoadingView = true
+                                }
+                            }
+                    }
+                        
+                }.offset(y: !appeared ? UIScreen.main.bounds.height * 1.3 : 0)
             }
         }
         .animation(.easeInOut, value: firebaseManager.isAuthenticated)

@@ -30,7 +30,7 @@ struct CompactImageViewer: View {
                             .tag(index)
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: scroll ? .never : .automatic))
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: !scroll ? .never : .automatic))
                 .overlay {
                     
                     scroll ? Color.clear :

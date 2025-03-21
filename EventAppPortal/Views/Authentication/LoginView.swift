@@ -15,6 +15,7 @@ struct LoginView: View {
     @State var isPressed = false
     @State var viewState = CGSize.zero
     
+    
     private func login() {
         self.hideKeyboard()
         self.isFocused = false

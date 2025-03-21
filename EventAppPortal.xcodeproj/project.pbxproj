@@ -13,6 +13,8 @@
 		F715155F2D86A0E7001D55C3 /* EventRecommendationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */; };
 		F71515612D86A15F001D55C3 /* RecommendedEventsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71515602D86A15F001D55C3 /* RecommendedEventsViewModel.swift */; };
 		F71515632D86A26F001D55C3 /* RecommendedEventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */; };
+		F7155DF82D8DA69F00AC482C /* LogoLoadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7155DF72D8DA69F00AC482C /* LogoLoadingView.swift */; };
+		F7155DFA2D8DA97300AC482C /* MrDafoe-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F7155DF92D8DA97300AC482C /* MrDafoe-Regular.ttf */; };
 		F746526A2D884FB2002CE163 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74652692D884FB2002CE163 /* LocationManager.swift */; };
 		F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F746F4E82D766320009B68BA /* EventAppPortalApp.swift */; };
 		F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EF2D766322009B68BA /* Preview Assets.xcassets */; };
@@ -53,6 +55,8 @@
 		F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventRecommendationService.swift; sourceTree = "<group>"; };
 		F71515602D86A15F001D55C3 /* RecommendedEventsViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = RecommendedEventsViewModel.swift; path = EventAppPortal/ViewModels/RecommendedEventsViewModel.swift; sourceTree = SOURCE_ROOT; };
 		F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecommendedEventsView.swift; sourceTree = "<group>"; };
+		F7155DF72D8DA69F00AC482C /* LogoLoadingView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogoLoadingView.swift; sourceTree = "<group>"; };
+		F7155DF92D8DA97300AC482C /* MrDafoe-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "MrDafoe-Regular.ttf"; sourceTree = "<group>"; };
 		F74652692D884FB2002CE163 /* LocationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LocationManager.swift; path = EventAppPortal/Models/LocationManager.swift; sourceTree = SOURCE_ROOT; };
 		F746526B2D884FFF002CE163 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F746F4E52D766320009B68BA /* EventAppPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventAppPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -167,6 +171,7 @@
 				F79545222D8673AA0053ED72 /* CompactImageViewer.swift */,
 				F71515622D86A26F001D55C3 /* RecommendedEventsView.swift */,
 				F715155C2D869B14001D55C3 /* EventImageUpdateView.swift */,
+				F7155DF72D8DA69F00AC482C /* LogoLoadingView.swift */,
 				F773EC822D79EDC60009AC93 /* Resources */,
 				F773EC702D790FAC0009AC93 /* LottieView.swift */,
 				F773EC7F2D79E1700009AC93 /* AIOrb.swift */,
@@ -178,6 +183,7 @@
 		F773EC822D79EDC60009AC93 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				F7155DF92D8DA97300AC482C /* MrDafoe-Regular.ttf */,
 				F773EC852D79EE8A0009AC93 /* Lottie */,
 			);
 			name = Resources;
@@ -330,6 +336,7 @@
 				F773EC7C2D79DD990009AC93 /* orbpurple.json in Resources */,
 				F773EC762D7911650009AC93 /* locationbubble.json in Resources */,
 				F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */,
+				F7155DFA2D8DA97300AC482C /* MrDafoe-Regular.ttf in Resources */,
 				F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */,
 				F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */,
 				F7855EA32D85195E00D668CD /* GoogleService-Info.plist in Resources */,
@@ -364,6 +371,7 @@
 				F79C82812D77564900C87783 /* ProfileView.swift in Sources */,
 				F79545252D8673C10053ED72 /* ImageViewer.swift in Sources */,
 				F7633E332D77589E00644438 /* TabBar.swift in Sources */,
+				F7155DF82D8DA69F00AC482C /* LogoLoadingView.swift in Sources */,
 				F773EC712D790FAC0009AC93 /* LottieView.swift in Sources */,
 				F7855EAF2D8521B900D668CD /* ContentView.swift in Sources */,
 				F79C82882D77564900C87783 /* LoginView.swift in Sources */,

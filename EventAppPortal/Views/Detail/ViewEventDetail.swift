@@ -24,7 +24,9 @@ struct ViewEventDetail: View {
     @State private var purchaseError: String?
     @State private var showPurchaseError = false
     @State private var showPurchaseSuccess = false
-    
+    @State private var showRecommendedEvent = false
+    @State private var showRecommendedEventDetails : Event = sampleEvent
+    var hideRecommendedCards = false
     private func incrementViews() {
         let db = Firestore.firestore()
 //        print("Attempting to increment views for event ID: \(event.id)")
@@ -413,55 +415,64 @@ struct ViewEventDetail: View {
                         .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
                         
                         // Add Recommended Events Section
+                        if !hideRecommendedCards {
                             VStack(alignment: .leading, spacing: 16) {
-                            Text("Similar Events")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                .padding(.horizontal)
-                            
-                            if viewModel.isLoading {
-                                HStack {
-                                    Spacer()
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                    Spacer()
-                                }
-                                .frame(height: 200)
-                                .padding(.bottom,120)
-                            } else if viewModel.error != nil {
-                                // Show error message
-                                Text("Unable to load recommendations")
-                                    .foregroundColor(.gray)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.bottom,120)
-                            } else if viewModel.recommendedEvents.isEmpty {
-                                Text("No similar events found")
-                                    .foregroundColor(.gray)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.bottom,120)
-                            } else {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 16) {
-                                        ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
-                                            
-                                            NavigationLink {
-                                                ViewEventDetail(event: event)
-                                            } label: {
-                                               
-                                                RecommendedEventCard(event: event)
-                                                    
-                                            }
-                                        }
-                                    }.padding(.horizontal)
-                                    
-                                }.padding(.bottom,120)
+                                Text("Similar Events")
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                    .padding(.horizontal)
                                 
+                                if viewModel.isLoading {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .scaleEffect(0.8)
+                                        Spacer()
                                     }
-                                }
-                        .onAppear {
-                            print("Loading recommended events...")
-                            self.viewModel.loadRecommendedEvents()
-                            }
+                                    .frame(height: 200)
+                                    .padding(.bottom,120)
+                                } else if viewModel.error != nil {
+                                    // Show error message
+                                    Text("Unable to load recommendations")
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .padding(.bottom,120)
+                                } else if viewModel.recommendedEvents.isEmpty {
+                                    Text("No similar events found")
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .padding(.bottom,120)
+                                } else {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        LazyHStack(spacing: 16) {
+                                            ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
+                                                
+                                               
+                                                Button {
+                                                    //pass event details to sheet view
+                                                    showRecommendedEventDetails = event
+                                                    //show recommended sheet
+                                                    showRecommendedEvent = true
+                                                } label: {
+                                                    RecommendedEventCard(event: event)
+                                                }
+
+                                                   
+                                                    
+                                                        
+                                                
+                                            }
+                                        }.padding(.horizontal)
+                                        
+                                    }.padding(.bottom,120)
+                                    
+                                        }
+                                    }
+                            .onAppear {
+                                print("Loading recommended events...")
+                                self.viewModel.loadRecommendedEvents()
+                        }
+                        }
                         }
                 }
                 .ignoresSafeArea()
@@ -532,6 +543,13 @@ struct ViewEventDetail: View {
             .sheet(isPresented: $showPurchaseView) {
                 PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
             }
+            .sheet(isPresented: $showRecommendedEvent) {
+                NavigationView {
+                    ViewEventDetail(event:showRecommendedEventDetails,hideRecommendedCards:true)
+                        .navigationBarTitle(showRecommendedEventDetails.name)
+                        .toolbarBackground(Color.dynamic)
+                }
+            }
             .onAppear {
                 withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
                     pageAppeared = true
@@ -584,6 +602,7 @@ struct ViewEventDetail: View {
                     .padding(10)
                     
             }
+            
             .alert("Purchase Error", isPresented: $showPurchaseError) {
                 Button("OK", role: .cancel) {}
             } message: {

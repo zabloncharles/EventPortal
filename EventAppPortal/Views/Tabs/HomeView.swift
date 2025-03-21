@@ -582,8 +582,8 @@ struct HomeView: View {
                                             RecommendedEventCard(event: event)
                                         }
                                     }
-                                }
-                            }.padding(.leading)
+                                }.padding(.horizontal)
+                            }
                                 }
                         }.padding(.bottom, 70)
                         
@@ -695,8 +695,8 @@ struct PopularEventCard: View {
                                             .frame(width: 15, height: 15)
                                             .offset(x: CGFloat(index * 10 - 0))
                                     }
-                                }
-                                Text("\(event.participants.count) \(event.participants.count > 1 ? "Participants" : "Participant")")
+                                }.padding(.trailing)
+                                Text("\(Int((Double(event.views) ?? 0).rounded())) \(Int(event.views) ?? 0 > 1 ? "Views" : "View")")
                                     .font(.footnote)
                             }
                         }
@@ -737,7 +737,7 @@ struct RegularEventCard: View {
         VStack {
             ZStack {
                 // Replace single image with CompactImageViewer
-                CompactImageViewer(imageUrls: event.images, height: 200)
+                CompactImageViewer(imageUrls: event.images, height: 200, scroll: false)
                     .overlay(
                         LinearGradient(colors: [.black, .black.opacity(0.40), .black.opacity(0.60)], 
                                      startPoint: .bottomLeading, 
@@ -810,8 +810,8 @@ struct RegularEventCard: View {
                                             .frame(width: 15, height: 15)
                                             .offset(x: CGFloat(index * 10 - 0))
                                     }
-                                }
-                                Text("\(event.participants.count) \(event.participants.count > 1 ? "Participants" : "Participant")")
+                                }.padding(.trailing)
+                                Text("\(Int((Double(event.views) ?? 0).rounded())) \(Int(event.views) ?? 0 > 1 ? "Views" : "View")")
                                     .font(.footnote)
                             }
                         }
