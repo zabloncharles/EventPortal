@@ -1,6 +1,5 @@
 import SwiftUI
 import Firebase
-import FirebaseFirestore
 
 struct HomeView: View {
     @State private var searchText = ""
@@ -9,6 +8,8 @@ struct HomeView: View {
     @State private var endPoint: UnitPoint = .trailing
     @State private var searchResults: [Event] = []
     @State private var isSearching = false
+    @State private var hasLoadedInitialContent = false
+    @State private var hasAnimated = false
     
     // Firebase state
     @State private var popularEvents: [Event] = []
@@ -331,11 +332,14 @@ struct HomeView: View {
                                     )
                                 )
                                 .onAppear {
-                                    withAnimation(
-                                        .linear(duration: 2)
-                                    ) {
-                                        startPoint = .trailing
-                                        endPoint = .leading
+                                    if !hasAnimated {
+                                        withAnimation(
+                                            .linear(duration: 2)
+                                        ) {
+                                            startPoint = .trailing
+                                            endPoint = .leading
+                                        }
+                                        hasAnimated = true
                                     }
                                 }
                             
@@ -413,7 +417,7 @@ struct HomeView: View {
                                                             case "Health & Wellness": return "heart.fill"
                                                             case "Technology": return "desktopcomputer"
                                                             case "Art & Culture": return "paintbrush.fill"
-                                                            case "Charity": return "heart.circle.fill"
+                                                            case "Charity": return  "heart.circle.fill"
                                                             case "Literature": return "book.fill"
                                                             case "Lifestyle": return "leaf.fill"
                                                             case "Environmental": return "leaf.arrow.triangle.circlepath"
@@ -442,7 +446,7 @@ struct HomeView: View {
                         .cornerRadius(20)
                     }
                     .padding(.horizontal)
-                    .offset(y: !pageAppeared ? -UIScreen.main.bounds.height * 0.5 : 0)
+                    .offset(y: !pageAppeared && !hasLoadedInitialContent ? -UIScreen.main.bounds.height * 0.5 : 0)
                     
                     if !searchText.isEmpty {
                         VStack( spacing: 20) {
@@ -589,7 +593,7 @@ struct HomeView: View {
                         
                         Spacer()
                     }
-                    .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                    .offset(y: !pageAppeared && !hasLoadedInitialContent ? UIScreen.main.bounds.height * 0.5 : 0)
                     }
                 }
                 .padding(.bottom)
@@ -597,14 +601,22 @@ struct HomeView: View {
             .background(Color.dynamic)
             .navigationBarHidden(true)
             .onAppear {
-                withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
-                    pageAppeared = true
-                }
-                Task {
-                    await fetchEvents()
+                if !hasLoadedInitialContent {
+                    withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                        pageAppeared = true
+                    }
+                    
+                    Task {
+                        await fetchEvents()
+                        hasLoadedInitialContent = true
+                    }
                 }
             }
             .refreshable {
+                // Reset the loading state when refreshing
+                isLoadingPopular = true
+                isLoadingNearby = true
+                isLoadingRecommended = true
                 await fetchEvents()
             }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {

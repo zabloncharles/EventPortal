@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import Firebase
 import FirebaseFirestore
 
 struct ViewEventDetail: View {

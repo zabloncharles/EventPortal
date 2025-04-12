@@ -3,6 +3,7 @@ import CoreLocation
 import FirebaseFirestore
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    static let shared = LocationManager()
     private let locationManager = CLLocationManager()
     @Published var location: CLLocation?
     @Published var locationString: String = "Not set"
@@ -15,6 +16,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingLocation()
     }
     
     func requestLocation() {

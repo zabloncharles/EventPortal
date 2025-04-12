@@ -140,6 +140,7 @@ struct TabItem: Identifiable {
 var tabItems = [
     TabItem(text: "Home", icon: "house", tab: .home, color: .teal),
     TabItem(text: "Explore", icon: "magnifyingglass", tab: .explore, color: .blue),
+    TabItem(text: "Groups", icon: "person.3", tab: .groups, color: .green),
     TabItem(text: "Notifications", icon: "bell", tab: .notifications, color: .red),
     TabItem(text: "Account", icon: "person", tab: .account, color: .pink)
 ]
@@ -147,6 +148,7 @@ var tabItems = [
 enum Tab: String {
     case home
     case explore
+    case groups
     case notifications
     case account
 }

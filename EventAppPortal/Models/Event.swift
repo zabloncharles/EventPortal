@@ -1,6 +1,6 @@
 import Foundation
 
-struct Event: Identifiable, Codable {
+struct Event: Identifiable, Codable, Equatable {
     var id: String = UUID().uuidString
     let name: String
     let description: String
@@ -20,6 +20,28 @@ struct Event: Identifiable, Codable {
     let createdAt: Date
     let coordinates: [Double]
     var status: String = "active"
+    
+    static func == (lhs: Event, rhs: Event) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.type == rhs.type &&
+        lhs.views == rhs.views &&
+        lhs.location == rhs.location &&
+        lhs.price == rhs.price &&
+        lhs.owner == rhs.owner &&
+        lhs.organizerName == rhs.organizerName &&
+        lhs.shareContactInfo == rhs.shareContactInfo &&
+        lhs.startDate == rhs.startDate &&
+        lhs.endDate == rhs.endDate &&
+        lhs.images == rhs.images &&
+        lhs.participants == rhs.participants &&
+        lhs.maxParticipants == rhs.maxParticipants &&
+        lhs.isTimed == rhs.isTimed &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.coordinates == rhs.coordinates &&
+        lhs.status == rhs.status
+    }
     
     enum CodingKeys: String, CodingKey {
         case id, name, description, type, views

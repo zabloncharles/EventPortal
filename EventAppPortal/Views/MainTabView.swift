@@ -12,6 +12,8 @@ struct MainTabView: View {
                     HomeView()
                 case .explore:
                     DiscoverView()
+                case .groups:
+                    GroupsView()
                 case .notifications:
                     NotificationView()
                 case .account:
