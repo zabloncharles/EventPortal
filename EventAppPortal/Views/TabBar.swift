@@ -34,6 +34,7 @@ struct TabBar: View {
     @State var color: Color = .teal
     @State var tabItemWidth: CGFloat = 0
     @State var animateClick = false
+    @State private var showCreateSheet = false
     
     var body: some View {
         HStack(alignment: .center) {
@@ -71,34 +72,54 @@ struct TabBar: View {
                 }
             }
         })
+        .sheet(isPresented: $showCreateSheet) {
+            NavigationView {
+                CreateEventView()
+                    .navigationBarItems(
+                        trailing: Button("Done") {
+                            showCreateSheet = false
+                        }
+                    )
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .ignoresSafeArea()
     }
     
     var buttons: some View {
         ForEach(tabItems) { item in
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    selectedTab = item.tab
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.prepare()
+                generator.impactOccurred()
+                if item.tab == .create {
+                    showCreateSheet = true
                     color = item.color
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.prepare()
-                    generator.impactOccurred()
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedTab = item.tab
+                        color = item.color
+                        
+                    }
                 }
             } label: {
                 VStack(spacing: 0) {
-                    Image(systemName: item.icon)
-                        .symbolVariant(.fill)
-                        .font(.body.bold())
-                        .frame(width: 44, height: 29)
-                    Text(item.text)
-                        .font(.caption2)
-                        .lineLimit(1)
-                    Rectangle()
-                        .fill(selectedTab == item.tab ? color : .clear)
-                        .frame(width:18, height:2)
-                        .cornerRadius(3)
-                        .animation(.linear , value: selectedTab)
-                        .offset(y:5)
+                   
+                        Image(systemName: item.icon)
+                            .symbolVariant(.fill)
+                            .font(.body.bold())
+                            .frame(width: 44, height: 29)
+                        Text(item.text)
+                            .font(.caption2)
+                            .lineLimit(1)
+                        Rectangle()
+                            .fill(selectedTab == item.tab ? color : .clear)
+                            .frame(width:18, height:2)
+                            .cornerRadius(3)
+                            .animation(.linear , value: selectedTab)
+                            .offset(y:5)
+                    
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -140,16 +161,16 @@ struct TabItem: Identifiable {
 var tabItems = [
     TabItem(text: "Home", icon: "house", tab: .home, color: .teal),
     TabItem(text: "Explore", icon: "magnifyingglass", tab: .explore, color: .blue),
+    TabItem(text: "Create", icon: "plus", tab: .create, color: .purple),
     TabItem(text: "Groups", icon: "person.3", tab: .groups, color: .green),
-    TabItem(text: "Notifications", icon: "bell", tab: .notifications, color: .red),
     TabItem(text: "Account", icon: "person", tab: .account, color: .pink)
 ]
 
 enum Tab: String {
     case home
     case explore
+    case create
     case groups
-    case notifications
     case account
 }
 

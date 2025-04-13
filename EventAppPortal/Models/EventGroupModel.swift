@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import FirebaseFirestore
+import PhotosUI
 
 struct EventGroup: Identifiable, Equatable {
     var id: String
@@ -90,4 +91,94 @@ struct EventGroup: Identifiable, Equatable {
             "admins": admins
         ]
     }
-} 
+}
+
+enum CreationType {
+    case none
+    case event
+    case group
+}
+
+class CreateEventViewModel: ObservableObject {
+    @Published var name = ""
+    @Published var description = ""
+    @Published var location = ""
+    @Published var startDate = Date()
+    @Published var endDate = Date()
+    @Published var price = ""
+    @Published var maxParticipants = ""
+    @Published var type = "Social"
+    @Published var selectedImages: [UIImage] = []
+    @Published var creationType: CreationType = .none
+    @Published var showImagePicker = false
+    @Published var isPrivate = false
+    
+    let eventTypes = [
+        "Social",
+        "Business",
+        "Education",
+        "Entertainment",
+        "Sports",
+        "Food & Dining",
+        "Arts & Culture",
+        "Technology",
+        "Health & Wellness",
+        "Music & Concerts",
+        "Other"  // Catch-all option
+    ]
+    
+    func createEvent() {
+        // Implement event creation logic
+    }
+    
+    func reset() {
+        name = ""
+        description = ""
+        location = ""
+        startDate = Date()
+        endDate = Date()
+        price = ""
+        maxParticipants = ""
+        type = "Social"
+        selectedImages = []
+        isPrivate = false
+    }
+}
+
+
+class CreateGroupViewModel: ObservableObject {
+    @Published var name = ""
+    @Published var description = ""
+    @Published var category = "Technology"
+    @Published var isPrivate = false
+    @Published var selectedImage: UIImage?
+    @Published var showImagePicker = false
+    
+    let categories = [
+        "Technology",
+        "Sports",
+        "Art & Culture",
+        "Music",
+        "Food",
+        "Travel",
+        "Environmental",
+        "Literature",
+        "Corporate",
+        "Health & Wellness",
+        "Other"  // Catch-all option
+    ]
+    
+    func createGroup() {
+        // Implement group creation logic
+    }
+    
+    func reset() {
+        name = ""
+        description = ""
+        category = "Technology"
+        isPrivate = false
+        selectedImage = nil
+    }
+}
+
+

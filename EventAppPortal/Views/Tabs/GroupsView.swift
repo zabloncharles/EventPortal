@@ -85,9 +85,6 @@ struct GroupsView: View {
                                 }
                             }
                             Spacer()
-                            Button(action: {}) {
-                                Image(systemName: "bell")
-                            }
                         }.padding(.horizontal)
                         
                         VStack(alignment: .leading) {
@@ -365,48 +362,61 @@ struct GroupsView: View {
 
 struct GroupCard: View {
     let group: EventGroup
-    
+    let colors =  [Color.red,Color.blue,Color.green,Color.purple,Color.orange]
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.dynamic.opacity(0.9))
+        NavigationLink(destination: GroupDetailView(group: group)) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.clear)
                 
-            
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(group.name)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.invert)
-                    
-                    Text(group.shortDescription)
-                        .font(.subheadline)
-                        .foregroundColor(Color.invert.opacity(0.8))
-                        .lineLimit(2)
-                    
-                    HStack(spacing: 12) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.2")
-                            Text("\(group.memberCount) members")
-                        }
+                HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.name)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [colors.randomElement() ?? Color.red, .blue]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
                         
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                            Text("4.9")
+                        Text(group.shortDescription)
+                            .font(.subheadline)
+                            .foregroundColor(Color.invert.opacity(0.8))
+                            .lineLimit(2)
+                        
+                        HStack(spacing: 12) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "person.2")
+                                Text("\(group.memberCount) members")
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "star.fill")
+                                Text("4.9")
+                            }
                         }
+                        .font(.caption)
+                        .foregroundColor(Color.invert.opacity(0.8))
                     }
-                    .font(.caption)
-                    .foregroundColor(.invert.opacity(0.8))
-                }
-                
-                Spacer()
-                
-                Button(action: {}) {
+                    
+                    Spacer()
+                    
                     Image(systemName: categoryIcon(for: group.category))
                         .font(.system(size: 44))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [colors.randomElement() ?? Color.red, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                 }
+                .padding()
             }
-            .padding()
+            
         }.overlay(
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.invert.opacity(0.20), lineWidth: 1)
@@ -428,6 +438,344 @@ struct GroupCard: View {
         case "Corporate": return "building.2.fill"
         case "Health & Wellness": return "heart.fill"
         default: return "star.fill"
+        }
+    }
+}
+
+struct GroupDetailView: View {
+    let group: EventGroup
+    @Environment(\.presentationMode) var presentationMode
+    @State private var showJoinAlert = false
+    @State private var scrollOffset: CGFloat = 0
+    let colors = [Color.red, Color.blue, Color.green, Color.purple, Color.orange]
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Hero Section with Parallax
+                GeometryReader { geometry in
+                    let minY = geometry.frame(in: .global).minY
+                    ZStack {
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.blue, .blue]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        .opacity(0.9)
+                        .frame(height: 300 + (minY > 0 ? minY : 0))
+                        .offset(y: minY > 0 ? -minY : 0)
+                        
+                        VStack {
+                            Spacer()
+                            HStack {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(group.name)
+                                        .font(.system(size: 32, weight: .bold))
+                                        .foregroundColor(.white)
+                                    
+                                    Text(group.category)
+                                        .font(.headline)
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                                Spacer()
+                                
+                                Image(systemName: categoryIcon(for: group.category))
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            .padding(.horizontal)
+                            .padding(.bottom, 50)
+                        }
+                    }
+                }
+                .frame(height: 300)
+                
+                // Content Section
+                VStack(spacing: 24) {
+                    // Admin Card
+                    HStack(spacing: 16) {
+                        Circle()
+                            .fill(LinearGradient(
+                                gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Text(group.createdBy.prefix(1).uppercased())
+                                    .font(.title2.bold())
+                                    .foregroundColor(.white)
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(group.createdBy)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Text("Group Admin")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {}) {
+                            Text("Message")
+                                .font(.subheadline.bold())
+                                .foregroundColor(.blue)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(20)
+                        }
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(20)
+                    
+                    // Stats Grid
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 16) {
+                        StatCard(title: "Members", value: "\(group.memberCount)")
+                        StatCard(title: "Rating", value: "4.9")
+                        StatCard(title: "Posts", value: "\(group.tags.count)")
+                    }
+                    
+                    // Description Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("About")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(group.description)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .lineSpacing(4)
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(20)
+                    
+                    // Tags Cloud
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Topics")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        FlowLayout(spacing: 8) {
+                            ForEach(group.tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.subheadline)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.1))
+                                    .foregroundColor(.blue)
+                                    .cornerRadius(12)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(20)
+                    
+                    // Members Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Members")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Button("See All") {
+                                // Action
+                            }
+                            .foregroundColor(.blue)
+                        }
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(group.members.prefix(6), id: \.self) { member in
+                                    VStack(spacing: 8) {
+                                        Circle()
+                                            .fill(LinearGradient(
+                                                gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ))
+                                            .frame(width: 60, height: 60)
+                                            .overlay(
+                                                Text(member.prefix(1).uppercased())
+                                                    .font(.title2.bold())
+                                                    .foregroundColor(.white)
+                                            )
+                                        
+                                        Text(member.split(separator: "@").first ?? "")
+                                            .font(.caption)
+                                            .lineLimit(1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .cornerRadius(20)
+                }
+                .padding()
+                .background(Color(.systemGroupedBackground))
+                .cornerRadius(32)
+                .offset(y: -30)
+            }
+        }.navigationBarBackButtonHidden()
+        .edgesIgnoringSafeArea(.top)
+        .overlay(
+            // Navigation Bar
+            HStack {
+                Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(Color.black.opacity(0.3))
+                        .clipShape(Circle())
+                }
+                Spacer()
+                
+                Button(action: {}) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(Color.black.opacity(0.3))
+                        .clipShape(Circle())
+                }
+            }
+            .padding()
+            .padding(.top, 0)
+            , alignment: .top
+        )
+        .overlay(
+            // Join Button
+            Button(action: { showJoinAlert = true }) {
+                Text("Join Group")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(20)
+                    .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                    .padding()
+            }
+            .padding(.bottom)
+            , alignment: .bottom
+        )
+        .alert("Join Group", isPresented: $showJoinAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Join") {
+                // Handle join action
+            }
+        } message: {
+            Text("Would you like to join \(group.name)?")
+        }
+    }
+    
+    private func categoryIcon(for category: String) -> String {
+        switch category {
+        case "Sports": return "figure.run"
+        case "Music": return "music.note"
+        case "Art": return "paintbrush.fill"
+        case "Technology": return "desktopcomputer"
+        case "Food": return "fork.knife"
+        case "Travel": return "airplane"
+        case "Environmental": return "leaf.arrow.triangle.circlepath"
+        case "Literature": return "book.fill"
+        case "Corporate": return "building.2.fill"
+        case "Health & Wellness": return "heart.fill"
+        default: return "star.fill"
+        }
+    }
+}
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(20)
+    }
+}
+
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = computeRows(proposal: proposal, subviews: subviews)
+        return computeSize(rows: rows, proposal: proposal)
+    }
+    
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let rows = computeRows(proposal: proposal, subviews: subviews)
+        placeRows(rows, in: bounds)
+    }
+    
+    private func computeRows(proposal: ProposedViewSize, subviews: Subviews) -> [[LayoutSubviews.Element]] {
+        var rows: [[LayoutSubviews.Element]] = [[]]
+        var currentRow = 0
+        var remainingWidth = proposal.width ?? 0
+        
+        for subview in subviews {
+            let size = subview.sizeThatFits(proposal)
+            if size.width > remainingWidth {
+                currentRow += 1
+                rows.append([])
+                remainingWidth = (proposal.width ?? 0) - size.width - spacing
+            } else {
+                remainingWidth -= size.width + spacing
+            }
+            rows[currentRow].append(subview)
+        }
+        return rows
+    }
+    
+    private func computeSize(rows: [[LayoutSubviews.Element]], proposal: ProposedViewSize) -> CGSize {
+        var height: CGFloat = 0
+        for row in rows {
+            let rowHeight = row.map { $0.sizeThatFits(proposal).height }.max() ?? 0
+            height += rowHeight + spacing
+        }
+        return CGSize(width: proposal.width ?? 0, height: height)
+    }
+    
+    private func placeRows(_ rows: [[LayoutSubviews.Element]], in bounds: CGRect) {
+        var y = bounds.minY
+        for row in rows {
+            var x = bounds.minX
+            let rowHeight = row.map { $0.sizeThatFits(.unspecified).height }.max() ?? 0
+            for subview in row {
+                let size = subview.sizeThatFits(.unspecified)
+                subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += rowHeight + spacing
         }
     }
 }
