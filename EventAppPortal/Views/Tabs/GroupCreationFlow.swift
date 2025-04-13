@@ -16,13 +16,15 @@ import FirebaseAuth
 struct GroupCreationFlow: View {
     @ObservedObject var viewModel: CreateGroupViewModel
     @State private var currentStep = 0
-    let steps = ["Basic Info", "Details", "Preview"]
-    
+    @Environment(\.dismiss) private var dismiss
+    @State private var showLocationSearch = false
+    let steps = ["Basic Info", "Location", "Details", "Preview"]
+   
     var body: some View {
         VStack(spacing: 0) {
             // Progress Steps
             ProgressStepsView(steps: steps, currentStep: currentStep)
-                .padding(.horizontal) .padding(.horizontal)
+                .padding(.horizontal)
             
             // Content
             TabView(selection: $currentStep) {
@@ -52,6 +54,7 @@ struct GroupCreationFlow: View {
                                 .font(.headline)
                                 .foregroundColor(.gray)
                         }
+                        
                         // Category Picker
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Category")
@@ -76,7 +79,9 @@ struct GroupCreationFlow: View {
                                     }
                                 }
                             }
-                        }.padding(.horizontal)
+                        }
+                        .padding(.horizontal)
+                        
                         // Basic Info Section
                         FormSection {
                             VStack(alignment: .leading, spacing: 16) {
@@ -96,8 +101,6 @@ struct GroupCreationFlow: View {
                                     text: $viewModel.description,
                                     isMultiline: true
                                 )
-                                
-                                
                             }
                         }
                         
@@ -112,7 +115,69 @@ struct GroupCreationFlow: View {
                 }
                 .tag(0)
                 
-                // MARK: - Page 2: Details
+                // MARK: - Page 2: Location
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        FormSection {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Group Location")
+                                    .font(.headline)
+                                    .padding(.bottom, 8)
+                                
+                                if let location = viewModel.location {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Selected Location")
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                        
+                                        HStack {
+                                            Image(systemName: "mappin.circle.fill")
+                                                .foregroundColor(.blue)
+                                            Text(location)
+                                                .font(.subheadline)
+                                        }
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(10)
+                                    }
+                                }
+                                
+                                Button(action: { showLocationSearch = true }) {
+                                    HStack {
+                                        Image(systemName: "magnifyingglass")
+                                            .foregroundColor(.blue)
+                                        Text(viewModel.location == nil ? "Search Location" : "Change Location")
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(10)
+                                }
+                            }
+                        }
+                        
+                        // Navigation Buttons
+                        HStack(spacing: 16) {
+                            ActionButton(title: "Back", gradient: [.gray, .gray]) {
+                                withAnimation {
+                                    currentStep = 0
+                                }
+                            }
+                            
+                            ActionButton(title: "Next", gradient: [.blue, .purple]) {
+                                withAnimation {
+                                    currentStep = 2
+                                }
+                            }
+                            .disabled(viewModel.location == nil)
+                        }
+                    }
+                    .padding()
+                }
+                .tag(1)
+                
+                // MARK: - Page 3: Details
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         // Privacy Settings
@@ -142,22 +207,22 @@ struct GroupCreationFlow: View {
                         HStack(spacing: 16) {
                             ActionButton(title: "Back", gradient: [.gray, .gray]) {
                                 withAnimation {
-                                    currentStep = 0
+                                    currentStep = 1
                                 }
                             }
                             
                             ActionButton(title: "Preview", gradient: [.blue, .purple]) {
                                 withAnimation {
-                                    currentStep = 2
+                                    currentStep = 3
                                 }
                             }
                         }
                     }
                     .padding()
                 }
-                .tag(1)
+                .tag(2)
                 
-                // MARK: - Page 3: Preview
+                // MARK: - Page 4: Preview
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         // Group Preview using GroupCard
@@ -169,7 +234,7 @@ struct GroupCreationFlow: View {
                                 shortDescription: viewModel.description.isEmpty ? "No description provided" : String(viewModel.description.prefix(50)) + "...",
                                 memberCount: 1,
                                 imageURL: "",
-                                location: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+                                location: viewModel.coordinates ?? CLLocationCoordinate2D(latitude: 0, longitude: 0),
                                 createdAt: Date(),
                                 createdBy: "preview",
                                 isPrivate: viewModel.isPrivate,
@@ -181,16 +246,19 @@ struct GroupCreationFlow: View {
                             )
                         )
                         .padding(.horizontal)
+                        
                         Spacer()
+                        
                         // Navigation Buttons
                         VStack(spacing: 16) {
                             ActionButton(title: "Create Group", gradient: [.purple, .blue]) {
                                 viewModel.createGroup()
                             }
+                            .disabled(viewModel.isLoading)
                             
                             Button(action: {
                                 withAnimation {
-                                    currentStep = 1
+                                    currentStep = 2
                                 }
                             }) {
                                 Text("Edit Details")
@@ -202,32 +270,69 @@ struct GroupCreationFlow: View {
                     }
                     .padding(.vertical)
                 }
-                .tag(2)
+                .tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
         }
         .navigationTitle(steps[currentStep])
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showLocationSearch) {
+            LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
+                viewModel.location = address
+                viewModel.coordinates = CLLocationCoordinate2D(latitude: coordinates[0], longitude: coordinates[1])
+            }
+        }
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+        .alert("Success", isPresented: $viewModel.groupCreated) {
+            Button("OK") {
+                dismiss()
+            }
+        } message: {
+            Text("Your group has been created successfully!")
+        }
+        .overlay(
+            Group {
+                if viewModel.isLoading {
+                    Color.black.opacity(0.4)
+                        .edgesIgnoringSafeArea(.all)
+                        .overlay(
+                            VStack {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(1.5)
+                                Text("Creating group...")
+                                    .foregroundColor(.white)
+                                    .font(.headline)
+                                    .padding(.top, 10)
+                            }
+                        )
+                }
+            }
+        )
     }
     
     // Helper function to get the appropriate icon for each category
     func categoryIcon(for category: String) -> String {
         switch category {
             case "Technology":
-                return "desktopcomputer"
+                return "laptopcomputer"
             case "Sports":
-                return "figure.dance"
+                return "sportscourt.fill"
             case "Art & Culture":
                 return "paintbrush.fill"
             case "Music":
-                return "music.note.list"
+                return "music.note"
             case "Food":
                 return "fork.knife"
             case "Travel":
                 return "airplane"
             case "Environmental":
-                return "leaf.arrow.triangle.circlepath"
+                return "leaf.fill"
             case "Literature":
                 return "book.fill"
             case "Corporate":
@@ -235,7 +340,7 @@ struct GroupCreationFlow: View {
             case "Health & Wellness":
                 return "heart.fill"
             case "Other":
-                return "ellipsis.circle.fill"
+                return "questionmark.circle.fill"
             default:
                 return "person.3.fill"
         }
@@ -247,171 +352,180 @@ class CreateGroupViewModel: ObservableObject {
     @Published var description = ""
     @Published var category = "Technology"
     @Published var isPrivate = false
-    @Published var selectedImage: UIImage?
-    @Published var showImagePicker = false
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var showError = false
     @Published var groupCreated = false
     @Published var createdGroupId: String?
+    @Published var location: String?
+    @Published var coordinates: CLLocationCoordinate2D?
     
     let categories = [
-        "Technology", "Sports", "Art & Culture", "Music", "Food",
-        "Travel", "Environmental", "Literature", "Corporate",
-        "Health & Wellness", "Other"
+        "Technology",
+        "Sports",
+        "Art & Culture",
+        "Music",
+        "Food",
+        "Travel",
+        "Environmental",
+        "Literature",
+        "Corporate",
+        "Health & Wellness",
+        "Other"
     ]
     
-    private let db = Firestore.firestore()
-    private let storage = Storage.storage().reference()
-    
     func createGroup() {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            showError(message: "You must be logged in to create a group")
+            return
+        }
+        
         guard !name.isEmpty else {
-            errorMessage = "Please enter a group name"
-            showError = true
+            showError(message: "Please enter a group name")
+            return
+        }
+        
+        guard !description.isEmpty else {
+            showError(message: "Please enter a group description")
+            return
+        }
+        
+        guard let location = location, let coordinates = coordinates else {
+            showError(message: "Please select a location for your group")
             return
         }
         
         isLoading = true
         
-        // Get current user ID
-        guard let userId = Auth.auth().currentUser?.uid else {
-            errorMessage = "You must be logged in to create a group"
-            showError = true
-            isLoading = false
-            return
-        }
+        // Create a unique ID for the group
+        let groupId = UUID().uuidString
         
-        // Create short description (first 50 characters)
-        let shortDesc = description.isEmpty ? "No description provided" : 
-            String(description.prefix(50)) + (description.count > 50 ? "..." : "")
-        
-        // Create group data
+        // Create the group data
         let groupData: [String: Any] = [
+            "id": groupId,
             "name": name,
             "description": description,
-            "shortDescription": shortDesc,
+            "shortDescription": String(description.prefix(50)) + "...",
             "memberCount": 1,
-            "imageURL": "",
-            "latitude": 0.0,
-            "longitude": 0.0,
+            "imageURL": categoryIcon(for: category), // Store the SF Symbol name
+            "location": [
+                "address": location,
+                "coordinates": GeoPoint(
+                    latitude: coordinates.latitude,
+                    longitude: coordinates.longitude
+                )
+            ],
             "createdAt": Timestamp(date: Date()),
             "createdBy": userId,
             "isPrivate": isPrivate,
             "category": category,
             "tags": [],
             "pendingRequests": [],
-            "members": [userId], // Creator is the first member
-            "admins": [userId]   // Creator is the first admin
+            "members": [userId],
+            "admins": [userId]
         ]
         
-        // Add group to Firestore
-        let docRef = db.collection("groups").document()
-        docRef.setData(groupData) { [weak self] error in
-            guard let this = self else { return }
-            
-            if let error = error {
-                DispatchQueue.main.async {
-                    this.errorMessage = "Failed to create group: \(error.localizedDescription)"
-                    this.showError = true
-                    this.isLoading = false
-                }
-                return
-            }
-            
-            let groupId = docRef.documentID
-            
-            // If there's an image, upload it
-            if let image = this.selectedImage {
-                this.uploadGroupImage(image: image, groupId: groupId)
-            } else {
-                // No image to upload, we're done
-                DispatchQueue.main.async {
-                    this.createdGroupId = groupId
-                    this.groupCreated = true
-                    this.isLoading = false
-                }
-            }
-        }
-    }
-    
-    private func uploadGroupImage(image: UIImage, groupId: String) {
-        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+        // Create the group document
+        let db = Firestore.firestore()
+        db.collection("groups").document(groupId).setData(groupData) { [weak self] error in
             DispatchQueue.main.async {
-                self.errorMessage = "Failed to process image"
-                self.showError = true
-                self.isLoading = false
-            }
-            return
-        }
-        
-        let imageRef = storage.child("group_images/\(groupId).jpg")
-        
-        imageRef.putData(imageData, metadata: nil) { [weak self] metadata, error in
-            guard let self = self else { return }
-            
-            if let error = error {
-                DispatchQueue.main.async {
-                    self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
-                    self.showError = true
-                    self.isLoading = false
-                }
-                return
-            }
-            
-            // Get download URL
-            imageRef.downloadURL { [weak self] url, error in
-                guard let self = self else { return }
+                self?.isLoading = false
                 
                 if let error = error {
-                    DispatchQueue.main.async {
-                        self.errorMessage = "Failed to get image URL: \(error.localizedDescription)"
-                        self.showError = true
-                        self.isLoading = false
-                    }
-                    return
-                }
-                
-                guard let downloadURL = url else {
-                    DispatchQueue.main.async {
-                        self.errorMessage = "Failed to get download URL"
-                        self.showError = true
-                        self.isLoading = false
-                    }
-                    return
-                }
-                
-                // Update group with image URL
-                self.db.collection("groups").document(groupId).updateData([
-                    "imageURL": downloadURL.absoluteString
-                ]) { [weak self] error in
-                    guard let self = self else { return }
-                    
-                    DispatchQueue.main.async {
-                        if let error = error {
-                            self.errorMessage = "Failed to update group with image: \(error.localizedDescription)"
-                            self.showError = true
-                        } else {
-                            self.createdGroupId = groupId
-                            self.groupCreated = true
-                        }
-                        self.isLoading = false
-                    }
+                    self?.showError(message: error.localizedDescription)
+                } else {
+                    self?.createdGroupId = groupId
+                    self?.groupCreated = true
+                    self?.resetForm()
                 }
             }
         }
     }
     
-    func resetForm() {
+    private func showError(message: String) {
+        errorMessage = message
+        showError = true
+    }
+    
+    private func resetForm() {
         name = ""
         description = ""
         category = "Technology"
         isPrivate = false
-        selectedImage = nil
+        isLoading = false
         errorMessage = nil
         showError = false
         groupCreated = false
         createdGroupId = nil
+        location = nil
+        coordinates = nil
+    }
+    
+    // Helper function to get the appropriate icon for each category
+    func categoryIcon(for category: String) -> String {
+        switch category {
+            case "Technology":
+                return "laptopcomputer"
+            case "Sports":
+                return "sportscourt.fill"
+            case "Art & Culture":
+                return "paintbrush.fill"
+            case "Music":
+                return "music.note"
+            case "Food":
+                return "fork.knife"
+            case "Travel":
+                return "airplane"
+            case "Environmental":
+                return "leaf.fill"
+            case "Literature":
+                return "book.fill"
+            case "Corporate":
+                return "building.2.fill"
+            case "Health & Wellness":
+                return "heart.fill"
+            case "Other":
+                return "questionmark.circle.fill"
+            default:
+                return "person.3.fill"
+        }
     }
 }
 
 
+struct GroupCreationFlow_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            GroupCreationFlow(
+                viewModel: CreateGroupViewModel()
+            )
+        }
+    }
+}
+
+// MARK: - Group Creation Flow
+
+
+struct GroupCategoryButton: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(isSelected ? .white : .blue)
+                    .frame(width: 50, height: 50)
+                    .background(isSelected ? Color.blue : Color.blue.opacity(0.1))
+                    .clipShape(Circle())
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(isSelected ? .blue : .gray)
+            }
+        }
+    }
+}

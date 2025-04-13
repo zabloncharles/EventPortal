@@ -1,11 +1,8 @@
 import SwiftUI
+import MapKit
 import FirebaseFirestore
 import FirebaseStorage
 import PhotosUI
-
-// MARK: - View Models and Types
-
-
 
 
 // MARK: - Main View
@@ -15,10 +12,10 @@ struct CreateEventView: View {
     @StateObject private var eventViewModel = CreateEventViewModel()
     @StateObject private var groupViewModel = CreateGroupViewModel()
     @State private var creationType: CreationType = .none
-    
+
     var body: some View {
         NavigationView {
-            Group {
+            VStack {
                 switch creationType {
                 case .none:
                     SelectionView(creationType: $creationType)
@@ -28,14 +25,16 @@ struct CreateEventView: View {
                     GroupCreationFlow(viewModel: groupViewModel)
                 }
             }
-            .navigationBarItems(
-                leading: creationType != .none ? Button("Back") {
-                    creationType = .none
-                } : nil,
-                trailing: Button("Cancel") {
-                    dismiss()
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if creationType != .none {
+                        Button("Back") {
+                            creationType = .none
+                        }
+                    }
                 }
-            )
+            }
         }
     }
 }
@@ -46,18 +45,21 @@ struct SelectionView: View {
     @Binding var creationType: CreationType
     
     var body: some View {
-        VStack(spacing: 30) {
-            Text("What would you like to create?")
-                .font(.title2)
+        VStack(spacing: 24) {
+            Text("Create New")
+                .font(.largeTitle)
                 .fontWeight(.bold)
-                .padding(.top, 40)
+            
+            Text("Choose what you'd like to create")
+                .font(.subheadline)
+                .foregroundColor(.gray)
             
             // Event Option
             CreationOptionButton(
                 title: "Create Event",
-                subtitle: "Host meetups, parties, or gatherings",
-                icon: "calendar.badge.plus",
-                gradient: [.purple, .blue]
+                subtitle: "Organize and host events",
+                icon: "calendar",
+                gradient: [.blue, .purple]
             ) {
                 creationType = .event
             }
@@ -75,8 +77,6 @@ struct SelectionView: View {
             Spacer()
         }
                                 .padding()
-        .navigationTitle("Create")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -400,7 +400,7 @@ struct PreviewView: View {
                             .foregroundColor(.blue)
                     }
                 }
-                .padding(.horizontal)
+                        .padding(.horizontal)
             }
             .padding(.vertical)
         }
@@ -512,15 +512,15 @@ struct ActionButton: View {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                .padding()
+                            .frame(maxWidth: .infinity)
+                            .padding()
                                 .background(
-                                    LinearGradient(
+                                                LinearGradient(
                         gradient: Gradient(colors: gradient),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
                 .cornerRadius(15)
         }
         .padding(.horizontal)
@@ -562,33 +562,253 @@ struct ImageSelectionView: View {
     }
 }
 
-struct GroupImageSelector: View {
-    @Binding var selectedImage: UIImage?
-    @Binding var showPicker: Bool
+struct LocationSearchView: View {
+    @Binding var isPresented: Bool
+    @StateObject private var completer = SearchCompleter()
+    @State private var searchText = ""
+    @State private var showMap = false
+    @State private var confirmed = false
+    @FocusState private var isFocused: Bool
+    
+    let onLocationSelected: (String, [Double]) -> Void
     
     var body: some View {
-        Button(action: { showPicker = true }) {
-            if let selectedImage = selectedImage {
-                Image(uiImage: selectedImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 120, height: 120)
-                    .clipShape(Circle())
-            } else {
-                Circle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 120, height: 120)
-                    .overlay(
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 30))
-            .foregroundColor(.gray)
-                    )
+        NavigationView {
+            ZStack {
+                Color.dynamic
+                    .edgesIgnoringSafeArea(.all)
+                VStack {
+                    if !isFocused {
+                        LottieView(filename:"locationbubble", loop: true)
+                            .frame(height: 200)
+                            .padding(.top, 30)
+                            .padding(.bottom, 10)
+                            .overlay {
+                                Image(systemName: "location.fill.viewfinder")
+                                    .font(.largeTitle)
+                                    .foregroundColor(.white)
+                            }
+                    }
+                    
+                   
+                    VStack(alignment: isFocused ? .leading : .center) {
+                        Text("Add an address for Your Event")
+                                .font(.title3)
+                                .padding(.bottom, 3)
+                        
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(isFocused ? .leading : .center)
+                        .padding(.bottom, isFocused ? 0 : 5)
+                    .padding(.top,20)
+                        
+                        Text("This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(isFocused ? .leading : .center)
+                            .padding(.horizontal, isFocused ? 0 : 25)
+                    }
+                    
+                    
+                    
+                    TextField("Enter Address", text: $searchText)
+                        .focused($isFocused)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white, lineWidth: 1)
+                        )
+                        .padding()
+                        .onChange(of: searchText) { newValue in
+                            completer.search(text: newValue)
+                        }
+                    
+                    if !completer.searchResults.isEmpty {
+                        ScrollView {
+                            LazyVStack(alignment: .center, spacing: 12) {
+                                ForEach(completer.searchResults.prefix(3), id: \.self) { result in
+                                    Button(action: {
+                                        searchLocation(result)
+                                    }) {
+                                        VStack(alignment: .center) {
+                                            Divider()
+                                            Text(result.title + ", " + result.subtitle)
+                                                .font(.callout)
+                                                .foregroundColor(.primary)
+                                            
+                                        }
+                                    }
+                                    .padding(.vertical, 7)
+                                    .padding(.horizontal, 10)
+                                    .cornerRadius(9)
+                                    .padding(.horizontal)
+                                }
+                            }
+                        }
+                        .simultaneousGesture(DragGesture().onChanged { _ in
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        })
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, isFocused ? 25 : 0)
+                .animation(.spring(), value: isFocused)
+                
+                if showMap {
+                    
+                    
+                    VStack {
+                        Text("Please confirm the location of the event on the map below.")
+                           
+                            .multilineTextAlignment(.center)
+                        
+                        Divider()
+                        
+                        if let region = completer.region {
+                            Map(coordinateRegion: .constant(region),
+                                annotationItems: [MapPin(coordinate: region.center)]) { pin in
+                                MapMarker(coordinate: pin.coordinate, tint: .red)
+                            }
+                            .frame(height: 500)
+                            .cornerRadius(12)
+                        }
+                        
+                        
+                        
+                        if !confirmed {
+                            HStack {
+                              
+                                
+                                Button("Confirm") {
+                                    confirmed = true
+                                    // Split location and coordinates
+                                    let locationComponents = completer.selectedAddress.components(separatedBy: " | ")
+                                    let address = locationComponents[0]
+                                    let coordinates = locationComponents[1].components(separatedBy: ", ")
+                                        .compactMap { Double($0) }
+                                    onLocationSelected(address, coordinates)
+                                    isPresented = false
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.purple, .blue]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                                
+                                
+                            }
+                            .padding(.top,10)
+                            
+                            HStack{
+                                Button("Back") {
+                                    withAnimation(.spring()) {
+                                        showMap = false
+                                    }
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(Color.gray.opacity(0.3))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }.padding(.top,5)
+                        }
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color.dynamic)
+                    
+                   
+                    .onAppear {
+                        isFocused = false
+                    }
+                }
+            }.navigationTitle("Select Location")
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarItems(trailing: Button("Cancel") {
+                    isPresented = false
+                })
+        }
+      
+    }
+    private func searchLocation(_ result: MKLocalSearchCompletion) {
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = result.title + ", " + result.subtitle
+        
+        MKLocalSearch(request: searchRequest).start { response, error in
+            guard let mapItem = response?.mapItems.first else { return }
+            
+            if let coordinate = mapItem.placemark.location?.coordinate {
+                completer.region = MKCoordinateRegion(
+                    center: coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                )
+                
+                // Create location string with address and coordinates separated
+                let address = [
+                    mapItem.name,
+                    mapItem.placemark.locality
+                ].compactMap { $0 }.joined(separator: ", ")
+                
+                // Store address and coordinates separately with a delimiter
+                completer.selectedAddress = "\(address) | \(coordinate.latitude), \(coordinate.longitude)"
+            }
+            
+            withAnimation(.spring()) {
+                showMap = true
             }
         }
-        .padding(.top)
     }
 }
 
+class SearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    private let searchCompleter = MKLocalSearchCompleter()
+    @Published var searchResults: [MKLocalSearchCompletion] = []
+    @Published var error: Error?
+    @Published var region: MKCoordinateRegion?
+    @Published var selectedAddress: String = ""
+    
+    override init() {
+        super.init()
+        searchCompleter.delegate = self
+        searchCompleter.resultTypes = [.address, .pointOfInterest]
+    }
+    
+    func search(text: String) {
+        if text.isEmpty {
+            searchResults = []
+            return
+        }
+        searchCompleter.queryFragment = text
+    }
+    
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
+        DispatchQueue.main.async {
+            self.searchResults = completer.results
+            self.error = nil
+        }
+    }
+    
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) {
+        DispatchQueue.main.async {
+            self.searchResults = []
+            self.error = error
+        }
+    }
+}
 // MARK: - Preview
 
 struct Previews_CreateEventView_Previews: PreviewProvider {
@@ -597,10 +817,9 @@ struct Previews_CreateEventView_Previews: PreviewProvider {
     }
 }
 
-struct GroupCreationFlow_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            GroupCreationFlow(viewModel: CreateGroupViewModel())
-        }
-    }
-}
+
+
+
+
+
+
