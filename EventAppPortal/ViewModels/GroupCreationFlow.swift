@@ -7,6 +7,10 @@
 
 import SwiftUI
 import CoreLocation
+import FirebaseFirestore
+import FirebaseStorage
+import FirebaseAuth
+
 // MARK: - Group Creation Flow
 
 struct GroupCreationFlow: View {
@@ -235,6 +239,178 @@ struct GroupCreationFlow: View {
             default:
                 return "person.3.fill"
         }
+    }
+}
+
+class CreateGroupViewModel: ObservableObject {
+    @Published var name = ""
+    @Published var description = ""
+    @Published var category = "Technology"
+    @Published var isPrivate = false
+    @Published var selectedImage: UIImage?
+    @Published var showImagePicker = false
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    @Published var showError = false
+    @Published var groupCreated = false
+    @Published var createdGroupId: String?
+    
+    let categories = [
+        "Technology", "Sports", "Art & Culture", "Music", "Food",
+        "Travel", "Environmental", "Literature", "Corporate",
+        "Health & Wellness", "Other"
+    ]
+    
+    private let db = Firestore.firestore()
+    private let storage = Storage.storage().reference()
+    
+    func createGroup() {
+        guard !name.isEmpty else {
+            errorMessage = "Please enter a group name"
+            showError = true
+            return
+        }
+        
+        isLoading = true
+        
+        // Get current user ID
+        guard let userId = Auth.auth().currentUser?.uid else {
+            errorMessage = "You must be logged in to create a group"
+            showError = true
+            isLoading = false
+            return
+        }
+        
+        // Create short description (first 50 characters)
+        let shortDesc = description.isEmpty ? "No description provided" : 
+            String(description.prefix(50)) + (description.count > 50 ? "..." : "")
+        
+        // Create group data
+        let groupData: [String: Any] = [
+            "name": name,
+            "description": description,
+            "shortDescription": shortDesc,
+            "memberCount": 1,
+            "imageURL": "",
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "createdAt": Timestamp(date: Date()),
+            "createdBy": userId,
+            "isPrivate": isPrivate,
+            "category": category,
+            "tags": [],
+            "pendingRequests": [],
+            "members": [userId], // Creator is the first member
+            "admins": [userId]   // Creator is the first admin
+        ]
+        
+        // Add group to Firestore
+        let docRef = db.collection("groups").document()
+        docRef.setData(groupData) { [weak self] error in
+            guard let this = self else { return }
+            
+            if let error = error {
+                DispatchQueue.main.async {
+                    this.errorMessage = "Failed to create group: \(error.localizedDescription)"
+                    this.showError = true
+                    this.isLoading = false
+                }
+                return
+            }
+            
+            let groupId = docRef.documentID
+            
+            // If there's an image, upload it
+            if let image = this.selectedImage {
+                this.uploadGroupImage(image: image, groupId: groupId)
+            } else {
+                // No image to upload, we're done
+                DispatchQueue.main.async {
+                    this.createdGroupId = groupId
+                    this.groupCreated = true
+                    this.isLoading = false
+                }
+            }
+        }
+    }
+    
+    private func uploadGroupImage(image: UIImage, groupId: String) {
+        guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+            DispatchQueue.main.async {
+                self.errorMessage = "Failed to process image"
+                self.showError = true
+                self.isLoading = false
+            }
+            return
+        }
+        
+        let imageRef = storage.child("group_images/\(groupId).jpg")
+        
+        imageRef.putData(imageData, metadata: nil) { [weak self] metadata, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to upload image: \(error.localizedDescription)"
+                    self.showError = true
+                    self.isLoading = false
+                }
+                return
+            }
+            
+            // Get download URL
+            imageRef.downloadURL { [weak self] url, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to get image URL: \(error.localizedDescription)"
+                        self.showError = true
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                guard let downloadURL = url else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to get download URL"
+                        self.showError = true
+                        self.isLoading = false
+                    }
+                    return
+                }
+                
+                // Update group with image URL
+                self.db.collection("groups").document(groupId).updateData([
+                    "imageURL": downloadURL.absoluteString
+                ]) { [weak self] error in
+                    guard let self = self else { return }
+                    
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            self.errorMessage = "Failed to update group with image: \(error.localizedDescription)"
+                            self.showError = true
+                        } else {
+                            self.createdGroupId = groupId
+                            self.groupCreated = true
+                        }
+                        self.isLoading = false
+                    }
+                }
+            }
+        }
+    }
+    
+    func resetForm() {
+        name = ""
+        description = ""
+        category = "Technology"
+        isPrivate = false
+        selectedImage = nil
+        errorMessage = nil
+        showError = false
+        groupCreated = false
+        createdGroupId = nil
     }
 }
 
