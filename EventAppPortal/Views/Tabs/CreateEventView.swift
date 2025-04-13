@@ -434,111 +434,195 @@ struct DateTimeView: View {
     }
 }
 
+struct ProgressBar: View {
+    let currentStep: Int
+    let totalSteps: Int
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<totalSteps, id: \.self) { step in
+                Rectangle()
+                    .fill(step <= currentStep ? Color.blue : Color(.systemGray5))
+                    .frame(height: 4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal)
+    }
+}
+
 struct LocationDetailsView: View {
     @ObservedObject var viewModel: CreateEventViewModel
     let onBack: () -> Void
     let onNext: () -> Void
     @State private var showLocationSearch = false
     @State private var animateFields = false
+    @State private var selectedSection = 0
+    @State private var isPaidEvent = false
     
     var body: some View {
         VStack(spacing: 24) {
-            // Location Selection
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Where is your event?")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("Choose the location where your event will take place")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                Button(action: { showLocationSearch = true }) {
-                    HStack {
-                        Image(systemName: "location.fill")
-                            .foregroundColor(.blue)
-                        Text(viewModel.location?.address ?? "Select Location")
-                            .foregroundColor(viewModel.location == nil ? .gray : .primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
+            // Progress Bar
+            ProgressBar(currentStep: selectedSection, totalSteps: 3)
+                .padding(.top)
+            
+            // Section Title
+            Text(sectionTitle)
+                .font(.title2)
+                .fontWeight(.bold)
+                .padding(.horizontal)
+            
+            ScrollView {
+                switch selectedSection {
+                case 0:
+                    // Location Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Where is your event?")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Choose the location where your event will take place")
+                            .font(.subheadline)
                             .foregroundColor(.gray)
+                        
+                        Button(action: { showLocationSearch = true }) {
+                            HStack {
+                                Image(systemName: "location.fill")
+                                    .foregroundColor(.blue)
+                                Text(viewModel.location?.address ?? "Select Location")
+                                    .foregroundColor(viewModel.location == nil ? .gray : .primary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        
+                        if let location = viewModel.location {
+                            Map(coordinateRegion: .constant(MKCoordinateRegion(
+                                center: location.coordinates,
+                                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                            )))
+                            .frame(height: 200)
+                            .cornerRadius(12)
+                        }
                     }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
+                    
+                case 1:
+                    // Price Section
+                    VStack(alignment: .leading, spacing: 24) {
+                        Text("Is this a paid event?")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Let attendees know if they need to pay to participate")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        VStack(spacing: 16) {
+                            // Free Option
+                            Button(action: {
+                                isPaidEvent = false
+                                viewModel.price = "0"
+                            }) {
+                                HStack {
+                                    Image(systemName: isPaidEvent ? "circle" : "checkmark.circle.fill")
+                                        .foregroundColor(isPaidEvent ? .gray : .green)
+                                    Text("Free Event")
+                                        .font(.headline)
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
+                            
+                            // Paid Option
+                            Button(action: { isPaidEvent = true }) {
+                                HStack {
+                                    Image(systemName: isPaidEvent ? "checkmark.circle.fill" : "circle")
+                                        .foregroundColor(isPaidEvent ? .green : .gray)
+                                    Text("Paid Event")
+                                        .font(.headline)
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
+                        }
+                        
+                        if isPaidEvent {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Set the ticket price")
+                                    .font(.headline)
+                                
+                                HStack {
+                                    Text("$")
+                                        .foregroundColor(.gray)
+                                    TextField("0.00", text: $viewModel.price)
+                                        .keyboardType(.decimalPad)
+                                        .font(.system(size: 34, weight: .bold))
+                                }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            }
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                        }
+                    }
+                    
+                case 2:
+                    // Participants Section
+                    VStack(alignment: .leading, spacing: 24) {
+                        Text("How many people can attend?")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Set a limit for the number of participants")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        
+                        VStack(spacing: 16) {
+                            Picker("Maximum Participants", selection: $viewModel.maxParticipants) {
+                                ForEach(["10", "25", "50", "100", "250", "500", "1000"], id: \.self) { number in
+                                    Text("\(number) people").tag(number)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 150)
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        
+                        // Private Event Toggle
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle("Make this a private event", isOn: $viewModel.isPrivate)
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                            
+                            if viewModel.isPrivate {
+                                Text("Only invited participants can join this event")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                                    .padding(.horizontal)
+                            }
+                        }
+                    }
+                    
+                default:
+                    EmptyView()
                 }
-                
-                if let location = viewModel.location {
-                    Map(coordinateRegion: .constant(MKCoordinateRegion(
-                        center: location.coordinates,
-                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                    )))
-                    .frame(height: 200)
-                    .cornerRadius(12)
-                }
             }
-            .opacity(animateFields ? 1 : 0)
-            .offset(y: animateFields ? 0 : 20)
-            
-            // Price
-            VStack(alignment: .leading, spacing: 8) {
-                Text("How much does it cost?")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("Set the price per ticket for your event")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                HStack {
-                    Text("$")
-                        .foregroundColor(.gray)
-                    TextField("0.00", value: $viewModel.price, format: .number)
-                        .keyboardType(.decimalPad)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-            }
-            .opacity(animateFields ? 1 : 0)
-            .offset(y: animateFields ? 0 : 20)
-            
-            // Maximum Participants
-            VStack(alignment: .leading, spacing: 8) {
-                Text("How many people can join?")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("Set the maximum number of participants")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                TextField("Maximum Participants", value: $viewModel.maxParticipants, format: .number)
-                    .keyboardType(.numberPad)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-            }
-            .opacity(animateFields ? 1 : 0)
-            .offset(y: animateFields ? 0 : 20)
-            
-            // Private Event Toggle
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Event Visibility")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("Make your event private or public")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                Toggle("Private Event", isOn: $viewModel.isPrivate)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-            }
-            .opacity(animateFields ? 1 : 0)
-            .offset(y: animateFields ? 0 : 20)
+            .padding()
+            .animation(.spring(), value: selectedSection)
             
             Spacer()
             
@@ -557,28 +641,47 @@ struct LocationDetailsView: View {
                     .cornerRadius(12)
                 }
                 
-                Button(action: onNext) {
-                    Text("Continue")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.blue, .purple]),
-                                startPoint: .leading,
-                                endPoint: .trailing
+                if selectedSection < 2 {
+                    Button(action: {
+                        withAnimation {
+                            selectedSection += 1
+                        }
+                    }) {
+                        Text("Continue")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        .cornerRadius(12)
+                            .cornerRadius(12)
+                    }
+                    .disabled(selectedSection == 0 && viewModel.location == nil)
+                } else {
+                    Button(action: onNext) {
+                        Text("Preview Event")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                    }
                 }
-                .disabled(viewModel.location == nil)
-                .opacity(viewModel.location == nil ? 0.6 : 1)
             }
-            .opacity(animateFields ? 1 : 0)
-            .offset(y: animateFields ? 0 : 20)
+            .padding(.horizontal)
         }
-        .padding()
         .sheet(isPresented: $showLocationSearch) {
             LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
                 viewModel.location = EventLocation(address: address, coordinates: coordinates)
@@ -588,64 +691,188 @@ struct LocationDetailsView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3)) {
                 animateFields = true
             }
+            if viewModel.price.isEmpty {
+                viewModel.price = "0"
+            }
+            isPaidEvent = viewModel.price != "0"
+        }
+    }
+    
+    private var sectionTitle: String {
+        switch selectedSection {
+        case 0:
+            return "Where is your event?"
+        case 1:
+            return "Is this a paid event?"
+        case 2:
+            return "How many people can attend?"
+        default:
+            return ""
         }
     }
 }
 
 struct PreviewView: View {
     @ObservedObject var viewModel: CreateEventViewModel
+    @Environment(\.dismiss) private var dismiss
     let onBack: () -> Void
     let onCreateEvent: () -> Void
+    @State private var isCreating = false
+    @State private var showSuccess = false
+    @State private var animateSuccess = false
     
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
-                // Event Preview using RegularEventCard
-                RegularEventCard(
-                    event: Event(
-                        id: "preview",
-                        name: viewModel.name.isEmpty ? "Event Name" : viewModel.name,
-                        description: viewModel.description,
-                        type: viewModel.type,
-                        views: "0",
-                        location: (viewModel.location?.isEmpty ?? false ? "Location not set" : viewModel.location) ?? "",
-                        price: viewModel.price,
-                        owner: "preview",
-                        organizerName: "Preview Organizer",
-                        shareContactInfo: true,
-                        startDate: viewModel.startDate,
-                        endDate: viewModel.endDate,
-                        images: [],
-                        participants: [],
-                        maxParticipants: Int(viewModel.maxParticipants) ?? 0,
-                        isTimed: true,
-                        createdAt: Date(),
-                        coordinates: [0.0, 0.0],
-                        status: "active"
-                    )
-                )
-                                .padding(.horizontal)
-                
-                // Navigation Buttons
-                VStack(spacing: 16) {
-                    ActionButton(title: "Create Event", gradient: [.purple, .blue]) {
-                        onCreateEvent()
-                    }
-                    
-                    Button(action: onBack) {
-                        Text("Edit Details")
+                if showSuccess {
+                    // Success View
+                    VStack(spacing: 20) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.green)
+                            .scaleEffect(animateSuccess ? 1 : 0)
+                        
+                        Text("Event Created Successfully!")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .opacity(animateSuccess ? 1 : 0)
+                        
+                        Text("Your event has been published and is now visible to others.")
                             .font(.subheadline)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                            .opacity(animateSuccess ? 1 : 0)
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            DetailRow(
+                                icon: "calendar",
+                                title: "Date",
+                                value: formatDate(viewModel.startDate)
+                            )
+                            DetailRow(
+                                icon: "mappin.circle.fill",
+                                title: "Location",
+                                value: viewModel.location?.address ?? "Location not set"
+                            )
+                            DetailRow(
+                                icon: "person.2.fill",
+                                title: "Capacity",
+                                value: "\(viewModel.maxParticipants) participants"
+                            )
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .opacity(animateSuccess ? 1 : 0)
+                        
+                        Button(action: {
+                            dismiss()
+                        }) {
+                            Text("Done")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 50)
+                                .background(Color.green)
+                                .cornerRadius(12)
+                        }
+                        .padding(.top, 20)
+                        .opacity(animateSuccess ? 1 : 0)
                     }
+                    .padding()
+                    .onAppear {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            animateSuccess = true
+                        }
+                    }
+                } else {
+                    // Preview Card
+                    RegularEventCard(
+                        event: Event(
+                            id: "preview",
+                            name: viewModel.name.isEmpty ? "Event Name" : viewModel.name,
+                            description: viewModel.description,
+                            type: viewModel.type,
+                            views: "0",
+                            location: viewModel.location?.address ?? "Location not set",
+                            price: viewModel.price,
+                            owner: "preview",
+                            organizerName: "Preview Organizer",
+                            shareContactInfo: true,
+                            startDate: viewModel.startDate,
+                            endDate: viewModel.endDate,
+                            images: viewModel.selectedImages.isEmpty ? ["placeholder_image"] : viewModel.imageUrls,
+                            participants: [],
+                            maxParticipants: Int(viewModel.maxParticipants) ?? 0,
+                            isTimed: true,
+                            createdAt: Date(),
+                            coordinates: viewModel.location?.coordinates ?? [0.0, 0.0],
+                            status: "active"
+                        )
+                    )
+                    .padding(.horizontal)
+                    
+                    // Navigation Buttons
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            isCreating = true
+                            onCreateEvent()
+                        }) {
+                            HStack {
+                                if isCreating {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .padding(.trailing, 8)
+                                }
+                                Text(isCreating ? "Creating Event..." : "Create Event")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.purple, .blue]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .opacity(isCreating ? 0.8 : 1)
+                        }
+                        .disabled(isCreating)
+                        
+                        if !isCreating {
+                            Button(action: onBack) {
+                                Text("Edit Details")
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
                 }
-                        .padding(.horizontal)
             }
             .padding(.vertical)
         }
+        .interactiveDismissDisabled(isCreating)
+        .alert("Please Fix the Following", isPresented: $viewModel.showValidationAlert) {
+            Button("OK", role: .cancel) {
+                viewModel.showValidationAlert = false
+            }
+        } message: {
+            Text(viewModel.validationErrors.joined(separator: "\n"))
+        }
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
-
-
 
 struct DetailRow: View {
     let icon: String
@@ -718,8 +945,6 @@ struct CustomTextField: View {
         }
     }
 }
-
-
 
 // MARK: - Supporting Views
 
@@ -1052,6 +1277,142 @@ class SearchCompleter: NSObject, ObservableObject, MKLocalSearchCompleterDelegat
 struct CreateView_Previews: PreviewProvider {
     static var previews: some View {
         CreateView()
+    }
+}
+
+struct EventTypeView: View {
+    @ObservedObject var viewModel: CreateEventViewModel
+    let onNext: () -> Void
+    @State private var selectedTypes: Set<String> = []
+    @State private var animateFields = false
+    
+    let categories: [(icon: String, name: String, systemIcon: String)] = [
+        ("👶", "Baby & Child", "baby.carriage"),
+        ("🚚", "Delivery & Services", "box.truck"),
+        ("🎮", "Gaming", "gamecontroller"),
+        ("🚗", "Cars", "car"),
+        ("🎭", "Events", "calendar"),
+        ("👗", "Fashion", "tshirt"),
+        ("🍔", "Food & Drinks", "fork.knife"),
+        ("💎", "Jewellery", "diamond"),
+        ("🚲", "Bikes", "bicycle"),
+        ("💪", "Fitness", "figure.walk"),
+        ("⚽", "Sports", "sportscourt"),
+        ("❤️", "Love & Sex", "heart"),
+        ("🏕️", "Outdoors", "mountain.2"),
+        ("🎵", "Music", "music.note"),
+        ("✈️", "Travel", "airplane"),
+        ("👓", "Glasses", "eyeglasses"),
+        ("🐕", "Pets", "pawprint"),
+        ("💊", "Pharmacy", "cross.case"),
+        ("🎨", "Decorations", "paintpalette"),
+        ("🪑", "Furniture", "chair"),
+        ("🌺", "Garden", "leaf")
+    ]
+    
+    let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What are you interested in the most?")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal)
+                
+                Text("Choose up to 8 categories")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal)
+            }
+            .opacity(animateFields ? 1 : 0)
+            .offset(y: animateFields ? 0 : 20)
+            
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(categories, id: \.name) { category in
+                        CategoryButton(
+                            icon: category.icon,
+                            name: category.name,
+                            systemIcon: category.systemIcon,
+                            isSelected: selectedTypes.contains(category.name),
+                            maxSelected: selectedTypes.count >= 8,
+                            action: {
+                                if selectedTypes.contains(category.name) {
+                                    selectedTypes.remove(category.name)
+                                } else if selectedTypes.count < 8 {
+                                    selectedTypes.insert(category.name)
+                                    // Update viewModel type with the first selected category
+                                    if let firstType = selectedTypes.first {
+                                        viewModel.type = EventType(rawValue: firstType) ?? .other
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+                .padding()
+            }
+            .opacity(animateFields ? 1 : 0)
+            .offset(y: animateFields ? 0 : 20)
+            
+            Spacer()
+            
+            Button(action: onNext) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.blue)
+                    .cornerRadius(12)
+            }
+            .disabled(selectedTypes.isEmpty)
+            .opacity(selectedTypes.isEmpty ? 0.6 : 1)
+            .padding(.horizontal)
+            .opacity(animateFields ? 1 : 0)
+            .offset(y: animateFields ? 0 : 20)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3)) {
+                animateFields = true
+            }
+        }
+    }
+}
+
+struct CategoryButton: View {
+    let icon: String
+    let name: String
+    let systemIcon: String
+    let isSelected: Bool
+    let maxSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text(icon)
+                    .font(.system(size: 24))
+                Text(name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(height: 90)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? Color.blue : Color(.systemGray6))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+            )
+            .opacity((!isSelected && maxSelected) ? 0.5 : 1)
+        }
+        .disabled(!isSelected && maxSelected)
     }
 }
 

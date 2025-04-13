@@ -15,99 +15,74 @@ import MapKit
 
 struct EventCreationFlow: View {
     @ObservedObject var viewModel: CreateEventViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var currentStep = 0
     @State private var showLocationSearch = false
     @State private var animateContent = false
     let steps = ["Basic Info", "Date & Time", "Location & Details", "Preview"]
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Progress Steps with animation
+        VStack {
             ProgressStepsView(steps: steps, currentStep: currentStep)
-                .padding(.horizontal)
-                .transition(.slide)
             
-            // Content
-            TabView(selection: $currentStep) {
-                // MARK: - Basic Info Step
-                OnboardingStepView(
-                    title: "Let's Create Your Event",
-                    subtitle: "Start by giving your event a name and telling people what it's about",
-                    icon: "star.circle.fill",
-                    gradient: [.blue, .purple]
-                ) {
-                    BasicInfoView(viewModel: viewModel) {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 1
-                        }
+            switch currentStep {
+            case 0:
+                BasicInfoView(viewModel: viewModel) {
+                    withAnimation {
+                        currentStep += 1
                     }
                 }
-                .tag(0)
-                
-                // MARK: - Date & Time Step
-                OnboardingStepView(
-                    title: "When is Your Event?",
-                    subtitle: "Set the date and time for your event",
-                    icon: "calendar.circle.fill",
-                    gradient: [.orange, .red]
-                ) {
-                    DateTimeView(viewModel: viewModel,
-                               onBack: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 0
+            case 1:
+                DateTimeView(
+                    viewModel: viewModel,
+                    onBack: {
+                        withAnimation {
+                            currentStep -= 1
                         }
                     },
-                               onNext: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 2
+                    onNext: {
+                        withAnimation {
+                            currentStep += 1
                         }
-                    })
-                }
-                .tag(1)
-                
-                // MARK: - Location & Details Step
-                OnboardingStepView(
-                    title: "Where is Your Event?",
-                    subtitle: "Choose a location and add important details",
-                    icon: "mappin.circle.fill",
-                    gradient: [.green, .blue]
-                ) {
-                    LocationDetailsView(viewModel: viewModel,
-                                     onBack: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 1
+                    }
+                )
+            case 2:
+                LocationDetailsView(
+                    viewModel: viewModel,
+                    onBack: {
+                        withAnimation {
+                            currentStep -= 1
                         }
                     },
-                                     onNext: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 3
+                    onNext: {
+                        withAnimation {
+                            currentStep += 1
                         }
-                    })
-                }
-                .tag(2)
-                
-                // MARK: - Preview Step
-                OnboardingStepView(
-                    title: "Almost Done!",
-                    subtitle: "Review your event details before publishing",
-                    icon: "checkmark.circle.fill",
-                    gradient: [.purple, .blue]
-                ) {
-                    PreviewView(viewModel: viewModel,
-                              onBack: {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            currentStep = 2
+                    }
+                )
+            case 3:
+                PreviewView(
+                    viewModel: viewModel,
+                    onBack: {
+                        withAnimation {
+                            currentStep -= 1
                         }
                     },
-                              onCreateEvent: {
-                        viewModel.createEvent()
-                    })
-                }
-                .tag(3)
+                    onCreateEvent: {
+                        Task {
+                            do {
+                                try await viewModel.createEvent()
+                            } catch {
+                                print("Error creating event: \(error)")
+                            }
+                        }
+                    }
+                )
+            default:
+                EmptyView()
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(.easeInOut, value: currentStep)
         }
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showLocationSearch) {
             LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
                 viewModel.setLocation(address: address, coordinates: coordinates)
