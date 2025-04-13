@@ -74,7 +74,7 @@ struct TabBar: View {
         })
         .sheet(isPresented: $showCreateSheet) {
             NavigationView {
-                CreateEventView()
+                CreateView()
                     .navigationBarItems(
                         trailing: Button("Done") {
                             showCreateSheet = false

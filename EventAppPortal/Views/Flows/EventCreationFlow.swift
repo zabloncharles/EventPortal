@@ -10,71 +10,277 @@ import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
 import CoreLocation
-
+import MapKit
 // MARK: - Event Creation Flow
 
 struct EventCreationFlow: View {
     @ObservedObject var viewModel: CreateEventViewModel
     @State private var currentStep = 0
+    @State private var showLocationSearch = false
+    @State private var animateContent = false
     let steps = ["Basic Info", "Date & Time", "Location & Details", "Preview"]
     
     var body: some View {
         VStack(spacing: 0) {
-            // Progress Steps
+            // Progress Steps with animation
             ProgressStepsView(steps: steps, currentStep: currentStep)
-                .padding(.horizontal) .padding(.horizontal)
+                .padding(.horizontal)
+                .transition(.slide)
             
             // Content
             TabView(selection: $currentStep) {
-                BasicInfoView(viewModel: viewModel) {
-                    withAnimation {
-                        currentStep = 1
+                // MARK: - Basic Info Step
+                OnboardingStepView(
+                    title: "Let's Create Your Event",
+                    subtitle: "Start by giving your event a name and telling people what it's about",
+                    icon: "star.circle.fill",
+                    gradient: [.blue, .purple]
+                ) {
+                    BasicInfoView(viewModel: viewModel) {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 1
+                        }
                     }
                 }
                 .tag(0)
                 
-                DateTimeView(viewModel: viewModel,
-                             onBack: {
-                    withAnimation {
-                        currentStep = 0
-                    }
-                },
-                             onNext: {
-                    withAnimation {
-                        currentStep = 2
-                    }
-                })
+                // MARK: - Date & Time Step
+                OnboardingStepView(
+                    title: "When is Your Event?",
+                    subtitle: "Set the date and time for your event",
+                    icon: "calendar.circle.fill",
+                    gradient: [.orange, .red]
+                ) {
+                    DateTimeView(viewModel: viewModel,
+                               onBack: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 0
+                        }
+                    },
+                               onNext: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 2
+                        }
+                    })
+                }
                 .tag(1)
                 
-                LocationDetailsView(viewModel: viewModel,
-                                    onBack: {
-                    withAnimation {
-                        currentStep = 1
-                    }
-                },
-                                    onNext: {
-                    withAnimation {
-                        currentStep = 3
-                    }
-                })
+                // MARK: - Location & Details Step
+                OnboardingStepView(
+                    title: "Where is Your Event?",
+                    subtitle: "Choose a location and add important details",
+                    icon: "mappin.circle.fill",
+                    gradient: [.green, .blue]
+                ) {
+                    LocationDetailsView(viewModel: viewModel,
+                                     onBack: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 1
+                        }
+                    },
+                                     onNext: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 3
+                        }
+                    })
+                }
                 .tag(2)
                 
-                PreviewView(viewModel: viewModel,
-                            onBack: {
-                    withAnimation {
-                        currentStep = 2
-                    }
-                },
-                            onCreateEvent: {
-                    viewModel.createEvent()
-                })
+                // MARK: - Preview Step
+                OnboardingStepView(
+                    title: "Almost Done!",
+                    subtitle: "Review your event details before publishing",
+                    icon: "checkmark.circle.fill",
+                    gradient: [.purple, .blue]
+                ) {
+                    PreviewView(viewModel: viewModel,
+                              onBack: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            currentStep = 2
+                        }
+                    },
+                              onCreateEvent: {
+                        viewModel.createEvent()
+                    })
+                }
                 .tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
         }
+        .sheet(isPresented: $showLocationSearch) {
+            LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
+                viewModel.setLocation(address: address, coordinates: coordinates)
+            }
+        }
         .navigationTitle(steps[currentStep])
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: $viewModel.showError) {
+            Button("OK") {
+                viewModel.showError = false
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+    }
+}
+
+// MARK: - Onboarding Step View
+struct OnboardingStepView<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let gradient: [Color]
+    let content: () -> Content
+    @State private var animateIcon = false
+    
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 30) {
+                // Header
+                VStack(spacing: 16) {
+                    // Icon
+                    Image(systemName: icon)
+                        .font(.system(size: 60))
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: gradient),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .scaleEffect(animateIcon ? 1 : 0.5)
+                        .opacity(animateIcon ? 1 : 0)
+                    
+                    // Title
+                    Text(title)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
+                        .opacity(animateIcon ? 1 : 0)
+                        .offset(y: animateIcon ? 0 : 20)
+                    
+                    // Subtitle
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                        .opacity(animateIcon ? 1 : 0)
+                        .offset(y: animateIcon ? 0 : 20)
+                }
+                .padding(.top, 40)
+                
+                // Content
+                content()
+                    .opacity(animateIcon ? 1 : 0)
+                    .offset(y: animateIcon ? 0 : 20)
+            }
+            .padding()
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                animateIcon = true
+            }
+        }
+    }
+}
+
+// MARK: - Location View
+struct LocationView: View {
+    @ObservedObject var viewModel: CreateEventViewModel
+    @Binding var showLocationSearch: Bool
+    let onBack: () -> Void
+    let onNext: () -> Void
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Location Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Where is your event?")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Select a location for your event")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                
+                // Location Selection Button
+                Button(action: {
+                    showLocationSearch = true
+                }) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.blue)
+                        
+                        if let location = viewModel.location {
+                            Text(location)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                        } else {
+                            Text("Select Location")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                        }
+                        
+                        Text("Tap to search for a location")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                // Map Preview (if location is selected)
+                if let coordinates = viewModel.coordinates {
+                    Map(coordinateRegion: .constant(MKCoordinateRegion(
+                        center: coordinates,
+                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                    )))
+                    .frame(height: 200)
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                }
+                
+                Spacer()
+                
+                // Navigation Buttons
+                HStack {
+                    Button(action: onBack) {
+                        HStack {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(10)
+                    }
+                    
+                    Button(action: onNext) {
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "chevron.right")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(viewModel.location != nil ? Color.blue : Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                    }
+                    .disabled(viewModel.location == nil)
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical)
+        }
     }
 }
 
@@ -84,7 +290,8 @@ class CreateEventViewModel: ObservableObject {
     @Published var type = "Conference"
     @Published var startDate = Date()
     @Published var endDate = Date().addingTimeInterval(3600) // 1 hour later
-    @Published var location = ""
+    @Published var location: String?
+    @Published var coordinates: CLLocationCoordinate2D?
     @Published var price = ""
     @Published var maxParticipants = ""
     @Published var isPrivate = false
@@ -105,15 +312,27 @@ class CreateEventViewModel: ObservableObject {
     private let storage = Storage.storage().reference()
     private let geocoder = CLGeocoder()
     
+    func setLocation(address: String, coordinates: [Double]) {
+        self.location = address
+        self.coordinates = CLLocationCoordinate2D(latitude: coordinates[0], longitude: coordinates[1])
+    }
+    
     func createEvent() {
+        // Validate required fields
         guard !name.isEmpty else {
             errorMessage = "Please enter an event name"
             showError = true
             return
         }
         
-        guard !location.isEmpty else {
-            errorMessage = "Please enter a location"
+        guard let location = location, let coordinates = coordinates else {
+            errorMessage = "Please select a location for the event"
+            showError = true
+            return
+        }
+        
+        guard !maxParticipants.isEmpty, let maxParticipantsInt = Int(maxParticipants), maxParticipantsInt > 0 else {
+            errorMessage = "Please enter a valid number of maximum participants"
             showError = true
             return
         }
@@ -128,79 +347,54 @@ class CreateEventViewModel: ObservableObject {
             return
         }
         
-        // Geocode location to get coordinates
-        geocoder.geocodeAddressString(location) { [weak self] placemarks, error in
+        // Create event data
+        let eventData: [String: Any] = [
+            "name": self.name,
+            "description": self.description,
+            "type": self.type,
+            "views": "0",
+            "location": location,
+            "price": self.price,
+            "owner": userId,
+            "organizerName": "Event Organizer", // This could be fetched from user profile
+            "shareContactInfo": true,
+            "startDate": Timestamp(date: self.startDate),
+            "endDate": Timestamp(date: self.endDate),
+            "images": [],
+            "participants": [userId], // Creator is the first participant
+            "maxParticipants": maxParticipantsInt,
+            "isTimed": true,
+            "createdAt": Timestamp(date: Date()),
+            "latitude": coordinates.latitude,
+            "longitude": coordinates.longitude,
+            "status": "active"
+        ]
+        
+        // Add event to Firestore
+        let docRef = self.db.collection("events").document()
+        docRef.setData(eventData) { [weak self] error in
             guard let self = self else { return }
             
             if let error = error {
                 DispatchQueue.main.async {
-                    self.errorMessage = "Failed to geocode location: \(error.localizedDescription)"
+                    self.errorMessage = "Failed to create event: \(error.localizedDescription)"
                     self.showError = true
                     self.isLoading = false
                 }
                 return
             }
             
-            guard let placemark = placemarks?.first, let location = placemark.location else {
+            let eventId = docRef.documentID
+            
+            // If there are images, upload them
+            if !self.selectedImages.isEmpty {
+                self.uploadEventImages(images: self.selectedImages, eventId: eventId)
+            } else {
+                // No images to upload, we're done
                 DispatchQueue.main.async {
-                    self.errorMessage = "Could not find location coordinates"
-                    self.showError = true
+                    self.createdEventId = eventId
+                    self.eventCreated = true
                     self.isLoading = false
-                }
-                return
-            }
-            
-            let coordinates = location.coordinate
-            
-            // Create event data
-            let eventData: [String: Any] = [
-                "name": self.name,
-                "description": self.description,
-                "type": self.type,
-                "views": "0",
-                "location": self.location,
-                "price": self.price,
-                "owner": userId,
-                "organizerName": "Event Organizer", // This could be fetched from user profile
-                "shareContactInfo": true,
-                "startDate": Timestamp(date: self.startDate),
-                "endDate": Timestamp(date: self.endDate),
-                "images": [],
-                "participants": [userId], // Creator is the first participant
-                "maxParticipants": Int(self.maxParticipants) ?? 0,
-                "isTimed": true,
-                "createdAt": Timestamp(date: Date()),
-                "latitude": coordinates.latitude,
-                "longitude": coordinates.longitude,
-                "status": "active"
-            ]
-            
-            // Add event to Firestore
-            let docRef = self.db.collection("events").document()
-            docRef.setData(eventData) { [weak self] error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    DispatchQueue.main.async {
-                        self.errorMessage = "Failed to create event: \(error.localizedDescription)"
-                        self.showError = true
-                        self.isLoading = false
-                    }
-                    return
-                }
-                
-                let eventId = docRef.documentID
-                
-                // If there are images, upload them
-                if !self.selectedImages.isEmpty {
-                    self.uploadEventImages(images: self.selectedImages, eventId: eventId)
-                } else {
-                    // No images to upload, we're done
-                    DispatchQueue.main.async {
-                        self.createdEventId = eventId
-                        self.eventCreated = true
-                        self.isLoading = false
-                    }
                 }
             }
         }
@@ -289,7 +483,8 @@ class CreateEventViewModel: ObservableObject {
         type = "Conference"
         startDate = Date()
         endDate = Date().addingTimeInterval(3600)
-        location = ""
+        location = nil
+        coordinates = nil
         price = ""
         maxParticipants = ""
         isPrivate = false

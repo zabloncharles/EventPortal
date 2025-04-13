@@ -1751,15 +1751,26 @@ struct EventListItem: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                AsyncImage(url: URL(string: event.images[0])) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.3)
+                if !event.images.isEmpty {
+                    AsyncImage(url: URL(string: event.images[0])) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray.opacity(0.3)
+                    }
+                    .frame(width: 80, height: 80)
+                    .cornerRadius(8)
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 80, height: 80)
+                        .cornerRadius(8)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .foregroundColor(.gray)
+                        )
                 }
-                .frame(width: 80, height: 80)
-                .cornerRadius(8)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.name)

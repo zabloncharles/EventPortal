@@ -345,7 +345,7 @@ struct HomeView: View {
                             
                             Spacer()
                             
-                            NavigationLink(destination: CreateEventView()) {
+                            NavigationLink(destination: CreateView()) {
                                 Image(systemName: "plus")
                                     .font(.system(size: 16, weight: .medium))
                                     .frame(width: 36, height: 36)

@@ -9,7 +9,17 @@ struct CompactImageViewer: View {
     
     var body: some View {
         ZStack {
-          
+            if imageUrls.isEmpty {
+                // Show placeholder when no images are available
+                Rectangle()
+                    .fill(Color.gray.opacity(0.1))
+                    .frame(height: height)
+                    .overlay(
+                        Image(systemName: "photo.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.gray)
+                    )
+            } else {
                 TabView(selection: $currentIndex) {
                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
                         KFImage(URL(string: url))
@@ -32,10 +42,10 @@ struct CompactImageViewer: View {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: !scroll ? .never : .automatic))
                 .overlay {
-                    
                     scroll ? Color.clear :
                     Color.gray.opacity(0.02)
                 }
+            }
             
             // Image counter overlay
 //            if imageUrls.count > 1 {

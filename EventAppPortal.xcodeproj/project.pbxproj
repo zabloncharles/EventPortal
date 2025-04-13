@@ -37,7 +37,6 @@
 		F79C82812D77564900C87783 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82772D77564900C87783 /* ProfileView.swift */; };
 		F79C82822D77564900C87783 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82782D77564900C87783 /* HomeView.swift */; };
 		F79C82832D77564900C87783 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C82792D77564900C87783 /* DiscoverView.swift */; };
-		F79C82842D77564900C87783 /* CreateEventView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827A2D77564900C87783 /* CreateEventView.swift */; };
 		F79C82852D77564900C87783 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827B2D77564900C87783 /* MainTabView.swift */; };
 		F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827D2D77564900C87783 /* ViewModifiers.swift */; };
 		F79C82872D77564900C87783 /* RegistrationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79C827F2D77564900C87783 /* RegistrationView.swift */; };
@@ -51,6 +50,7 @@
 		F7FD38E22DAAEEC100682B6A /* EventGroupModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD38E12DAAEEC100682B6A /* EventGroupModel.swift */; };
 		F7FD38FD2DAB5AD400682B6A /* GroupCreationFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD38FC2DAB5AD400682B6A /* GroupCreationFlow.swift */; };
 		F7FD39012DAB6DDA00682B6A /* EventCreationFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD39002DAB6DDA00682B6A /* EventCreationFlow.swift */; };
+		F7FD39032DAB7A9000682B6A /* CreateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD39022DAB7A9000682B6A /* CreateView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -86,7 +86,6 @@
 		F79C82772D77564900C87783 /* ProfileView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		F79C82782D77564900C87783 /* HomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		F79C82792D77564900C87783 /* DiscoverView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
-		F79C827A2D77564900C87783 /* CreateEventView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateEventView.swift; sourceTree = "<group>"; };
 		F79C827B2D77564900C87783 /* MainTabView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		F79C827D2D77564900C87783 /* ViewModifiers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewModifiers.swift; sourceTree = "<group>"; };
 		F79C827F2D77564900C87783 /* RegistrationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RegistrationView.swift; sourceTree = "<group>"; };
@@ -95,6 +94,7 @@
 		F7FD38E12DAAEEC100682B6A /* EventGroupModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventGroupModel.swift; sourceTree = "<group>"; };
 		F7FD38FC2DAB5AD400682B6A /* GroupCreationFlow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = GroupCreationFlow.swift; path = EventAppPortal/Views/Tabs/GroupCreationFlow.swift; sourceTree = SOURCE_ROOT; };
 		F7FD39002DAB6DDA00682B6A /* EventCreationFlow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EventCreationFlow.swift; sourceTree = "<group>"; };
+		F7FD39022DAB7A9000682B6A /* CreateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -247,11 +247,11 @@
 		F79C82762D77564900C87783 /* Tabs */ = {
 			isa = PBXGroup;
 			children = (
+				F7FD39022DAB7A9000682B6A /* CreateView.swift */,
 				F7FD38DD2DAAED7D00682B6A /* GroupsView.swift */,
 				F79C82772D77564900C87783 /* ProfileView.swift */,
 				F79C82782D77564900C87783 /* HomeView.swift */,
 				F79C82792D77564900C87783 /* DiscoverView.swift */,
-				F79C827A2D77564900C87783 /* CreateEventView.swift */,
 				F7855E9E2D7D1DD700D668CD /* NotificationView.swift */,
 			);
 			path = Tabs;
@@ -395,7 +395,6 @@
 				F79C82862D77564900C87783 /* ViewModifiers.swift in Sources */,
 				F746526A2D884FB2002CE163 /* LocationManager.swift in Sources */,
 				F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */,
-				F79C82842D77564900C87783 /* CreateEventView.swift in Sources */,
 				F715155F2D86A0E7001D55C3 /* EventRecommendationService.swift in Sources */,
 				F79C82852D77564900C87783 /* MainTabView.swift in Sources */,
 				F773EC6E2D78A99F0009AC93 /* ViewEventDetail.swift in Sources */,
@@ -405,6 +404,7 @@
 				F7155DF82D8DA69F00AC482C /* LogoLoadingView.swift in Sources */,
 				F7FD38FD2DAB5AD400682B6A /* GroupCreationFlow.swift in Sources */,
 				F773EC712D790FAC0009AC93 /* LottieView.swift in Sources */,
+				F7FD39032DAB7A9000682B6A /* CreateView.swift in Sources */,
 				F7855EAF2D8521B900D668CD /* ContentView.swift in Sources */,
 				F79C82882D77564900C87783 /* LoginView.swift in Sources */,
 				F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */,
