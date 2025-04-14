@@ -46,11 +46,13 @@ struct EventCreationFlow: View {
                 ) {
                     VStack(spacing: 20) {
                         TextField("Event Name", text: $viewModel.name)
-                            .textFieldStyle(.roundedBorder)
                             .font(.title3)
                             .padding()
-                            .background(Color(.systemGray6))
                             .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                         
                         Button(action: { withAnimation { currentStep += 1 } }) {
                             Text("Continue")
@@ -74,29 +76,7 @@ struct EventCreationFlow: View {
                 }
                 .tag(0)
                 
-                // Description
-                OnboardingStepView(
-                    title: "Describe your event",
-                    subtitle: "Help people understand what your event is about",
-                    icon: "text.alignleft",
-                    gradient: [.purple, .blue]
-                ) {
-                    VStack(spacing: 20) {
-                        TextEditor(text: $viewModel.description)
-                            .frame(height: 150)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                        
-                        NavigationButtons(
-                            onBack: { withAnimation { currentStep -= 1 } },
-                            onNext: { withAnimation { currentStep += 1 } },
-                            isNextDisabled: viewModel.description.isEmpty
-                        )
-                    }
-                    .padding()
-                }
-                .tag(1)
+               
                 
                 // Event Type
                 OnboardingStepView(
@@ -107,11 +87,11 @@ struct EventCreationFlow: View {
                 ) {
                     VStack(spacing: 20) {
                         ScrollView {
-                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()),GridItem(.flexible())], spacing: 16) {
                                 ForEach(EventType.allCases, id: \.self) { type in
                                     Button(action: {
                                         viewModel.type = type.rawValue
-                                        withAnimation { currentStep += 1 }
+                                       // withAnimation { //mull }
                                     }) {
                                         VStack(spacing: 12) {
                                             Image(systemName: type.icon)
@@ -131,40 +111,65 @@ struct EventCreationFlow: View {
                             }
                         }
                         
-                        Button(action: { withAnimation { currentStep -= 1 } }) {
-                            Text("Back")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 50)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(12)
-                        }
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep -= 1 } },
+                            onNext: { withAnimation { currentStep += 1 } }
+                        )
+                    }
+                    .padding()
+                }
+                .tag(1)
+                
+                // Description
+                OnboardingStepView(
+                    title: "Describe your event",
+                    subtitle: "Help people understand what your event is about",
+                    icon: "text.alignleft",
+                    gradient: [.purple, .blue]
+                ) {
+                    VStack(spacing: 20) {
+                        TextEditor(text: $viewModel.description)
+                            .frame(height: 150)
+                            .font(.title3)
+                            .padding()
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep -= 1 } },
+                            onNext: { withAnimation { currentStep += 1 } },
+                            isNextDisabled: viewModel.description.isEmpty
+                        )
                     }
                     .padding()
                 }
                 .tag(2)
                 
-                // Date & Time
+                // Date & Time Start Date
                 OnboardingStepView(
-                    title: "When is it happening?",
+                    title: "When is it starting?",
                     subtitle: "Set the date and time for your event",
                     icon: "calendar",
                     gradient: [.green, .blue]
                 ) {
                     VStack(spacing: 20) {
+                        HStack {
+                            Text("Start Date:")
+                            Spacer()
+                            
+                        }
                         DatePicker("Start Date", selection: $viewModel.startDate, in: Date()...)
                             .datePickerStyle(.graphical)
+                            .font(.title3)
                             .padding()
-                            .background(Color(.systemGray6))
                             .cornerRadius(12)
-                        
-                        DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate...)
-                            .datePickerStyle(.graphical)
-                            .padding()
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                        
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
                         NavigationButtons(
                             onBack: { withAnimation { currentStep -= 1 } },
                             onNext: { withAnimation { currentStep += 1 } }
@@ -173,6 +178,34 @@ struct EventCreationFlow: View {
                     .padding()
                 }
                 .tag(3)
+                
+                // Date & Time End Date
+                OnboardingStepView(
+                    title: "When is it ending?",
+                    subtitle: "Set the date and time for your event",
+                    icon: "calendar",
+                    gradient: [.green, .blue]
+                ) {
+                    VStack(spacing: 20) {
+                      
+                        DatePicker("End Date", selection: $viewModel.endDate, in: viewModel.startDate...)
+                            .datePickerStyle(.graphical)
+                            .font(.title3)
+                            .padding()
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep -= 1 } },
+                            onNext: { withAnimation { currentStep += 1 } }
+                        )
+                    }
+                    .padding()
+                }
+                .tag(4)
                 
                 // Location
                 OnboardingStepView(
@@ -217,7 +250,7 @@ struct EventCreationFlow: View {
                     }
                     .padding()
                 }
-                .tag(4)
+                .tag(5)
                 
                 // Price
                 OnboardingStepView(
@@ -255,7 +288,7 @@ struct EventCreationFlow: View {
                     }
                     .padding()
                 }
-                .tag(5)
+                .tag(6)
                 
                 // Capacity
                 OnboardingStepView(
@@ -288,7 +321,7 @@ struct EventCreationFlow: View {
                     }
                     .padding()
                 }
-                .tag(6)
+                .tag(7)
                 
                 // Preview
                 PreviewView(
@@ -305,7 +338,7 @@ struct EventCreationFlow: View {
                         }
                     }
                 )
-                .tag(7)
+                .tag(8)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)

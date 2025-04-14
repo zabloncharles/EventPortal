@@ -75,7 +75,7 @@ struct SelectionView: View {
                     .font(.system(size: 36, weight: .bold))
                     .foregroundStyle(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.purple, .black]),
+                            gradient: Gradient(colors: [Color.purple, Color.invert]),
                             startPoint: .leading,
                             endPoint: .trailing
                         )
