@@ -12,25 +12,40 @@ struct CreateView: View {
     @StateObject private var eventViewModel = CreateEventViewModel()
     @StateObject private var groupViewModel = CreateGroupViewModel()
     @State private var creationType: CreationType = .none
+    @State private var textOffset: CGFloat = 100
+    @State private var viewState = CGSize.zero
+    @State private var isDragging = false
 
     var body: some View {
         NavigationView {
-            VStack {
-                switch creationType {
-                case .none:
-                    SelectionView(creationType: $creationType)
-                case .event:
-                    EventCreationFlow(viewModel: eventViewModel)
-                case .group:
-                    GroupCreationFlow(viewModel: groupViewModel)
+            ZStack {
+                Color.dynamic.edgesIgnoringSafeArea(.all)
+                
+                VStack(spacing: 20) {
+                   
+                    
+                    VStack {
+                        switch creationType {
+                        case .none:
+                            SelectionView(creationType: $creationType)
+                        case .event:
+                            EventCreationFlow(viewModel: eventViewModel)
+                        case .group:
+                            GroupCreationFlow(viewModel: groupViewModel)
+                        }
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if creationType != .none {
-                        Button("Back") {
-                            creationType = .none
+                        Button(action: { creationType = .none }) {
+                            HStack(spacing: 4.0) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 16, weight: .bold))
+                                Text("Back")
+                            }
                         }
                     }
                 }
@@ -45,30 +60,63 @@ struct SelectionView: View {
     @Binding var creationType: CreationType
     
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Create New")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 0) {
+                Image(systemName: "note.text.badge.plus")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.purple]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                Text("What do\nyou want to")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.purple, .black]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+              
+                Text("be apart of?")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.red, .orange]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                HStack(spacing:5) {
+                    Image(systemName: "info.circle")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                    Text("Choose what you'd like to create")
+                        .font(.subheadline)
+                    .foregroundColor(.gray)
+                }
+            }.padding(.horizontal)
             
-            Text("Choose what you'd like to create")
-                .font(.subheadline)
-                .foregroundColor(.gray)
+            
             
             // Event Option
             CreationOptionButton(
                 title: "Create Event",
                 subtitle: "Organize and host events",
-                icon: "calendar",
+                icon: "bird.fill",
                 gradient: [.blue, .purple]
             ) {
                 creationType = .event
             }
-            
+            Divider()
             // Group Option
             CreationOptionButton(
                 title: "Create Group",
                 subtitle: "Build a community around shared interests",
-                icon: "person.3.fill",
+                icon: "person.2.fill",
                 gradient: [.green, .blue]
             ) {
                 creationType = .group
@@ -129,32 +177,21 @@ struct ProgressStepsView: View {
     let currentStep: Int
     
     var body: some View {
-        HStack(spacing: 0) {
+        VStack(spacing: 16) {
+            // Progress Bar
+            HStack(spacing: 4) {
             ForEach(0..<steps.count, id: \.self) { index in
-                VStack(spacing: 8) {
-                                        Circle()
-                        .fill(currentStep >= index ? Color.blue : Color.gray.opacity(0.3))
-                        .frame(width: 30, height: 30)
-                                            .overlay(
-                            Text("\(index + 1)")
-                                                    .foregroundColor(.white)
-                                .font(.headline)
-                        )
-                    Text(steps[index])
-                        .font(.caption)
-                        .foregroundColor(currentStep >= index ? .primary : .gray)
-                }
-                
-                if index < steps.count - 1 {
                     Rectangle()
-                        .fill(currentStep > index ? Color.blue : Color.gray.opacity(0.3))
-                        .frame(height: 2)
-                        .padding(.horizontal, 8)
+                        .fill(index <= currentStep ? Color.blue : Color(.systemGray5))
+                        .frame(height: 4)
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal)
+            
+           
         }
-        .padding(.top, 20)
-        .padding(.bottom, 30)
+        .padding(.horizontal, 50)
     }
 }
 
@@ -168,7 +205,7 @@ struct BasicInfoView: View {
                 
                 
                 // Basic Info Section
-                FormSection {
+                FormSection(title: "Basic Information") {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Basic Information")
                             .font(.headline)
@@ -244,7 +281,7 @@ struct DateTimeView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 // Date & Time Section
-                FormSection {
+                FormSection(title: "Date & Time") {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Date & Time")
                             .font(.headline)
@@ -286,107 +323,107 @@ struct DateTimeView: View {
 
 struct LocationDetailsView: View {
     @ObservedObject var viewModel: CreateEventViewModel
-    @State private var showLocationSearch = false
     let onBack: () -> Void
     let onNext: () -> Void
+    @State private var showLocationSearch = false
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                // Location & Details Section
-                FormSection {
+        VStack(spacing: 20) {
+            FormSection(title: "Location & Details") {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Location & Details")
-                            .font(.headline)
-                            .padding(.bottom, 8)
-                        
-                        // Location Selection
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Event Location")
-                                .font(.subheadline)
+                    // Location selection button
+                    Button(action: {
+                        showLocationSearch = true
+                    }) {
+                        HStack {
+                            Image(systemName: "mappin.circle.fill")
+                                .foregroundColor(.blue)
+                            Text(viewModel.location?.address ?? "Select Location")
+                                .foregroundColor(viewModel.location == nil ? .gray : .primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .foregroundColor(.gray)
-                            
-                            Button(action: { showLocationSearch = true }) {
-                                HStack {
-                                    Image(systemName: "magnifyingglass")
-                                        .foregroundColor(.blue)
-                                    Text(viewModel.location == nil ? "Search Location" : "Change Location")
-                                        .foregroundColor(.blue)
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(10)
-                            }
-                            
-                            if let location = viewModel.location {
-                                Text(location)
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                    .padding(.top, 4)
-                            }
-                            
-                            if let coordinates = viewModel.coordinates {
-                                Map(coordinateRegion: .constant(MKCoordinateRegion(
-                                    center: coordinates,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                )))
-                                .frame(height: 200)
-                                .cornerRadius(12)
-                            }
                         }
-                        
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(10)
+                        .shadow(radius: 2)
+                    }
+                    
+                    // Map preview if location is selected
+                    if let location = viewModel.location {
+                        MapPreview(coordinates: location.coordinates)
+                            .frame(height: 150)
+                            .cornerRadius(10)
+                    }
+                    
+                    // Price field
                         CustomTextField(
                             title: "Price",
-                            placeholder: "0.00",
+                        placeholder: "Price (leave empty if free)",
                             text: $viewModel.price,
-                            icon: "dollarsign.circle.fill",
                             keyboardType: .decimalPad
                         )
                         
+                    // Max participants field
                         CustomTextField(
                             title: "Maximum Participants",
                             placeholder: "Enter limit (optional)",
-                            text: $viewModel.maxParticipants,
-                            icon: "person.2.fill",
-                            keyboardType: .numberPad
-                        )
-                        
-                        Toggle(isOn: $viewModel.isPrivate) {
-                            HStack {
-                                Image(systemName: viewModel.isPrivate ? "lock.fill" : "globe")
-                                    .foregroundColor(viewModel.isPrivate ? .blue : .gray)
-                                VStack(alignment: .leading) {
-                                    Text(viewModel.isPrivate ? "Private Event" : "Public Event")
-                                        .font(.subheadline)
-                                    Text(viewModel.isPrivate ? "Only invited people can join" : "Anyone can discover and join")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                        text: .init(
+                            get: { String(viewModel.maxParticipants) },
+                            set: { 
+                                if let value = Int($0) {
+                                    viewModel.maxParticipants = String(value)
                                 }
                             }
-                        }
-                    }
+                        ),
+                        keyboardType: .numberPad
+                    )
+                    
+                    // Private event toggle
+                    Toggle("Private Event", isOn: $viewModel.isPrivate)
+                        .padding(.vertical, 8)
+                }
+            }
+            
+            // Navigation buttons
+            HStack {
+                Button(action: onBack) {
+                    Text("Back")
+                        .foregroundColor(.blue)
                 }
                 
-                // Navigation Buttons
-                HStack(spacing: 16) {
-                    ActionButton(title: "Back", gradient: [.gray, .gray]) {
-                        onBack()
-                    }
-                    
-                    ActionButton(title: "Preview", gradient: [.blue, .purple]) {
-                        onNext()
-                    }
-                    .disabled(viewModel.location == nil)
+                Spacer()
+                
+                Button(action: onNext) {
+                    Text("Next")
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(viewModel.location != nil ? Color.blue : Color.gray)
+                        .cornerRadius(8)
                 }
+                .disabled(viewModel.location == nil)
             }
-            .padding()
+            .padding(.horizontal)
         }
         .sheet(isPresented: $showLocationSearch) {
-            LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
-                viewModel.setLocation(address: address, coordinates: coordinates)
-            }
+            LocationSearchView(
+                isPresented: $showLocationSearch,
+                onLocationSelected: { address, coordinates in
+                    viewModel.location = EventLocation(address: address, coordinates: coordinates)
+                }
+            )
         }
+    }
+}
+
+struct MapPreview: View {
+    let coordinates: [Double]
+    
+    var body: some View {
+        // Implement map preview using coordinates
+        Color.gray // Placeholder for now
     }
 }
 
@@ -406,19 +443,19 @@ struct PreviewView: View {
                         description: viewModel.description,
                         type: viewModel.type,
                         views: "0",
-                        location: (viewModel.location?.isEmpty ?? false ? "Location not set" : viewModel.location) ?? "",
+                        location: viewModel.location?.address ?? "Location not set",
                         price: viewModel.price,
                         owner: "preview",
                         organizerName: "Preview Organizer",
                         shareContactInfo: true,
                         startDate: viewModel.startDate,
                         endDate: viewModel.endDate,
-                        images: [],
+                        images: viewModel.selectedImages.isEmpty ? ["placeholder_image"] : viewModel.selectedImages.map { _ in "placeholder_image" },
                         participants: [],
                         maxParticipants: Int(viewModel.maxParticipants) ?? 0,
                         isTimed: true,
                         createdAt: Date(),
-                        coordinates: [0.0, 0.0],
+                        coordinates: viewModel.location?.coordinates ?? [0.0, 0.0],
                         status: "active"
                     )
                 )
@@ -522,14 +559,20 @@ struct CustomTextField: View {
 // MARK: - Supporting Views
 
 struct FormSection<Content: View>: View {
+    let title: String
     let content: Content
     
-    init(@ViewBuilder content: () -> Content) {
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
         self.content = content()
     }
     
     var body: some View {
         VStack(spacing: 20) {
+            Text(title)
+                .font(.headline)
+                .padding(.bottom, 8)
+            
             content
                                 }
                                 .padding()
@@ -852,6 +895,8 @@ struct CreateView_Previews: PreviewProvider {
         CreateView()
     }
 }
+
+
 
 
 

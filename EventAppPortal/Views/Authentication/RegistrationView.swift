@@ -11,75 +11,196 @@ struct RegistrationView: View {
     @State private var isLoading = false
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var animateFields = false
+    @State private var isSuccessful = false
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                // Header
-                Text("Create Account")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .padding(.top, 30)
-                
-                // Registration Form
-                VStack(spacing: 15) {
-                    TextField("Full Name", text: $name)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .textContentType(.name)
-                        .disabled(isLoading)
-                    
-                    TextField("Email", text: $email)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .textContentType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disabled(isLoading)
-                    
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .textContentType(.newPassword)
-                        .disabled(isLoading)
-                    
-                    SecureField("Confirm Password", text: $confirmPassword)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .textContentType(.newPassword)
-                        .disabled(isLoading)
-                }
-                .padding(.horizontal)
-                
-                if showPasswordMismatch {
-                    Text("Passwords do not match")
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-                
-                // Register Button
-                Button(action: {
-                    register()
-                }) {
-                    HStack {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(0.8)
-                        }
+        ZStack {
+            // Background
+            Color.dynamic.edgesIgnoringSafeArea(.all)
+            
+            // Content
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 30) {
+                    // Header
+                    VStack(spacing: 16) {
+                        // Logo/Icon
+                        Image(systemName: "person.badge.plus")
+                            .font(.system(size: 80))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .scaleEffect(animateFields ? 1 : 0.5)
+                            .opacity(animateFields ? 1 : 0)
+                        
+                        // Title
                         Text("Create Account")
-                            .fontWeight(.semibold)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .opacity(animateFields ? 1 : 0)
+                            .offset(y: animateFields ? 0 : 20)
+                        
+                        // Subtitle
+                        Text("Join our community of event enthusiasts")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .opacity(animateFields ? 1 : 0)
+                            .offset(y: animateFields ? 0 : 20)
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isLoading ? Color.gray : Color.blue)
-                    .cornerRadius(10)
+                    .padding(.top, 50)
+                    
+                    // Registration Form
+                    VStack(spacing: 20) {
+                        // Name Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Full Name")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.blue)
+                                TextField("Enter your full name", text: $name)
+                                    .textContentType(.name)
+                                    .disabled(isLoading)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Email Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Email")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "envelope.fill")
+                                    .foregroundColor(.blue)
+                                TextField("Enter your email", text: $email)
+                                    .textContentType(.emailAddress)
+                                    .autocapitalization(.none)
+                                    .keyboardType(.emailAddress)
+                                    .disabled(isLoading)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Password Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "lock.fill")
+                                    .foregroundColor(.blue)
+                                SecureField("Create a password", text: $password)
+                                    .textContentType(.newPassword)
+                                    .disabled(isLoading)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Confirm Password Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Confirm Password")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "lock.fill")
+                                    .foregroundColor(.blue)
+                                SecureField("Confirm your password", text: $confirmPassword)
+                                    .textContentType(.newPassword)
+                                    .disabled(isLoading)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        if showPasswordMismatch {
+                            Text("Passwords do not match")
+                                .foregroundColor(.red)
+                                .font(.caption)
+                                .opacity(animateFields ? 1 : 0)
+                                .offset(y: animateFields ? 0 : 20)
+                        }
+                        
+                        // Register Button
+                        Button(action: register) {
+                            HStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                }
+                                Text(isLoading ? "Creating Account..." : "Create Account")
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        }
+                        .disabled(isLoading)
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Sign In Link
+                        HStack {
+                            Text("Already have an account?")
+                                .foregroundColor(.gray)
+                            Button {
+                                dismiss()
+                            } label: {
+                                Text("Sign In")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .font(.subheadline)
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                    }
+                    .padding(.horizontal, 30)
                 }
-                .disabled(isLoading)
-                .padding(.horizontal)
-                
-                Spacer()
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
             }
-            .padding()
-            .navigationBarItems(leading: Button("Cancel") {
-                dismiss()
-            })
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    animateFields = true
+                }
+            }
+            
+            // Alerts
             .alert(isPresented: $showAlert) {
                 Alert(
                     title: Text("Error"),
@@ -87,8 +208,16 @@ struct RegistrationView: View {
                     dismissButton: .default(Text("OK"))
                 )
             }
+            
+            // Success View
+            if isSuccessful {
+                SuccessView(message: "Account Created!")
+                    .transition(.opacity)
+            }
         }
-        .appBackground()
+        .navigationBarItems(leading: Button("Cancel") {
+            dismiss()
+        })
     }
     
     private func register() {
@@ -138,7 +267,10 @@ struct RegistrationView: View {
                         }
                     }
                 }
-                dismiss()
+                isSuccessful = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
             } else {
                 alertMessage = error ?? "An error occurred during registration"
                 showAlert = true
@@ -147,9 +279,32 @@ struct RegistrationView: View {
     }
 }
 
+struct SuccessView: View {
+    let message: String
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.8)
+                .edgesIgnoringSafeArea(.all)
+            
+            VStack(spacing: 20) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.white)
+                
+                Text(message)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+}
+
 struct RegistrationView_Previews: PreviewProvider {
     static var previews: some View {
         RegistrationView()
+            .environmentObject(FirebaseManager.shared)
     }
 }
 

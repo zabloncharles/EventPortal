@@ -29,13 +29,13 @@ struct ContentView: View {
                     Color.dynamic.edgesIgnoringSafeArea(.all)
                     LogoLoadingView()
                         .onAppear{
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                                 withAnimation(.spring()) {
                                     appeared = false
                                 }
                                
                             }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
                                 withAnimation {
                                     hideLoadingView = true
                                 }

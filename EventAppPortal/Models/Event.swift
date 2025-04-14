@@ -6,7 +6,7 @@ struct Event: Identifiable, Codable, Equatable {
     let description: String
     let type: String
     let views: String
-    let location: String
+    let location: String // Keep as string for Firebase storage
     let price: String
     let owner: String
     let organizerName: String
@@ -18,8 +18,94 @@ struct Event: Identifiable, Codable, Equatable {
     let maxParticipants: Int
     let isTimed: Bool
     let createdAt: Date
-    let coordinates: [Double]
+    let coordinates: [Double] // Store coordinates separately
     var status: String = "active"
+    
+    // Computed property to get EventLocation
+    var eventLocation: EventLocation {
+        EventLocation(address: location, coordinates: coordinates)
+    }
+    
+    // Initialize from EventLocation
+    init(id: String = UUID().uuidString,
+         name: String,
+         description: String,
+         type: String,
+         views: String,
+         location: EventLocation, // Accept EventLocation
+         price: String,
+         owner: String,
+         organizerName: String,
+         shareContactInfo: Bool,
+         startDate: Date,
+         endDate: Date,
+         images: [String],
+         participants: [String],
+         maxParticipants: Int,
+         isTimed: Bool,
+         createdAt: Date,
+         status: String = "active") {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.type = type
+        self.views = views
+        self.location = location.address // Store address string
+        self.price = price
+        self.owner = owner
+        self.organizerName = organizerName
+        self.shareContactInfo = shareContactInfo
+        self.startDate = startDate
+        self.endDate = endDate
+        self.images = images
+        self.participants = participants
+        self.maxParticipants = maxParticipants
+        self.isTimed = isTimed
+        self.createdAt = createdAt
+        self.coordinates = location.coordinates // Store coordinates array
+        self.status = status
+    }
+    
+    // Regular initializer for Firestore data
+    init(id: String = UUID().uuidString,
+         name: String,
+         description: String,
+         type: String,
+         views: String,
+         location: String,
+         price: String,
+         owner: String,
+         organizerName: String,
+         shareContactInfo: Bool,
+         startDate: Date,
+         endDate: Date,
+         images: [String],
+         participants: [String],
+         maxParticipants: Int,
+         isTimed: Bool,
+         createdAt: Date,
+         coordinates: [Double],
+         status: String = "active") {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.type = type
+        self.views = views
+        self.location = location
+        self.price = price
+        self.owner = owner
+        self.organizerName = organizerName
+        self.shareContactInfo = shareContactInfo
+        self.startDate = startDate
+        self.endDate = endDate
+        self.images = images
+        self.participants = participants
+        self.maxParticipants = maxParticipants
+        self.isTimed = isTimed
+        self.createdAt = createdAt
+        self.coordinates = coordinates
+        self.status = status
+    }
     
     static func == (lhs: Event, rhs: Event) -> Bool {
         lhs.id == rhs.id &&

@@ -2,19 +2,19 @@ import SwiftUI
 import FirebaseAuth
 
 struct LoginView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var isShowingRegistration = false
     @State private var showAlert = false
     @State private var showForgotPassword = false
-    @State var email = "John@gmail.com"
-    @State var password = "123john"
+    @State var email = ""
+    @State var password = ""
     @State var isFocused = false
     @State private var alertMessage = "Something went wrong."
     @State var isLoading = false
     @State var isSuccessful = false
-    @State var isPressed = false
-    @State var viewState = CGSize.zero
-    
+    @State private var animateFields = false
+    @State private var animateGradient = false
     
     private func login() {
         self.hideKeyboard()
@@ -34,10 +34,6 @@ struct LoginView: View {
                 isLoading = false
             }
             self.isSuccessful = true
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-//                self.email = ""
-//                self.password = ""
-//            }
             if !success {
                 alertMessage = error ?? "An error occurred"
                 showAlert = true
@@ -45,129 +41,162 @@ struct LoginView: View {
         }
     }
     
-    
     func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     var body: some View {
         ZStack {
-            Color.clear.edgesIgnoringSafeArea(.all)
-                .onTapGesture {
-                    self.hideKeyboard()
-                }
+            // Background
+            Color.dynamic.edgesIgnoringSafeArea(.all)
             
-            ZStack(alignment: .top) {
-                Color.clear
-                    .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-                
-                    .onTapGesture {
-                        self.hideKeyboard()
-                    }
-                    .edgesIgnoringSafeArea(.bottom)
-                
-                CoverView(animateLoading: isLoading)
-                
-                VStack {
-                    HStack {
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundColor(Color.invert)
-                            .frame(width: 44, height: 44)
-                            .background(Color.dynamic)
-                            .clipShape(RoundedRectangle(cornerRadius: 60, style: .continuous))
-                            .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 5)
-                            .padding(.leading)
+            // Content
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 30) {
+                    // Header
+                    VStack(spacing: 16) {
+                        // Logo/Icon
+                        Image("transparent-icon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height:150)
+                           
+                            .scaleEffect(animateFields ? 1 : 0.5)
+                            .opacity(animateFields ? 1 : 0)
                         
-                        TextField("Your Email".uppercased(), text: $email)
-                            .keyboardType(.emailAddress)
-                            .textContentType(.emailAddress)
-                            .font(.subheadline)
-                            .padding(.leading)
-                            .frame(height: 44)
-                            .onTapGesture {
-                                self.isFocused = true
-                            }
-                    }
-                    
-                    Divider().padding(.leading, 80)
-                    
-                    
-                    HStack {
-                        Image(systemName: "lock.fill")
-                            .foregroundColor(Color.invert)
-                            .frame(width: 44, height: 44)
-                            .background(Color.dynamic)
-                            .clipShape(RoundedRectangle(cornerRadius: 60, style: .continuous))
-                            .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 5)
-                            .padding(.leading)
+                        // Title
+                        Text("Welcome Back")
+                            .font(.title)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .fontWeight(.bold)
+                            .opacity(animateFields ? 1 : 0)
+                            .offset(y: animateFields ? 0 : 20)
                         
-                        SecureField("Password".uppercased(), text: $password)
-                            .keyboardType(.default)
-                            .textContentType(.password)
+                        // Subtitle
+                        Text("Sign in to continue")
                             .font(.subheadline)
-                            .padding(.leading)
-                            .frame(height: 44)
-                            .onTapGesture {
-                                self.isFocused = true
+                            .foregroundColor(.gray)
+                            .opacity(animateFields ? 1 : 0)
+                            .offset(y: animateFields ? 0 : 20)
+                    }
+                    .padding(.top, 50)
+                    
+                    // Login Form
+                    VStack(spacing: 20) {
+                        // Email Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Email")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "envelope.fill")
+                                    .foregroundColor(.blue)
+                                TextField("Enter your email", text: $email)
+                                    .textContentType(.emailAddress)
+                                    .autocapitalization(.none)
+                                    .keyboardType(.emailAddress)
                             }
-                    }
-                    
-                    Button {
-                        //show registration view
-                        isShowingRegistration = true
-                    } label: {
-                        Text("Don't have an account? Sign Up")
-                            .foregroundColor(.blue)
-                            .padding(.top,20)
-                    }
-                    
-                    
-                    
-                }
-                
-                
-                .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 20)
-                .padding(.horizontal)
-                .offset(y: 510)
-                
-                
-                
-                
-                
-                HStack {
-                    Button {
-                        //show forgot password view
-                        showForgotPassword = true
-                    } label: {
-                        Text("Forgot password?")
-                            .font(.subheadline)
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        self.login()
-                    }) {
-                        Text(isLoading ? "Loggin In.." : "Log in")
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Password Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Password")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            HStack {
+                                Image(systemName: "lock.fill")
+                                    .foregroundColor(.blue)
+                                SecureField("Enter your password", text: $password)
+                                    .textContentType(.password)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Forgot Password
+                        Button {
+                            showForgotPassword = true
+                        } label: {
+                            Text("Forgot Password?")
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Login Button
+                        Button(action: login) {
+                            HStack {
+                                if isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                }
+                                Text(isLoading ? "Signing in..." : "Sign In")
+                                    .fontWeight(.semibold)
+                            }
                             .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                        }
+                        .disabled(isLoading)
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
+                        
+                        // Sign Up Link
+                        HStack {
+                            Text("Don't have an account?")
+                                .foregroundColor(.gray)
+                            Button {
+                                isShowingRegistration = true
+                            } label: {
+                                Text("Sign Up")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .font(.subheadline)
+                        .opacity(animateFields ? 1 : 0)
+                        .offset(y: animateFields ? 0 : 20)
                     }
-                    .padding(12)
                     .padding(.horizontal, 30)
-                    .background(.blue)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: Color(#colorLiteral(red: 0, green: 0.7529411765, blue: 1, alpha: 1)).opacity(0.3), radius: 20, x: 0, y: 20)
-                    .alert(isPresented: $showAlert) {
-                        Alert(title: Text("Error"), message: Text(self.alertMessage), dismissButton: .default(Text("OK")))
-                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .padding()
+                .padding(.horizontal)
+                .padding(.bottom, 30)
             }
-            .offset(y: isFocused ? -300 : 0)
-            .animation(isFocused ? .easeInOut : nil, value: isFocused)
-            .sheet(isPresented: $isShowingRegistration) {
-                RegistrationView()
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    animateFields = true
+                }
             }
+            
+            // Alerts
             .alert(isPresented: $showAlert) {
                 Alert(
                     title: Text("Error"),
@@ -184,16 +213,20 @@ struct LoginView: View {
             } message: {
                 Text("Enter your email address and we'll send you a link to reset your password.")
             }
-            .onTapGesture {
-                self.isFocused = false
-                self.hideKeyboard()
+            .sheet(isPresented: $isShowingRegistration) {
+                RegistrationView()
             }
             
-           
-            
+            // Success View
+            if isSuccessful {
+                SuccessView(message: "Welcome Back!")
+                    .transition(.opacity)
+            }
         }
+        .navigationBarItems(leading: Button("Cancel") {
+            dismiss()
+        })
     }
-  
     
     private func resetPassword() {
         guard !email.isEmpty else {
@@ -215,11 +248,10 @@ struct LoginView: View {
 
 
 
-
-
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
         LoginView()
+            .environmentObject(FirebaseManager.shared)
     }
 }
 

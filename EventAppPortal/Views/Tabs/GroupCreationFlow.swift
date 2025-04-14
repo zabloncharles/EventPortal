@@ -83,12 +83,8 @@ struct GroupCreationFlow: View {
                         .padding(.horizontal)
                         
                         // Basic Info Section
-                        FormSection {
+                        FormSection(title: "Basic Information") {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Basic Information")
-                                    .font(.headline)
-                                    .padding(.bottom, 8)
-                                
                                 CustomTextField(
                                     title: "Group Name",
                                     placeholder: "Give your group a name",
@@ -118,12 +114,8 @@ struct GroupCreationFlow: View {
                 // MARK: - Page 2: Location
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
-                        FormSection {
+                        FormSection(title: "Group Location") {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Group Location")
-                                    .font(.headline)
-                                    .padding(.bottom, 8)
-                                
                                 if let location = viewModel.location {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Selected Location")
@@ -181,12 +173,8 @@ struct GroupCreationFlow: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         // Privacy Settings
-                        FormSection {
+                        FormSection(title: "Privacy Settings") {
                             VStack(alignment: .leading, spacing: 16) {
-                                Text("Privacy Settings")
-                                    .font(.headline)
-                                    .padding(.bottom, 8)
-                                
                                 Toggle(isOn: $viewModel.isPrivate) {
                                     HStack {
                                         Image(systemName: viewModel.isPrivate ? "lock.fill" : "globe")
