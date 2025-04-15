@@ -41,7 +41,8 @@ struct EventCreationFlow: View {
                 OnboardingStepView(
                     title: "Name your event",
                     subtitle: "Give your event a catchy name that stands out",
-                    icon: "pencil.line",
+                    icon: "eventpic1",
+                    isPhoto: true,
                     gradient: [.blue, .purple]
                 ) {
                     VStack(spacing: 20) {
@@ -431,6 +432,7 @@ struct OnboardingStepView<Content: View>: View {
     let title: String
     let subtitle: String
     let icon: String
+    var isPhoto = false
     let gradient: [Color]
     let content: () -> Content
     @State private var animateIcon = false
@@ -441,18 +443,28 @@ struct OnboardingStepView<Content: View>: View {
                 // Header
                 VStack(spacing: 16) {
                     // Icon
-                    Image(systemName: icon)
-                        .font(.system(size: 60))
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: gradient),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    if !isPhoto {
+                        Image(systemName: icon)
+                            .font(.system(size: 60))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: gradient),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
                             )
-                        )
-                        .scaleEffect(animateIcon ? 1 : 0.5)
-                        .opacity(animateIcon ? 1 : 0)
-                    
+                            .scaleEffect(animateIcon ? 1 : 0.5)
+                            .opacity(animateIcon ? 1 : 0)
+                    } else {
+                        Image(icon)
+                            .resizable()
+                            .renderingMode(.original)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width:200,height:200)
+                        
+                            .scaleEffect(animateIcon ? 1 : 0.5)
+                            .opacity(animateIcon ? 1 : 0)
+                    }
                     // Title
                     Text(title)
                         .font(.title)

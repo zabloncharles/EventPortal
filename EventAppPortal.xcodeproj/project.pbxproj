@@ -17,6 +17,7 @@
 		F746526A2D884FB2002CE163 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74652692D884FB2002CE163 /* LocationManager.swift */; };
 		F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F746F4E82D766320009B68BA /* EventAppPortalApp.swift */; };
 		F746F4F02D766322009B68BA /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F746F4EF2D766322009B68BA /* Preview Assets.xcassets */; };
+		F75F5B4E2DAEA433000FBDC8 /* ScrollableNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B4D2DAEA433000FBDC8 /* ScrollableNavigationBar.swift */; };
 		F7633E332D77589E00644438 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7633E322D77589E00644438 /* TabBar.swift */; };
 		F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */ = {isa = PBXBuildFile; fileRef = F764BB322D89CDC7002F53E3 /* Ghost.json */; };
 		F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F773EC5D2D7888B50009AC93 /* Assets.xcassets */; };
@@ -66,6 +67,7 @@
 		F746F4E52D766320009B68BA /* EventAppPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventAppPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F746F4E82D766320009B68BA /* EventAppPortalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventAppPortalApp.swift; sourceTree = "<group>"; };
 		F746F4EF2D766322009B68BA /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		F75F5B4D2DAEA433000FBDC8 /* ScrollableNavigationBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ScrollableNavigationBar.swift; path = EventAppPortal/Views/Components/ScrollableNavigationBar.swift; sourceTree = SOURCE_ROOT; };
 		F7633E322D77589E00644438 /* TabBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBar.swift; sourceTree = "<group>"; };
 		F764BB322D89CDC7002F53E3 /* Ghost.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = Ghost.json; sourceTree = "<group>"; };
 		F773EC5D2D7888B50009AC93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 		F7855EA42D851A9E00D668CD /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				F75F5B4D2DAEA433000FBDC8 /* ScrollableNavigationBar.swift */,
 				F74652692D884FB2002CE163 /* LocationManager.swift */,
 				F715155E2D86A0E7001D55C3 /* EventRecommendationService.swift */,
 				F7855EA52D851A9E00D668CD /* FirebaseManager.swift */,
@@ -379,6 +382,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F75F5B4E2DAEA433000FBDC8 /* ScrollableNavigationBar.swift in Sources */,
 				F79C82822D77564900C87783 /* HomeView.swift in Sources */,
 				F7FD39012DAB6DDA00682B6A /* EventCreationFlow.swift in Sources */,
 				F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */,

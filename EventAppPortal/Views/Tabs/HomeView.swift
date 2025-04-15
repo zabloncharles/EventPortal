@@ -315,8 +315,14 @@ struct HomeView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ScrollView(showsIndicators: false) {
+    
+        ScrollableNavigationBar(
+            title: "Home",
+            icon: "house.fill",
+            trailingTitle: "3",
+            trailingIcon: "bell.fill",
+            showNotification: true
+        ) {
                 VStack(alignment: .leading, spacing: 30) {
                     VStack {
                         HStack {
@@ -599,7 +605,6 @@ struct HomeView: View {
                 .padding(.bottom)
             }
             .background(Color.dynamic)
-            .navigationBarHidden(true)
             .onAppear {
                 if !hasLoadedInitialContent {
                     withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
@@ -628,7 +633,7 @@ struct HomeView: View {
                     Text(errorMessage)
                 }
             }
-        }
+        
     }
     
     struct ErrorWrapper: Identifiable {

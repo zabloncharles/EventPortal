@@ -448,6 +448,7 @@ struct GroupDetailView: View {
     @State private var showJoinAlert = false
     @State private var scrollOffset: CGFloat = 0
     let colors = [Color.red, Color.blue, Color.green, Color.purple, Color.orange]
+    @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     
     var body: some View {
         ScrollView {
@@ -526,11 +527,16 @@ struct GroupDetailView: View {
                                 .padding(.vertical, 8)
                                 .background(Color.blue.opacity(0.1))
                                 .cornerRadius(20)
+                    
                         }
                     }
                     .padding()
                     .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                     
                     // Stats Grid
                     LazyVGrid(columns: [
@@ -557,6 +563,10 @@ struct GroupDetailView: View {
                     .padding()
                     .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                     
                     // Tags Cloud
                     VStack(alignment: .leading, spacing: 12) {
@@ -579,6 +589,10 @@ struct GroupDetailView: View {
                     .padding()
                     .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
                     
                     // Members Section
                     VStack(alignment: .leading, spacing: 12) {
@@ -621,14 +635,45 @@ struct GroupDetailView: View {
                     .padding()
                     .background(Color(.secondarySystemGroupedBackground))
                     .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                   
+                    
+                    
+                    //Join Group Section
+                    // Join Button
+                    VStack {
+                        Button(action: { showJoinAlert = true }) {
+                            Text("Join Group")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(20)
+                   
+                                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                                .padding()
+                        }
+                       
+                    }
                 }
                 .padding()
-                .background(Color(.systemGroupedBackground))
-                .cornerRadius(32)
-                .offset(y: -30)
+                .background(Color.dynamic)
             }
         }.navigationBarBackButtonHidden()
         .edgesIgnoringSafeArea(.top)
+        .onAppear{
+            tabBarManager.hideTab = true
+        }
         .overlay(
             // Navigation Bar
             HStack {
@@ -655,28 +700,7 @@ struct GroupDetailView: View {
             .padding(.top, 0)
             , alignment: .top
         )
-        .overlay(
-            // Join Button
-            Button(action: { showJoinAlert = true }) {
-                Text("Join Group")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(20)
-                    .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
-                    .padding()
-            }
-            .padding(.bottom)
-            , alignment: .bottom
-        )
+        
         .alert("Join Group", isPresented: $showJoinAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Join") {
@@ -721,6 +745,10 @@ struct StatCard: View {
         .padding()
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(20)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
     }
 }
 
@@ -956,7 +984,8 @@ let sampleGroups = [
 
 struct GroupsView_Previews: PreviewProvider {
     static var previews: some View {
-        GroupsView(previewGroups: sampleGroups)
+        //GroupsView(previewGroups: sampleGroups)
+        GroupDetailView(group: sampleGroups[0])
     }
 }
 
