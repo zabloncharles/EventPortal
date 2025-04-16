@@ -34,7 +34,6 @@ struct TabBar: View {
     @State var color: Color = .teal
     @State var tabItemWidth: CGFloat = 0
     @State var animateClick = false
-    @State private var showCreateSheet = false
     
     var body: some View {
         HStack(alignment: .center) {
@@ -72,19 +71,12 @@ struct TabBar: View {
                 }
             }
         })
-        .sheet(isPresented: $showCreateSheet) {
-            NavigationView {
-                CreateView()
-                    .navigationBarItems(
-                        trailing: Button("Done") {
-                            showCreateSheet = false
-                        }
-                    )
-            }
+        
+            
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
-        }
-        .ignoresSafeArea()
+            .ignoresSafeArea()
+        
     }
     
     var buttons: some View {
@@ -93,16 +85,13 @@ struct TabBar: View {
                 let generator = UIImpactFeedbackGenerator(style: .light)
                 generator.prepare()
                 generator.impactOccurred()
-                if item.tab == .create {
-                    showCreateSheet = true
-                    color = item.color
-                } else {
+              
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedTab = item.tab
                         color = item.color
                         
                     }
-                }
+                
             } label: {
                 VStack(spacing: 0) {
                    

@@ -11,13 +11,19 @@ struct MainTabView: View {
                 HomeView()
             case .explore:
                 DiscoverView()
+                    
             case .groups:
                 GroupsView()
             case .create:
-                EmptyView() // This is handled by the sheet in TabBar
+                    // Tab Bar with animation
+                    CreateView()
             case .account:
                 ProfileView()
             }
+            
+            
+            
+               
             
             // Tab Bar with animation
             VStack {
@@ -28,6 +34,7 @@ struct MainTabView: View {
         }
         .onAppear {
             tabBarManager.hideTab = false
+        
         }
     }
 }

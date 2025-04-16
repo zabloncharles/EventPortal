@@ -3,12 +3,14 @@ import SwiftUI
 // MARK: - ScrollableNavigationBar
 struct ScrollableNavigationBar<Content: View>: View {
     // MARK: - Properties
-    let title: String
-    let icon: String
-    let trailingTitle: String
-    let trailingIcon: String
-    let showNotification: Bool
+    var title: String
+    var icon: String = ""
+    var isInline: Bool = false
+    var showBackButton: Bool = false
+    var onBackPressed: (() -> Void)? = nil
     let content: Content
+    
+    @Environment(\.presentationMode) var presentationMode
     
     @State private var isScrolled = false
     @State var animateScroll = false
@@ -20,16 +22,16 @@ struct ScrollableNavigationBar<Content: View>: View {
     init(
         title: String,
         icon: String = "",
-        trailingTitle: String = "",
-        trailingIcon: String = "",
-        showNotification: Bool = false,
+        isInline: Bool = false,
+        showBackButton: Bool = false,
+        onBackPressed: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.icon = icon
-        self.trailingTitle = trailingTitle
-        self.trailingIcon = trailingIcon
-        self.showNotification = showNotification
+        self.isInline = isInline
+        self.showBackButton = showBackButton
+        self.onBackPressed = onBackPressed
         self.content = content()
     }
     
@@ -37,7 +39,7 @@ struct ScrollableNavigationBar<Content: View>: View {
     var body: some View {
         ZStack(alignment: .top) {
             // Main Content
-            ScrollView {
+            ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     // Scroll detection
                     ScrollDetectionView(isScrolled: $isScrolled, isRefreshing: $isRefreshing)
@@ -49,24 +51,23 @@ struct ScrollableNavigationBar<Content: View>: View {
             .coordinateSpace(name: "scroll")
             
             // Navigation Bar
-            if isScrolled {
+            if isScrolled || isInline {
                 NavigationBarView(
                     title: title,
                     icon: icon,
-                    trailingTitle: trailingTitle,
-                    trailingIcon: trailingIcon,
-                    showNotification: showNotification
+                    isInline: isInline,
+                    showBackButton: showBackButton,
+                    onBackPressed: onBackPressed ?? { presentationMode.wrappedValue.dismiss() }
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .offset(y: animateScroll ? 0 : -50)
+                .offset(y: animateScroll ? 36 : -50)
                 .onAppear{
                     withAnimation(.spring()) {
-                        
                         animateScroll = true
                     }
                 }
             }
-        }
+        }.edgesIgnoringSafeArea(.all)
         .navigationBarHidden(true)
         .onAppear {
             startTypewriterAnimation()
@@ -103,49 +104,62 @@ struct ScrollableNavigationBar<Content: View>: View {
 struct NavigationBarView: View {
     let title: String
     let icon: String
-    let trailingTitle: String
-    let trailingIcon: String
-    let showNotification: Bool
+    var isInline: Bool = false
+    var showBackButton: Bool = false
+    var onBackPressed: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                HStack(spacing: 8) {
-                    if !icon.isEmpty {
-                        Image(systemName: icon)
+                if showBackButton && isInline {
+                    Button(action: onBackPressed) {
+                        Image(systemName: "chevron.left")
                             .font(.title3)
                             .fontWeight(.bold)
+                            .foregroundColor(.primary.opacity(0.70))
                     }
-                    
+                    .padding(.trailing, 8)
+                    Spacer()
+                    Text(title)
+                        .font(.headline)
+                        .bold()
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.invert, Color.invert]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    Spacer()
+                } else if isInline {
+                    Spacer()
+                    Text(title)
+                        .font(.headline)
+                        .bold()
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.invert, Color.invert]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    Spacer()
+                } else {
                     Text(title)
                         .font(.title)
                         .bold()
                         .foregroundStyle(
                             LinearGradient(
-                                gradient: Gradient(colors: [Color.invert, .yellow]),
+                                gradient: Gradient(colors: [Color.invert, Color.invert]),
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                }
-                
-                Spacer()
-                
-                if showNotification {
-                    NotificationBadge(text: trailingTitle)
-                } else if !trailingIcon.isEmpty {
-                    TrailingIconButton(
-                        icon: trailingIcon,
-                        text: trailingTitle
-                    )
+                    Spacer()
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            
-            Divider()
-                .foregroundColor(.secondary)
-                .opacity(0.9)
         }
         .background(
             Rectangle()
@@ -153,46 +167,6 @@ struct NavigationBarView: View {
                 .frame(height:200)
                 .offset(y:-72)
         )
-    }
-}
-
-// MARK: - NotificationBadge
-struct NotificationBadge: View {
-    let text: String
-    
-    var body: some View {
-        Text(text)
-            .padding(5)
-            .background(
-                Circle()
-                    .fill(.red)
-                    .padding(-2)
-            )
-    }
-}
-
-// MARK: - TrailingIconButton
-struct TrailingIconButton: View {
-    let icon: String
-    let text: String
-    @AppStorage("currentPage") var selected = 0
-    
-    var body: some View {
-        HStack(alignment: .center) {
-            Image(systemName: icon)
-                .font(.title)
-                .foregroundColor(selected == 4 ? Color("black") : .red)
-            
-            if !text.isEmpty {
-                Text(text)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(
-            Color.red.opacity(!icon.isEmpty ? text.isEmpty && !icon.isEmpty ? 0 : 0.8 : 0)
-        )
-        .cornerRadius(20)
     }
 }
 
@@ -261,16 +235,12 @@ extension View {
     func withScrollableNavigationBar(
         title: String,
         icon: String = "",
-        trailingTitle: String = "",
-        trailingIcon: String = "",
-        showNotification: Bool = false
+        isInline: Bool = false
     ) -> some View {
         ScrollableNavigationBar(
             title: title,
             icon: icon,
-            trailingTitle: trailingTitle,
-            trailingIcon: trailingIcon,
-            showNotification: showNotification
+            isInline: isInline
         ) {
             self
         }
@@ -283,9 +253,7 @@ struct ScrollableNavigationBar_Previews: PreviewProvider {
         ScrollableNavigationBar(
             title: "Home",
             icon: "house.fill",
-            trailingTitle: "3",
-            trailingIcon: "bell.fill",
-            showNotification: true
+            isInline: false
         ) {
             VStack(spacing: 20) {
                 ForEach(0..<50) { index in

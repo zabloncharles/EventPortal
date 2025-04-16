@@ -314,295 +314,275 @@ struct HomeView: View {
         .padding()
     }
     
+    // MARK: - Header Section
+    private var headerSection: some View {
+        VStack {
+            HStack {
+                Text("LinkedUp Event Expectations.")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .padding(.top, 20)
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.invert, .yellow, Color.invert]),
+                            startPoint: startPoint,
+                            endPoint: endPoint
+                        )
+                    )
+                    .onAppear {
+                        if !hasAnimated {
+                            withAnimation(.linear(duration: 2)) {
+                                startPoint = .trailing
+                                endPoint = .leading
+                            }
+                            hasAnimated = true
+                        }
+                    }
+                
+                Spacer()
+                
+                NavigationLink(destination: CreateView()) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(width: 36, height: 36)
+                        .background(Color.dynamic)
+                        .cornerRadius(60)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 60)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                }
+                
+                NavigationLink(destination: MyEventsView()) {
+                    Image(systemName: "calendar")
+                        .renderingMode(.original)
+                        .font(.system(size: 16, weight: .medium))
+                        .frame(width: 36, height: 36)
+                        .background(Color.dynamic)
+                        .cornerRadius(60)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 60)
+                                .stroke(Color.gray, lineWidth: 1)
+                        )
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    // MARK: - Search Section
+    private var searchSection: some View {
+        ZStack {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .blur(radius: 570)
+            
+            VStack {
+                HStack {
+                    TextField("Search event, party...", text: $searchText)
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.dynamic, lineWidth: 2)
+                        )
+                        .onChange(of: searchText) { query in
+                            if !query.isEmpty {
+                                searchEvents(query: query)
+                            } else {
+                                searchResults = []
+                                isSearching = false
+                            }
+                        }
+                }
+                .padding(10)
+                .padding(.top, 0)
+                
+                if searchText.isEmpty {
+                    if isLoadingRecommended {
+                        ProgressView()
+                            .padding()
+                    } else if !recommendedEvents.isEmpty {
+                        ForEach(recommendedEvents.shuffled().prefix(3)) { event in
+                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                VStack {
+                                    Divider()
+                                    HStack {
+                                        Image(systemName: {
+                                            switch event.type {
+                                            case "Concert": return "figure.dance"
+                                            case "Corporate": return "building.2.fill"
+                                            case "Marketing": return "megaphone.fill"
+                                            case "Health & Wellness": return "heart.fill"
+                                            case "Technology": return "desktopcomputer"
+                                            case "Art & Culture": return "paintbrush.fill"
+                                            case "Charity": return  "heart.circle.fill"
+                                            case "Literature": return "book.fill"
+                                            case "Lifestyle": return "leaf.fill"
+                                            case "Environmental": return "leaf.arrow.triangle.circlepath"
+                                            case "Entertainment": return "music.note.list"
+                                            default: return "calendar"
+                                            }
+                                        }())
+                                            .foregroundColor(.gray)
+                                        Text(event.name)
+                                            .font(.callout)
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 7)
+                                    .padding(.horizontal, 10)
+                                    .cornerRadius(9)
+                                    .padding(.horizontal)
+                                }
+                                .animation(.spring(), value: searchText.isEmpty)
+                            }
+                        }
+                    }
+                }
+                Spacer()
+               
+            }.padding(.horizontal)
+        }
+    }
+
+    // MARK: - Popular Events Section
+    private var popularEventsSection: some View {
+        VStack {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading) {
+                    Text("Plans near you")
+                        .font(.headline)
+                    Text("View and join plans near your area!")
+                        .font(.callout)
+                }
+                .padding(.top, 30)
+                Spacer()
+                VStack(alignment: .center) {
+                    Image(systemName: "flame")
+                }
+            }
+            .padding(.horizontal)
+            if isLoadingPopular {
+                SectionLoadingView()
+            } else if popularEvents.isEmpty {
+                EmptyStateView(
+                    title: "No Popular Events",
+                    message: "Be the first to create an exciting event!"
+                )
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(popularEvents) { event in
+                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                PopularEventCard(event: event)
+                                    .frame(width: 280)
+                            }
+                        }
+                    }.padding(.leading)
+                        .padding(.trailing, 10)
+                }
+            }
+        }
+    }
+
+    // MARK: - Nearby Events Section
+    private var nearbyEventsSection: some View {
+        VStack {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading) {
+                    Text("Plans near you")
+                        .font(.headline)
+                    Text("View and join plans near your area!")
+                        .font(.callout)
+                }
+                .padding(.top, 30)
+                Spacer()
+                VStack(alignment: .center) {
+                    Image(systemName: "figure.dance")
+                }
+            }
+            .padding(.horizontal)
+            
+            if isLoadingNearby {
+                SectionLoadingView()
+            } else if nearbyEvents.isEmpty {
+                VStack {
+                    EmptyStateView(
+                        title: "No Nearby Events",
+                        message: "There are no upcoming events in your area yet."
+                    )
+                }
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(spacing: 16) {
+                        ForEach(nearbyEvents) { event in
+                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                RegularEventCard(event: event, showdescription: false)
+                            }
+                        }
+                    }.padding(.horizontal)
+                }
+            }
+        }
+        .padding(.bottom)
+    }
+
+    // MARK: - Recommended Events Section
+    private var recommendedEventsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Recommended Events")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                Spacer()
+                VStack(alignment: .center) {
+                    Image(systemName: "figure.dance")
+                }
+            }.padding(.horizontal)
+            
+            if isLoadingRecommended {
+                SectionLoadingView()
+            } else if recommendedEvents.isEmpty {
+                EmptyStateView(
+                    title: "No Recommendations",
+                    message: "Check back later for personalized event recommendations!"
+                )
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(recommendedEvents) { event in
+                            NavigationLink(destination: ViewEventDetail(event: event)) {
+                                RecommendedEventCard(event: event)
+                            }
+                        }
+                    }.padding(.horizontal)
+                }
+            }
+        }
+        .padding(.bottom, 70)
+    }
+
     var body: some View {
-    
-        ScrollableNavigationBar(
-            title: "Home",
-            icon: "house.fill",
-            trailingTitle: "3",
-            trailingIcon: "bell.fill",
-            showNotification: true
-        ) {
+        NavigationView {
+            ScrollableNavigationBar(
+                title: "Home",
+                icon: "house.fill"
+                
+            ) {
                 VStack(alignment: .leading, spacing: 30) {
                     VStack {
-                        HStack {
-                            Text("LinkedUp Event Expectations.")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .padding(.top, 20)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.invert, .yellow, Color.invert]),
-                                        startPoint: startPoint,
-                                        endPoint: endPoint
-                                    )
-                                )
-                                .onAppear {
-                                    if !hasAnimated {
-                                        withAnimation(
-                                            .linear(duration: 2)
-                                        ) {
-                                            startPoint = .trailing
-                                            endPoint = .leading
-                                        }
-                                        hasAnimated = true
-                                    }
-                                }
-                            
-                            Spacer()
-                            
-                            NavigationLink(destination: CreateView()) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.dynamic)
-                                    .cornerRadius(60)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 60)
-                                            .stroke(Color.gray, lineWidth: 1)
-                                    )
-                            }
-                            
-                            NavigationLink(destination: MyEventsView()) {
-                                Image(systemName: "calendar")
-                                    .renderingMode(.original)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .frame(width: 36, height: 36)
-                                    .background(Color.dynamic)
-                                    .cornerRadius(60)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 60)
-                                            .stroke(Color.gray, lineWidth: 1)
-                                    )
-                            }
-                        }
-                        .padding(.horizontal)
-                        
-                        ZStack {
-                            Rectangle()
-                                .fill(.ultraThinMaterial)
-                                .blur(radius: 570)
-                            
-                            VStack {
-                                HStack {
-                                    TextField("Search event, party...", text: $searchText)
-                                        .padding()
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(12)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(Color.dynamic, lineWidth: 2)
-                                        )
-                                        .onChange(of: searchText) { query in
-                                            if !query.isEmpty {
-                                                searchEvents(query: query)
-                                            } else {
-                                                searchResults = []
-                                                isSearching = false
-                                            }
-                                        }
-                                }
-                                .padding(10)
-                                .padding(.top, 0)
-                                
-                                if searchText.isEmpty {
-                                    if isLoadingRecommended {
-                                        ProgressView()
-                                            .padding()
-                                    } else if !recommendedEvents.isEmpty {
-                                        ForEach(recommendedEvents.shuffled().prefix(3)) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                            VStack {
-                                                Divider()
-                                                HStack {
-                                                        Image(systemName: {
-                                                            switch event.type {
-                                                            case "Concert": return "figure.dance"
-                                                            case "Corporate": return "building.2.fill"
-                                                            case "Marketing": return "megaphone.fill"
-                                                            case "Health & Wellness": return "heart.fill"
-                                                            case "Technology": return "desktopcomputer"
-                                                            case "Art & Culture": return "paintbrush.fill"
-                                                            case "Charity": return  "heart.circle.fill"
-                                                            case "Literature": return "book.fill"
-                                                            case "Lifestyle": return "leaf.fill"
-                                                            case "Environmental": return "leaf.arrow.triangle.circlepath"
-                                                            case "Entertainment": return "music.note.list"
-                                                            default: return "calendar"
-                                                            }
-                                                        }())
-                                                            .foregroundColor(.gray)
-                                                        Text(event.name)
-                                                        .font(.callout)
-                                                        .foregroundColor(.primary)
-                                                    Spacer()
-                                                }
-                                                .padding(.vertical, 7)
-                                                .padding(.horizontal, 10)
-                                                .cornerRadius(9)
-                                                .padding(.horizontal)
-                                            }
-                                            .animation(.spring(), value: searchText.isEmpty)
-                                        }
-                                    }
-                                }
-                            }
-                            }
-                        }
-                        .cornerRadius(20)
-                    }
-                    .padding(.horizontal)
-                    .offset(y: !pageAppeared && !hasLoadedInitialContent ? -UIScreen.main.bounds.height * 0.5 : 0)
-                    
-                    if !searchText.isEmpty {
-                        VStack( spacing: 20) {
-                            if isSearching {
-                                SectionLoadingView()
-                            } else if searchResults.isEmpty {
-                              
-                                    
-                                        EmptyStateView(
-                                            title: "No Results Found",
-                                               message: "Try different keywords or browse our featured events below"
-                                    )
-                                
-                            } else {
-                                Text("Search Results")
-                                    .font(.headline)
-                                    .padding(.horizontal)
-                                
-                                ScrollView(.vertical, showsIndicators: false) {
-                                    LazyVStack(spacing: 16) {
-                                        ForEach(searchResults.prefix(5)) { event in
-                                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                                RegularEventCard(event: event)
-                                                    .padding(.horizontal)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.top,-20)
-                    }
-                    
-                    if searchText.isEmpty {
-                    VStack {
-                        // Popular Events Section
-                        VStack(alignment: .leading, spacing: 20) {
-                            HStack(alignment: .bottom) {
-                                VStack(alignment: .leading) {
-                                    Text("Popular events")
-                                        .font(.headline)
-                                    Text("View & join popular events!")
-                                        .font(.callout)
-                                }
-                                Spacer()
-                                VStack(alignment: .center) {
-                                    Image(systemName: "flame")
-                                }
-                            }.padding(.horizontal)
-                            
-                                if isLoadingPopular {
-                                    SectionLoadingView()
-                                } else if popularEvents.isEmpty {
-                                    EmptyStateView(
-                                        title: "No Popular Events",
-                                        message: "Be the first to create an exciting event!"
-                                    )
-                                } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                LazyHStack(spacing: 16) {
-                                            ForEach(popularEvents) { event in
-                                        NavigationLink(destination: ViewEventDetail(event: event)) {
-                                            PopularEventCard(event: event)
-                                                .frame(width: 280)
-                                        }
-                                    }
-                                }.padding(.leading)
-                                    .padding(.trailing, 10)
-                            }
-                        }
-                            }
-                        
-                        // Plans Near You Section
-                            VStack {
-                            HStack(alignment: .bottom) {
-                                VStack(alignment: .leading) {
-                                    Text("Plans near you")
-                                        .font(.headline)
-                                    Text("View and join plans near your area!")
-                                        .font(.callout)
-                                }
-                                .padding(.top, 30)
-                                Spacer()
-                                VStack(alignment: .center) {
-                                    Image(systemName: "figure.dance")
-                                }
-                            }
-                                .padding(.horizontal)
-                                
-                                if isLoadingNearby {
-                                    SectionLoadingView()
-                                } else if nearbyEvents.isEmpty {
-                                    VStack {
-                                        EmptyStateView(
-                                            title: "No Nearby Events",
-                                            message: "There are no upcoming events in your area yet."
-                                        )
-                                    }
-                                } else {
-                            ScrollView(.vertical, showsIndicators: false) {
-                                LazyVStack(spacing: 16) {
-                                            ForEach(nearbyEvents) { event in
-                                        NavigationLink(destination: ViewEventDetail(event: event)) {
-                                                    RegularEventCard(event: event, showdescription: false)
-                                                }
-                                        }
-                                }.padding(.horizontal)
-                                    }
-                                }
-                            }
-                        .padding(.bottom)
-                        
-                        // Recommended Events
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Recommended Events")
-                                    .font(.title3)
-                                .fontWeight(.bold)
-                                Spacer()
-                                VStack(alignment: .center) {
-                                    Image(systemName: "figure.dance")
-                                }
-                            }.padding(.horizontal)
-                            
-                                if isLoadingRecommended {
-                                    SectionLoadingView()
-                                } else if recommendedEvents.isEmpty {
-                                    EmptyStateView(
-                                        title: "No Recommendations",
-                                        message: "Check back later for personalized event recommendations!"
-                                    )
-                                } else {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 16) {
-                                            ForEach(recommendedEvents) { event in
-                                        NavigationLink(destination: ViewEventDetail(event: event)) {
-                                            RecommendedEventCard(event: event)
-                                        }
-                                    }
-                                }.padding(.horizontal)
-                            }
-                                }
-                        }.padding(.bottom, 70)
-                        
+                        headerSection
+                        searchSection
+                        popularEventsSection
+                        nearbyEventsSection
+                        recommendedEventsSection
                         Spacer()
                     }
                     .offset(y: !pageAppeared && !hasLoadedInitialContent ? UIScreen.main.bounds.height * 0.5 : 0)
-                    }
                 }
-                .padding(.bottom)
+                .padding(.bottom).padding(.top,50)
             }
             .background(Color.dynamic)
             .onAppear {
@@ -618,7 +598,6 @@ struct HomeView: View {
                 }
             }
             .refreshable {
-                // Reset the loading state when refreshing
                 isLoadingPopular = true
                 isLoadingNearby = true
                 isLoadingRecommended = true
@@ -628,12 +607,12 @@ struct HomeView: View {
                 Button("OK") {
                     errorMessage = nil
                 }
-            } message: {
+            }message: {
                 if let errorMessage = errorMessage {
                     Text(errorMessage)
                 }
             }
-        
+        }
     }
     
     struct ErrorWrapper: Identifiable {

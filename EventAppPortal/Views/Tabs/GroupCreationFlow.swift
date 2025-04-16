@@ -29,8 +29,13 @@ struct GroupCreationFlow: View {
             // Content
             TabView(selection: $currentStep) {
                 // MARK: - Page 1: Basic Info
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
+                OnboardingStepView(
+                    title: "Create your group",
+                    subtitle: "Start by giving your group a name and description",
+                    icon: "person.3.fill",
+                    gradient: [.blue, .purple]
+                ) {
+                    VStack(spacing: 20) {
                         // Group Icon
                         VStack(spacing: 16) {
                             ZStack {
@@ -80,31 +85,33 @@ struct GroupCreationFlow: View {
                                 }
                             }
                         }
-                        .padding(.horizontal)
                         
-                        // Basic Info Section
-                        FormSection(title: "Basic Information") {
-                            VStack(alignment: .leading, spacing: 16) {
-                                CustomTextField(
-                                    title: "Group Name",
-                                    placeholder: "Give your group a name",
-                                    text: $viewModel.name
+                        // Basic Info Fields
+                        VStack(spacing: 20) {
+                            TextField("Group Name", text: $viewModel.name)
+                                .font(.title3)
+                                .padding()
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                                 )
-                                
-                                CustomTextField(
-                                    title: "Description",
-                                    placeholder: "Describe your group",
-                                    text: $viewModel.description,
-                                    isMultiline: true
+                            
+                            TextEditor(text: $viewModel.description)
+                                .frame(height: 150)
+                                .font(.title3)
+                                .padding()
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                                 )
-                            }
-                        }
-                        
-                        // Next Button
-                        ActionButton(title: "Next", gradient: [.blue, .purple]) {
-                            withAnimation {
-                                currentStep = 1
-                            }
+                            
+                            NavigationButtons(
+                                onBack: { },
+                                onNext: { withAnimation { currentStep = 1 } },
+                                isNextDisabled: viewModel.name.isEmpty || viewModel.description.isEmpty
+                            )
                         }
                     }
                     .padding()
@@ -112,107 +119,96 @@ struct GroupCreationFlow: View {
                 .tag(0)
                 
                 // MARK: - Page 2: Location
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        FormSection(title: "Group Location") {
-                            VStack(alignment: .leading, spacing: 16) {
-                                if let location = viewModel.location {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Selected Location")
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                        
-                                        HStack {
-                                            Image(systemName: "mappin.circle.fill")
-                                                .foregroundColor(.blue)
-                                            Text(location)
-                                                .font(.subheadline)
-                                        }
-                                        .padding()
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(10)
-                                    }
-                                }
+                OnboardingStepView(
+                    title: "Choose location",
+                    subtitle: "Where will your group meet?",
+                    icon: "mappin.and.ellipse",
+                    gradient: [.red, .orange]
+                ) {
+                    VStack(spacing: 20) {
+                        if let location = viewModel.location {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Selected Location")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                                 
-                                Button(action: { showLocationSearch = true }) {
-                                    HStack {
-                                        Image(systemName: "magnifyingglass")
-                                            .foregroundColor(.blue)
-                                        Text(viewModel.location == nil ? "Search Location" : "Change Location")
-                                            .foregroundColor(.blue)
-                                    }
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(10)
+                                HStack {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .foregroundColor(.blue)
+                                    Text(location)
+                                        .font(.subheadline)
                                 }
+                                .padding()
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
                             }
                         }
                         
-                        // Navigation Buttons
-                        HStack(spacing: 16) {
-                            ActionButton(title: "Back", gradient: [.gray, .gray]) {
-                                withAnimation {
-                                    currentStep = 0
-                                }
+                        Button(action: { showLocationSearch = true }) {
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.blue)
+                                Text(viewModel.location == nil ? "Search Location" : "Change Location")
+                                    .foregroundColor(.blue)
                             }
-                            
-                            ActionButton(title: "Next", gradient: [.blue, .purple]) {
-                                withAnimation {
-                                    currentStep = 2
-                                }
-                            }
-                            .disabled(viewModel.location == nil)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(12)
                         }
+                        
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep = 0 } },
+                            onNext: { withAnimation { currentStep = 2 } },
+                            isNextDisabled: viewModel.location == nil
+                        )
                     }
                     .padding()
                 }
                 .tag(1)
                 
                 // MARK: - Page 3: Details
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // Privacy Settings
-                        FormSection(title: "Privacy Settings") {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Toggle(isOn: $viewModel.isPrivate) {
-                                    HStack {
-                                        Image(systemName: viewModel.isPrivate ? "lock.fill" : "globe")
-                                            .foregroundColor(viewModel.isPrivate ? .blue : .gray)
-                                        VStack(alignment: .leading) {
-                                            Text(viewModel.isPrivate ? "Private Group" : "Public Group")
-                                                .font(.subheadline)
-                                            Text(viewModel.isPrivate ? "Only invited people can join" : "Anyone can discover and join")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        }
-                                    }
+                OnboardingStepView(
+                    title: "Privacy settings",
+                    subtitle: "Control who can join your group",
+                    icon: "lock.shield",
+                    gradient: [.purple, .blue]
+                ) {
+                    VStack(spacing: 20) {
+                        Toggle(isOn: $viewModel.isPrivate) {
+                            HStack {
+                                Image(systemName: viewModel.isPrivate ? "lock.fill" : "globe")
+                                    .foregroundColor(viewModel.isPrivate ? .blue : .gray)
+                                VStack(alignment: .leading) {
+                                    Text(viewModel.isPrivate ? "Private Group" : "Public Group")
+                                        .font(.subheadline)
+                                    Text(viewModel.isPrivate ? "Only invited people can join" : "Anyone can discover and join")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
                                 }
                             }
                         }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
                         
-                        // Navigation Buttons
-                        HStack(spacing: 16) {
-                            ActionButton(title: "Back", gradient: [.gray, .gray]) {
-                                withAnimation {
-                                    currentStep = 1
-                                }
-                            }
-                            
-                            ActionButton(title: "Preview", gradient: [.blue, .purple]) {
-                                withAnimation {
-                                    currentStep = 3
-                                }
-                            }
-                        }
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep = 1 } },
+                            onNext: { withAnimation { currentStep = 3 } }
+                        )
                     }
                     .padding()
                 }
                 .tag(2)
                 
                 // MARK: - Page 4: Preview
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
+                OnboardingStepView(
+                    title: "Preview your group",
+                    subtitle: "Review all the details before creating",
+                    icon: "eye.fill",
+                    gradient: [.green, .blue]
+                ) {
+                    VStack(spacing: 20) {
                         // Group Preview using GroupCard
                         GroupCard(
                             group: EventGroup(
@@ -237,10 +233,23 @@ struct GroupCreationFlow: View {
                         
                         Spacer()
                         
-                        // Navigation Buttons
                         VStack(spacing: 16) {
-                            ActionButton(title: "Create Group", gradient: [.purple, .blue]) {
+                            Button(action: {
                                 viewModel.createGroup()
+                            }) {
+                                Text("Create Group")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.purple, .blue]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .cornerRadius(12)
                             }
                             .disabled(viewModel.isLoading)
                             
@@ -263,8 +272,7 @@ struct GroupCreationFlow: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
         }
-        .navigationTitle(steps[currentStep])
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showLocationSearch) {
             LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
                 viewModel.location = address

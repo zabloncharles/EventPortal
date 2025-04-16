@@ -58,7 +58,7 @@ struct CreateView: View {
 
 struct SelectionView: View {
     @Binding var creationType: CreationType
-    
+    @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 0) {
@@ -109,6 +109,9 @@ struct SelectionView: View {
                 icon: "bird.fill",
                 gradient: [.blue, .purple]
             ) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    tabBarManager.hideTab = true
+                }
                 creationType = .event
             }
             Divider()
@@ -119,12 +122,21 @@ struct SelectionView: View {
                 icon: "person.2.fill",
                 gradient: [.green, .blue]
             ) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    tabBarManager.hideTab = true
+                }
                 creationType = .group
             }
             
             Spacer()
         }
                                 .padding()
+                                .onAppear{
+                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                        tabBarManager.hideTab = false
+                                    }
+                                }
+                                
     }
 }
 

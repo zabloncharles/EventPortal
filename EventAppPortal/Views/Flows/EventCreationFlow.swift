@@ -115,9 +115,9 @@ struct EventCreationFlow: View {
                         NavigationButtons(
                             onBack: { withAnimation { currentStep -= 1 } },
                             onNext: { withAnimation { currentStep += 1 } }
-                        )
+                        ).padding(.vertical,20)
                     }
-                    .padding()
+                    .padding(.horizontal)
                 }
                 .tag(1)
                 
@@ -436,6 +436,7 @@ struct OnboardingStepView<Content: View>: View {
     let gradient: [Color]
     let content: () -> Content
     @State private var animateIcon = false
+    @StateObject private var tabBarManager = TabBarVisibilityManager.shared
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -466,20 +467,24 @@ struct OnboardingStepView<Content: View>: View {
                             .opacity(animateIcon ? 1 : 0)
                     }
                     // Title
-                    Text(title)
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                        .opacity(animateIcon ? 1 : 0)
+                    VStack(spacing: 5) {
+                        Text(title)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .opacity(animateIcon ? 1 : 0)
                         .offset(y: animateIcon ? 0 : 20)
+                        
+                        // Subtitle
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .opacity(animateIcon ? 1 : 0)
+                            .offset(y: animateIcon ? 0 : 20)
+                    }
                     
-                    // Subtitle
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.center)
-                        .opacity(animateIcon ? 1 : 0)
-                        .offset(y: animateIcon ? 0 : 20)
+                   
                 }
                 .padding(.top, 40)
                 
@@ -493,8 +498,10 @@ struct OnboardingStepView<Content: View>: View {
         .onAppear {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
                 animateIcon = true
+                tabBarManager.hideTab = true
             }
         }
+       
     }
 }
 
