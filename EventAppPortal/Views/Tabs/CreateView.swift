@@ -678,22 +678,20 @@ struct LocationSearchView: View {
                                 Image(systemName: "location.fill.viewfinder")
                                     .font(.largeTitle)
                                     .foregroundColor(.white)
+                                    .padding(.top, 30)
+                                    .padding(.bottom, 10)
                             }
                     }
                     
                    
-                    VStack(alignment: isFocused ? .leading : .center) {
-                        Text("Add an address for Your Event")
-                                .font(.title3)
+                    VStack {
+                        Text("Address")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
                                 .padding(.bottom, 3)
                         
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.purple, .blue]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        
                         .fontWeight(.bold)
                         .multilineTextAlignment(isFocused ? .leading : .center)
                         .padding(.bottom, isFocused ? 0 : 5)
@@ -701,9 +699,9 @@ struct LocationSearchView: View {
                         
                         Text("This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(isFocused ? .leading : .center)
-                            .padding(.horizontal, isFocused ? 0 : 25)
-                    }
+                            .multilineTextAlignment(isFocused ? .center : .center)
+                            
+                    }.padding(.horizontal, isFocused ? 20 : 25)
                     
                     
                     
@@ -750,7 +748,7 @@ struct LocationSearchView: View {
                     
                     Spacer()
                 }
-                .padding(.horizontal, isFocused ? 25 : 0)
+                .padding(.horizontal, isFocused ? 20 : 0)
                 .animation(.spring(), value: isFocused)
                 
                 if showMap {

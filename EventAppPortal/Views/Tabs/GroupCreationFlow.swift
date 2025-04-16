@@ -18,22 +18,47 @@ struct GroupCreationFlow: View {
     @State private var currentStep = 0
     @Environment(\.dismiss) private var dismiss
     @State private var showLocationSearch = false
-    let steps = ["Basic Info", "Location", "Details", "Preview"]
+    let steps = ["Group Name", "Category", "Description", "Location", "Privacy", "Preview"]
    
     var body: some View {
         VStack(spacing: 0) {
-            // Progress Steps
-            ProgressStepsView(steps: steps, currentStep: currentStep)
-                .padding(.horizontal)
+           
             
             // Content
             TabView(selection: $currentStep) {
-                // MARK: - Page 1: Basic Info
+                // MARK: - Page 1: Group Name
                 OnboardingStepView(
-                    title: "Create your group",
-                    subtitle: "Start by giving your group a name and description",
-                    icon: "person.3.fill",
+                    title: "Group Name",
+                    subtitle: "Give your group a memorable name",
+                    icon: "textformat",
                     gradient: [.blue, .purple]
+                ) {
+                    VStack(spacing: 20) {
+                        TextField("Group Name", text: $viewModel.name)
+                            .font(.title3)
+                            .padding()
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        NavigationButtons(
+                            onBack: { },
+                            onNext: { withAnimation { currentStep = 1 } },
+                            isNextDisabled: viewModel.name.isEmpty
+                        )
+                    }
+                    .padding()
+                }
+                .tag(0)
+                
+                // MARK: - Page 2: Category
+                OnboardingStepView(
+                    title: "Choose Category",
+                    subtitle: "Select a category for your group",
+                    icon: "tag.fill",
+                    gradient: [.purple, .blue]
                 ) {
                     VStack(spacing: 20) {
                         // Group Icon
@@ -55,7 +80,7 @@ struct GroupCreationFlow: View {
                                     .foregroundColor(.white)
                             }
                             
-                            Text("Group Icon")
+                            Text(viewModel.category)
                                 .font(.headline)
                                 .foregroundColor(.gray)
                         }
@@ -73,52 +98,57 @@ struct GroupCreationFlow: View {
                                                 Image(systemName: categoryIcon(for: category))
                                                     .font(.system(size: 14))
                                                 Text(category)
-                                                    .font(.subheadline)
+                                                    .font(.title3)
                                             }
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
-                                            .background(viewModel.category == category ? Color.blue : Color.gray.opacity(0.1))
+                                            .background(viewModel.category == category ? Color.randomize : Color.gray.opacity(0.1))
                                             .foregroundColor(viewModel.category == category ? .white : .primary)
-                                            .cornerRadius(20)
+                                            .cornerRadius(12)
                                         }
                                     }
                                 }
                             }
                         }
-                        
-                        // Basic Info Fields
-                        VStack(spacing: 20) {
-                            TextField("Group Name", text: $viewModel.name)
-                                .font(.title3)
-                                .padding()
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                )
-                            
-                            TextEditor(text: $viewModel.description)
-                                .frame(height: 150)
-                                .font(.title3)
-                                .padding()
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                                )
-                            
-                            NavigationButtons(
-                                onBack: { },
-                                onNext: { withAnimation { currentStep = 1 } },
-                                isNextDisabled: viewModel.name.isEmpty || viewModel.description.isEmpty
-                            )
-                        }
+                       
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep = 0 } },
+                            onNext: { withAnimation { currentStep = 2 } }
+                        ).padding(.top, 20)
                     }
                     .padding()
                 }
-                .tag(0)
+                .tag(1)
                 
-                // MARK: - Page 2: Location
+                // MARK: - Page 3: Description
+                OnboardingStepView(
+                    title: "Description",
+                    subtitle: "Tell people about your group",
+                    icon: "text.justify",
+                    gradient: [.green, .blue]
+                ) {
+                    VStack(spacing: 20) {
+                        TextEditor(text: $viewModel.description)
+                            .frame(height: 200)
+                            .font(.title3)
+                            .padding()
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                            )
+                        
+                        NavigationButtons(
+                            onBack: { withAnimation { currentStep = 1 } },
+                            onNext: { withAnimation { currentStep = 3 } },
+                            isNextDisabled: viewModel.description.isEmpty
+                        )
+                    }
+                    .padding()
+                }
+                .tag(2)
+                
+                // MARK: - Page 4: Location
                 OnboardingStepView(
                     title: "Choose location",
                     subtitle: "Where will your group meet?",
@@ -158,16 +188,16 @@ struct GroupCreationFlow: View {
                         }
                         
                         NavigationButtons(
-                            onBack: { withAnimation { currentStep = 0 } },
-                            onNext: { withAnimation { currentStep = 2 } },
+                            onBack: { withAnimation { currentStep = 2 } },
+                            onNext: { withAnimation { currentStep = 4 } },
                             isNextDisabled: viewModel.location == nil
                         )
                     }
                     .padding()
                 }
-                .tag(1)
+                .tag(3)
                 
-                // MARK: - Page 3: Details
+                // MARK: - Page 5: Privacy
                 OnboardingStepView(
                     title: "Privacy settings",
                     subtitle: "Control who can join your group",
@@ -193,15 +223,15 @@ struct GroupCreationFlow: View {
                         .cornerRadius(12)
                         
                         NavigationButtons(
-                            onBack: { withAnimation { currentStep = 1 } },
-                            onNext: { withAnimation { currentStep = 3 } }
+                            onBack: { withAnimation { currentStep = 3 } },
+                            onNext: { withAnimation { currentStep = 5 } }
                         )
                     }
                     .padding()
                 }
-                .tag(2)
+                .tag(4)
                 
-                // MARK: - Page 4: Preview
+                // MARK: - Page 6: Preview
                 OnboardingStepView(
                     title: "Preview your group",
                     subtitle: "Review all the details before creating",
@@ -255,7 +285,7 @@ struct GroupCreationFlow: View {
                             
                             Button(action: {
                                 withAnimation {
-                                    currentStep = 2
+                                    currentStep = 4
                                 }
                             }) {
                                 Text("Edit Details")
@@ -267,10 +297,14 @@ struct GroupCreationFlow: View {
                     }
                     .padding(.vertical)
                 }
-                .tag(3)
+                .tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
+            
+            // Progress Steps
+            ProgressStepsView(steps: steps, currentStep: currentStep)
+                .padding(.horizontal)
         }
         .navigationBarBackButtonHidden(true)
         .sheet(isPresented: $showLocationSearch) {
@@ -522,6 +556,42 @@ struct GroupCategoryButton: View {
                     .font(.caption)
                     .foregroundColor(isSelected ? .blue : .gray)
             }
+        }
+    }
+}
+
+// MARK: - Group Input Fields
+struct GroupInputFields: View {
+    @Binding var name: String
+    @Binding var description: String
+    let onNext: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            TextField("Group Name", text: $name)
+                .font(.title3)
+                .padding()
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+            
+            TextEditor(text: $description)
+                .frame(height: 150)
+                .font(.title3)
+                .padding()
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+            
+            NavigationButtons(
+                onBack: { },
+                onNext: onNext,
+                isNextDisabled: name.isEmpty || description.isEmpty
+            )
         }
     }
 }
