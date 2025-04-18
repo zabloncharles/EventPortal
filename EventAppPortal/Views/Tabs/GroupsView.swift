@@ -36,6 +36,8 @@ struct GroupsView: View {
     @State var showHorizontalCategory = false
     @State private var selectedCategoryForOverlay: String? = nil
     @State private var showNotifications = false
+    @State private var showError = false
+    @State private var errorMessage: String?
    
     private let radiusInMiles: Double = 50
     @State var seeAllCategories = false
@@ -326,11 +328,18 @@ struct GroupsView: View {
                             }
                             .padding(.horizontal)
                             Spacer()
-                            Button(action: { showNotifications.toggle() }) {
-                                Image(systemName: "bell.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.primary)
-                            }.padding(.horizontal)
+                            HStack {
+                                NavigationLink(destination: ChatHomeView()) {
+                                    Image(systemName: "paperplane")
+                                        .font(.title3)
+                                        .foregroundColor(.blue)
+                                }
+                                Button(action: { showNotifications.toggle() }) {
+                                    Image(systemName: "bell.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.blue)
+                                }.padding(.trailing)
+                            }
                         }
                         searchBar
                     }.padding(.bottom, 15)
@@ -360,6 +369,11 @@ struct GroupsView: View {
                         .foregroundColor(.primary)
                 }
             }
+        }
+        .alert("Error", isPresented: $showError, presenting: errorMessage) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { message in
+            Text(message)
         }
     }
     
@@ -691,61 +705,120 @@ struct GroupNotificationsView: View {
     @State private var createdGroups: [EventGroup] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var selectedFilter = "Recent"
+  
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Custom Tab Bar
-                HStack(spacing: 0) {
-                    TabButton(title: "My Groups", isSelected: selectedTab == 0) {
-                        withAnimation { selectedTab = 0 }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Header Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your\nGroup Updates")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.invert, .blue]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            
+                            Text("Stay connected with your groups")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Quick Action Button
+                        NavigationLink(destination: GroupCreationFlow(viewModel: CreateGroupViewModel())) {
+                            HStack {
+                                Text("Create New Group")
+                                    .foregroundColor(.blue)
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(12)
+                        }
                     }
-                    TabButton(title: "Pending", isSelected: selectedTab == 1) {
-                        withAnimation { selectedTab = 1 }
+                    .padding()
+                    
+                  
+                    
+                    // Custom Tab Bar
+                    HStack(spacing: 0) {
+                        TabButton(title: "My Groups", isSelected: selectedTab == 0) {
+                            withAnimation { selectedTab = 0 }
+                        }
+                        TabButton(title: "Pending", isSelected: selectedTab == 1) {
+                            withAnimation { selectedTab = 1 }
+                        }
+                        TabButton(title: "Created", isSelected: selectedTab == 2) {
+                            withAnimation { selectedTab = 2 }
+                        }
                     }
-                    TabButton(title: "Created", isSelected: selectedTab == 2) {
-                        withAnimation { selectedTab = 2 }
+                    .padding(.horizontal)
+                    
+                    // Content based on selected tab
+                    if isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            switch selectedTab {
+                            case 0:
+                                if myGroups.isEmpty {
+                                    EmptyStateView(message: "You haven't joined any groups yet")
+                                } else {
+                                    ForEach(myGroups) { group in
+                                        GroupNotificationCard(group: group)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            case 1:
+                                if pendingGroups.isEmpty {
+                                    EmptyStateView(message: "No pending group requests")
+                                } else {
+                                    ForEach(pendingGroups) { group in
+                                        GroupNotificationCard(group: group)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            case 2:
+                                if createdGroups.isEmpty {
+                                    EmptyStateView(message: "You haven't created any groups")
+                                } else {
+                                    ForEach(createdGroups) { group in
+                                        GroupNotificationCard(group: group)
+                                            .padding(.horizontal)
+                                    }
+                                }
+                            default:
+                                EmptyView()
+                            }
+                        }
+                        .padding(.vertical)
                     }
                 }
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Tab Content
-                TabView(selection: $selectedTab) {
-                    // My Groups Tab
-                    GroupList(groups: myGroups, emptyMessage: "You haven't joined any groups yet")
-                        .tag(0)
-                    
-                    // Pending Groups Tab
-                    GroupList(groups: pendingGroups, emptyMessage: "No pending group requests")
-                        .tag(1)
-                    
-                    // Created Groups Tab
-                    GroupList(groups: createdGroups, emptyMessage: "You haven't created any groups")
-                        .tag(2)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .navigationTitle("Group Notifications")
+            .background(Color.dynamic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.primary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .foregroundColor(.primary)
                     }
                 }
             }
             .onAppear {
                 fetchGroups()
-            }
-            .overlay {
-                if isLoading {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black.opacity(0.2))
-                }
             }
         }
     }
@@ -764,113 +837,45 @@ struct GroupNotificationsView: View {
             .whereField("members", arrayContains: userId)
             .getDocuments { snapshot, error in
                 if let error = error {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
                     return
                 }
                 
-                myGroups = snapshot?.documents.compactMap { document in
+                self.myGroups = snapshot?.documents.compactMap { document in
                     EventGroup.fromFirestore(document)
                 } ?? []
                 
                 // Fetch pending groups
                 db.collection("groups")
-                    .whereField("pendingMembers", arrayContains: userId)
+                    .whereField("pendingRequests", arrayContains: userId)
                     .getDocuments { snapshot, error in
                         if let error = error {
-                            errorMessage = error.localizedDescription
-                            isLoading = false
+                            self.errorMessage = error.localizedDescription
+                            self.isLoading = false
                             return
                         }
                         
-                        pendingGroups = snapshot?.documents.compactMap { document in
+                        self.pendingGroups = snapshot?.documents.compactMap { document in
                             EventGroup.fromFirestore(document)
                         } ?? []
                         
                         // Fetch created groups
                         db.collection("groups")
-                            .whereField("owner", isEqualTo: userId)
+                            .whereField("createdBy", isEqualTo: userId)
                             .getDocuments { snapshot, error in
-                                isLoading = false
-                                
                                 if let error = error {
-                                    errorMessage = error.localizedDescription
-                                    return
+                                    self.errorMessage = error.localizedDescription
+                                } else {
+                                    self.createdGroups = snapshot?.documents.compactMap { document in
+                                        EventGroup.fromFirestore(document)
+                                    } ?? []
                                 }
                                 
-                                createdGroups = snapshot?.documents.compactMap { document in
-                                    EventGroup.fromFirestore(document)
-                                } ?? []
+                                self.isLoading = false
                             }
                     }
             }
-    }
-}
-
-struct GroupList: View {
-    let groups: [EventGroup]
-    let emptyMessage: String
-    
-    var body: some View {
-        ScrollView {
-            if groups.isEmpty {
-                EmptyStateView(message: emptyMessage)
-            } else {
-                LazyVStack(spacing: 16) {
-                    ForEach(groups) { group in
-                        GroupNotificationCard(group: group)
-                    }
-                }
-                .padding()
-            }
-        }
-    }
-}
-
-struct GroupNotificationCard: View {
-    let group: EventGroup
-    
-    var body: some View {
-        NavigationLink(destination: GroupDetailView(group: group)) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(group.name)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                    Spacer()
-                    Text("\(group.memberCount) members")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                if let description = group.description {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-                
-                HStack {
-                    CategoryPill(
-                        text: group.category,
-                        isSelected: false,
-                        action: {}
-                    )
-                    Spacer()
-                    Text(group.isPrivate ? "Private" : "Public")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(group.isPrivate ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
-                        .foregroundColor(group.isPrivate ? .red : .green)
-                        .cornerRadius(8)
-                }
-            }
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
-        }
     }
 }
 
@@ -881,17 +886,95 @@ struct TabButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(isSelected ? .primary : .secondary)
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.black : Color.clear)
+                .cornerRadius(20)
+        }
+    }
+}
+
+struct GroupNotificationCard: View {
+    let group: EventGroup
+    @State private var adminName: String = ""
+    
+    var body: some View {
+        NavigationLink(destination: GroupDetailView(group: group)) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.blue, .purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Text(group.name.prefix(1).uppercased())
+                                .font(.title2.bold())
+                                .foregroundColor(.white)
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(group.name)
+                            .font(.headline)
+                        Text("Admin: \(adminName)")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Joined")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(15)
+                }
                 
-                Rectangle()
-                    .fill(isSelected ? Color.blue : Color.clear)
-                    .frame(height: 2)
+                if let description = group.description {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                HStack {
+                    Label("\(group.memberCount) members", systemImage: "person.2")
+                    Spacer()
+                    Label(group.category, systemImage: "tag")
+                }
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(15)
+            .overlay(
+                RoundedRectangle(cornerRadius: 15)
+                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .onAppear {
+            fetchAdminName()
+        }
+    }
+    
+    private func fetchAdminName() {
+        let db = Firestore.firestore()
+        db.collection("users").document(group.createdBy).getDocument { document, error in
+            if let document = document, document.exists,
+               let userData = document.data(),
+               let fullName = userData["name"] as? String {
+                adminName = String(fullName.split(separator: " ").first ?? "")
             }
         }
-        .frame(maxWidth: .infinity)
     }
 }
 

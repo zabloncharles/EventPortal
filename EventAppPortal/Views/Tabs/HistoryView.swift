@@ -13,16 +13,7 @@ struct HistoryView: View {
         
             VStack(spacing: 0) {
                 // Custom Segmented Control
-                HStack(spacing: 0) {
-                    HistoryTabButton(title: "Groups", isSelected: selectedTab == 0) {
-                        withAnimation { selectedTab = 0 }
-                    }
-                    HistoryTabButton(title: "Events", isSelected: selectedTab == 1) {
-                        withAnimation { selectedTab = 1 }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top)
+                tabButtons
                 
                 if isLoading {
                     ProgressView()
@@ -101,36 +92,21 @@ struct HistoryView: View {
                     }
             }
     }
-}
-
-// MARK: - Supporting Views
-struct HistoryTabButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
     
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.headline)
-                .foregroundColor(isSelected ? .white : .gray)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    Group {
-                        if isSelected {
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        } else {
-                            Color.clear
-                        }
-                    }
-                )
-                .cornerRadius(25)
+    var tabButtons: some View {
+        HStack(spacing: 10) {
+            TabButton(title: "Groups", isSelected: selectedTab == 0) {
+                withAnimation {
+                    selectedTab = 0
+                }
+            }
+            TabButton(title: "Events", isSelected: selectedTab == 1) {
+                withAnimation {
+                    selectedTab = 1
+                }
+            }
         }
+        .padding(.horizontal)
     }
 }
 

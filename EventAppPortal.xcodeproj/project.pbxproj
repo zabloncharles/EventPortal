@@ -20,6 +20,8 @@
 		F75F5B4E2DAEA433000FBDC8 /* ScrollableNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B4D2DAEA433000FBDC8 /* ScrollableNavigationBar.swift */; };
 		F75F5B502DB2EEE2000FBDC8 /* GroupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B4F2DB2EEE2000FBDC8 /* GroupDetailView.swift */; };
 		F75F5B532DB2F4A2000FBDC8 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B522DB2F4A2000FBDC8 /* HistoryView.swift */; };
+		F75F5B552DB307F7000FBDC8 /* ChatHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B542DB307F7000FBDC8 /* ChatHomeView.swift */; };
+		F75F5B572DB30CD5000FBDC8 /* ChatDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */; };
 		F7633E332D77589E00644438 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7633E322D77589E00644438 /* TabBar.swift */; };
 		F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */ = {isa = PBXBuildFile; fileRef = F764BB322D89CDC7002F53E3 /* Ghost.json */; };
 		F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F773EC5D2D7888B50009AC93 /* Assets.xcassets */; };
@@ -72,6 +74,8 @@
 		F75F5B4D2DAEA433000FBDC8 /* ScrollableNavigationBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ScrollableNavigationBar.swift; path = EventAppPortal/Views/Components/ScrollableNavigationBar.swift; sourceTree = SOURCE_ROOT; };
 		F75F5B4F2DB2EEE2000FBDC8 /* GroupDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupDetailView.swift; sourceTree = "<group>"; };
 		F75F5B522DB2F4A2000FBDC8 /* HistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HistoryView.swift; path = EventAppPortal/Views/Tabs/HistoryView.swift; sourceTree = SOURCE_ROOT; };
+		F75F5B542DB307F7000FBDC8 /* ChatHomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ChatHomeView.swift; path = EventAppPortal/Views/Tabs/ChatHomeView.swift; sourceTree = SOURCE_ROOT; };
+		F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatDetailView.swift; sourceTree = "<group>"; };
 		F7633E322D77589E00644438 /* TabBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBar.swift; sourceTree = "<group>"; };
 		F764BB322D89CDC7002F53E3 /* Ghost.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = Ghost.json; sourceTree = "<group>"; };
 		F773EC5D2D7888B50009AC93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -239,6 +243,8 @@
 		F7855EB02D85439D00D668CD /* Detail */ = {
 			isa = PBXGroup;
 			children = (
+				F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */,
+				F75F5B542DB307F7000FBDC8 /* ChatHomeView.swift */,
 				F75F5B522DB2F4A2000FBDC8 /* HistoryView.swift */,
 				F715155A2D868E26001D55C3 /* PhotoUploadView.swift */,
 				F773EC6D2D78A99F0009AC93 /* ViewEventDetail.swift */,
@@ -417,6 +423,7 @@
 				F715155D2D869B14001D55C3 /* EventImageUpdateView.swift in Sources */,
 				F715155F2D86A0E7001D55C3 /* EventRecommendationService.swift in Sources */,
 				F79C82852D77564900C87783 /* MainTabView.swift in Sources */,
+				F75F5B572DB30CD5000FBDC8 /* ChatDetailView.swift in Sources */,
 				F773EC6E2D78A99F0009AC93 /* ViewEventDetail.swift in Sources */,
 				F79C82812D77564900C87783 /* ProfileView.swift in Sources */,
 				F79545252D8673C10053ED72 /* ImageViewer.swift in Sources */,
@@ -426,6 +433,7 @@
 				F773EC712D790FAC0009AC93 /* LottieView.swift in Sources */,
 				F7FD39032DAB7A9000682B6A /* CreateView.swift in Sources */,
 				F7855EAF2D8521B900D668CD /* ContentView.swift in Sources */,
+				F75F5B552DB307F7000FBDC8 /* ChatHomeView.swift in Sources */,
 				F79C82882D77564900C87783 /* LoginView.swift in Sources */,
 				F746F4E92D766320009B68BA /* EventAppPortalApp.swift in Sources */,
 				F7FD38DE2DAAED7D00682B6A /* GroupsView.swift in Sources */,
