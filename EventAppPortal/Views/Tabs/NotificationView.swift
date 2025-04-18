@@ -7,71 +7,255 @@
 
 import SwiftUI
 
+enum ViewMode {
+    case single, multiple
+}
+
 struct NotificationView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var firebaseManager: FirebaseManager
     @State private var selectedDate = Date()
     @State private var currentMonth = Date()
     @State private var viewMode: ViewMode = .single
-    
-    enum ViewMode {
-        case single, multiple
-    }
+    @State private var showCalendar = false
+    @State private var selectedFilter = "Recent"
+    let filters = ["Recent", "Most Active", "Most View"]
     
     private var calendar: Calendar {
         var calendar = Calendar.current
-        calendar.firstWeekday = 1 // Start week on Monday
+        calendar.firstWeekday = 1
         return calendar
-    }
-    
-    private var monthDates: [[Date?]] {
-        let monthInterval = calendar.dateInterval(of: .month, for: currentMonth)!
-        let firstWeekday = calendar.component(.weekday, from: monthInterval.start)
-        let offsetDays = firstWeekday - calendar.firstWeekday
-        
-        let firstDate = calendar.date(byAdding: .day, value: -offsetDays, to: monthInterval.start)!
-        
-        var weeks: [[Date?]] = []
-        var week: [Date?] = []
-        var currentDate = firstDate
-        
-        // Previous month dates
-        for _ in 0..<offsetDays {
-            week.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-        
-        // Current month dates
-        while currentDate < monthInterval.end {
-            if week.count == 7 {
-                weeks.append(week)
-                week = []
-            }
-            week.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-        
-        // Next month dates
-        while week.count < 7 {
-            week.append(currentDate)
-            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-        }
-        weeks.append(week)
-        
-        // Add remaining weeks to make it 6 rows
-        while weeks.count < 6 {
-            var nextWeek: [Date?] = []
-            for _ in 0..<7 {
-                nextWeek.append(currentDate)
-                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
-            }
-            weeks.append(nextWeek)
-        }
-        
-        return weeks
     }
     
     var body: some View {
         NavigationView {
-            ScrollView(showsIndicators:false) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    // Header Section
+                    VStack(alignment: .leading, spacing: 16) {
+                      
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your\nNotifications")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundColor(.primary)
+                            
+                            Text("Stay updated with your events")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Quick Action Button
+                        NavigationLink(destination: CreateView()) {
+                            HStack {
+                                Text("Create New Event")
+                                    .foregroundColor(.blue)
+                                Image(systemName: "plus.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding()
+                    
+                    // Filter Tabs
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(filters, id: \.self) { filter in
+                                FilterTab(title: filter, isSelected: filter == selectedFilter) {
+                                    withAnimation {
+                                        selectedFilter = filter
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    
+                    Text("Join Community and RSVP")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    // Event Cards
+                    LazyVStack(spacing: 16) {
+                        ForEach(eventsForSelectedDate()) { event in
+                            EventNotificationCard(event: event)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+            }
+            .background(Color.dynamic)
+            .navigationTitle("Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                            Text("Back")
+                        }
+                        .foregroundColor(.primary)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showCalendar.toggle() }) {
+                        Image(systemName: "calendar")
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showCalendar) {
+                CalendarView(selectedDate: $selectedDate, currentMonth: $currentMonth, viewMode: $viewMode)
+            }
+        }
+    }
+    
+    private func eventsForSelectedDate() -> [Event] {
+        eventsForDate(selectedDate)
+    }
+    
+    private func eventsForDate(_ date: Date) -> [Event] {
+        return sampleEvents.filter { event in
+            let eventDate = event.startDate
+            return calendar.isDate(eventDate, inSameDayAs: date)
+        }
+    }
+}
+
+struct FilterTab: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(isSelected ? .white : .primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.black : Color.clear)
+                .cornerRadius(20)
+        }
+    }
+}
+
+struct EventNotificationCard: View {
+    let event: Event
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var hasTicket = false
+    
+    var body: some View {
+        NavigationLink(destination: ViewEventDetail(event: event)) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(event.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    Spacer()
+                    Text("\(Int.random(in: 1000...50000)) Views")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                if let description = event.description {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .padding(.vertical, 4)
+                }
+                
+                HStack {
+                    ForEach(0..<4) { i in
+                        Circle()
+                            .fill(Color.randomize)
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Text(String(event.participants[safe: i]?.prefix(1) ?? ""))
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: CGFloat(i * -10))
+                    }
+                    Text("+\(max(0, event.participants.count - 4))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.leading, -8)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        if let userId = firebaseManager.currentUser?.uid {
+                            hasTicket = event.participants.contains(userId)
+                        }
+                    }) {
+                        Text(hasTicket ? "Joined" : "Join Event")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(hasTicket ? Color.green : Color.blue)
+                            .cornerRadius(20)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+        .onAppear {
+            if let userId = firebaseManager.currentUser?.uid {
+                hasTicket = event.participants.contains(userId)
+            }
+        }
+    }
+}
+
+struct CalendarView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @Binding var selectedDate: Date
+    @Binding var currentMonth: Date
+    @Binding var viewMode: ViewMode
+    
+    private var calendar: Calendar {
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
+        return calendar
+    }
+    
+    private func eventsForSelectedDate() -> [Event] {
+        eventsForDate(selectedDate)
+    }
+    
+    private func eventsForDate(_ date: Date) -> [Event] {
+        return sampleEvents.filter { event in
+            let eventDate = event.startDate
+            return calendar.isDate(eventDate, inSameDayAs: date)
+        }
+    }
+    
+    private func hasEvents(for date: Date) -> Bool {
+        !eventsForDate(date).isEmpty
+    }
+    
+    private func moveMonth(by offset: Int) {
+        if let newMonth = calendar.date(byAdding: .month, value: offset, to: currentMonth) {
+            currentMonth = newMonth
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
                 VStack(spacing: 0) {
                     // Month and View Mode Selector
                     HStack {
@@ -120,13 +304,12 @@ struct NotificationView: View {
                         // Weekday headers
                         HStack(spacing: 15) {
                             ForEach(["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], id: \.self) { day in
-                               
-                                    Text(day)
-                                        .font(.callout)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(.gray)
-                                        .frame(maxWidth: .infinity)
-                                }
+                                Text(day)
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                    .frame(maxWidth: .infinity)
+                            }
                         }
                         .padding(.horizontal)
                         
@@ -159,14 +342,12 @@ struct NotificationView: View {
                     .padding()
                     
                     // Events List for Selected Date
-                    
                     VStack(spacing: 0) {
                         HStack {
                             VStack(alignment: .leading) {
                                 HStack {
                                     Text("Let's view an event!")
                                         .font(.title3)
-                                    
                                         .foregroundStyle(
                                             LinearGradient(
                                                 gradient: Gradient(colors: [Color.purple, .blue]),
@@ -176,22 +357,18 @@ struct NotificationView: View {
                                         )
                                     Spacer()
                                     
-                                   
-                                        Image(systemName: "text.badge.plus")
-                                            .font(.title2)
-                                            .foregroundColor(.white.opacity(0.7))
-                                    
+                                    Image(systemName: "text.badge.plus")
+                                        .font(.title2)
+                                        .foregroundColor(.white.opacity(0.7))
                                 }
                                 Text("Events happening today")
                                     .foregroundColor(.secondary)
                             }
                             Spacer()
-                            
                         }
+                        
                         ForEach(Array(eventsForSelectedDate().enumerated()), id: \.element.id) { index, event in
-                            NavigationLink(destination: ViewEventDetail(event: event)){
-                                
-                            
+                            NavigationLink(destination: ViewEventDetail(event: event)) {
                                 EventRow(event: event, isLastEvent: index == eventsForSelectedDate().count - 1)
                                     .padding(.top, index == 0 ? 16 : 0)
                             }
@@ -201,37 +378,69 @@ struct NotificationView: View {
                             NoEventsView()
                                 .transition(.opacity)
                         }
-                    }.fontWeight(.bold)
-                        .padding(.horizontal)
+                    }
+                    .fontWeight(.bold)
+                    .padding(.horizontal)
                 }
                 .animation(.easeInOut, value: selectedDate)
             }
-            .background(Color.dynamic)
-            .navigationTitle("Notification")
+            .navigationTitle("Calendar")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.dynamic)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+            }
         }
     }
     
-    private func moveMonth(by offset: Int) {
-        if let newMonth = calendar.date(byAdding: .month, value: offset, to: currentMonth) {
-            currentMonth = newMonth
+    private var monthDates: [[Date?]] {
+        let monthInterval = calendar.dateInterval(of: .month, for: currentMonth)!
+        let firstWeekday = calendar.component(.weekday, from: monthInterval.start)
+        let offsetDays = firstWeekday - calendar.firstWeekday
+        
+        let firstDate = calendar.date(byAdding: .day, value: -offsetDays, to: monthInterval.start)!
+        
+        var weeks: [[Date?]] = []
+        var week: [Date?] = []
+        var currentDate = firstDate
+        
+        // Previous month dates
+        for _ in 0..<offsetDays {
+            week.append(currentDate)
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
         }
-    }
-    
-    private func hasEvents(for date: Date) -> Bool {
-        !eventsForDate(date).isEmpty
-    }
-    
-    private func eventsForSelectedDate() -> [Event] {
-        eventsForDate(selectedDate)
-    }
-    
-    private func eventsForDate(_ date: Date) -> [Event] {
-        return sampleEvents.filter { event in
-            let eventDate = event.startDate
-            return calendar.isDate(eventDate, inSameDayAs: date)
+        
+        // Current month dates
+        while currentDate < monthInterval.end {
+            if week.count == 7 {
+                weeks.append(week)
+                week = []
+            }
+            week.append(currentDate)
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
         }
+        
+        // Next month dates
+        while week.count < 7 {
+            week.append(currentDate)
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+        }
+        weeks.append(week)
+        
+        // Add remaining weeks to make it 6 rows
+        while weeks.count < 6 {
+            var nextWeek: [Date?] = []
+            for _ in 0..<7 {
+                nextWeek.append(currentDate)
+                currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate)!
+            }
+            weeks.append(nextWeek)
+        }
+        
+        return weeks
     }
 }
 
@@ -263,6 +472,36 @@ struct MonthDayButton: View {
             )
         }
         .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
+    }
+}
+
+extension Collection {
+    subscript(safe index: Index) -> Element? {
+        return indices.contains(index) ? self[index] : nil
+    }
+}
+
+struct Previews_NotificationView_Previews: PreviewProvider {
+    static var previews: some View {
+        NotificationView()
+            .environmentObject(FirebaseManager.shared)
+    }
+}
+
+// For testing purposes
+struct EventNotificationCard_Previews: PreviewProvider {
+    static var previews: some View {
+        EventNotificationCard(event: sampleEvent)
+            .environmentObject(FirebaseManager.shared)
+            .padding()
     }
 }
 
@@ -319,7 +558,6 @@ struct EventRow: View {
         .background(Color.gray.opacity(0.10))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-        
         .padding(.vertical, 4)
     }
 }
@@ -350,19 +588,5 @@ struct NoEventsView: View {
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
-    }
-}
-
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(.easeOut(duration: 0.2), value: configuration.isPressed)
-    }
-}
-
-struct NotificationView_Previews: PreviewProvider {
-    static var previews: some View {
-        NotificationView()
     }
 }
