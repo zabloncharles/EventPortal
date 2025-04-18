@@ -36,28 +36,29 @@ struct TabBar: View {
     @State var animateClick = false
     
     var body: some View {
-        HStack(alignment: .center) {
-            buttons
+        VStack(spacing: 0) {
+            // Top Gray Bar
+            Rectangle()
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 1)
+            
+            HStack(alignment: .center) {
+                buttons
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 14)
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 14)
-       
         .frame(height: 178, alignment: .top)
-        
         .background(Color.dynamic)
         .padding(.bottom,10)
-       
         .cornerRadius(0)
         .overlay(
             RoundedRectangle(cornerRadius: 0)
                 .stroke(Color.invert.opacity(0.00), lineWidth: 1)
         )
-       // .scaleEffect(animateClick ? 0.97 : 1)
-        
         .offset(y: hideTab ? 200 : 100) // Move the tab downwards when hideTab is true
         .animation(.spring(), value: hideTab) // Animate the offset change
         .frame(maxHeight: .infinity, alignment: .bottom)
-        
         .onChange(of: selectedTab, perform: { change in
             withAnimation(.spring()) {
                 animateClick = true
@@ -71,12 +72,9 @@ struct TabBar: View {
                 }
             }
         })
-        
-            
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-            .ignoresSafeArea()
-        
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+        .ignoresSafeArea()
     }
     
     var buttons: some View {

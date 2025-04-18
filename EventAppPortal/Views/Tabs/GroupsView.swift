@@ -8,7 +8,7 @@ class GroupFilterModel: ObservableObject {
     @Published var selectedCategory: String?
     @Published var memberCountRange: ClosedRange<Double>
     @Published var radius: Double
-    let categories: [String]
+    var categories: [String]
     
     init(selectedCategory: String? = nil,
          memberCountRange: ClosedRange<Double> = 0...500,
@@ -33,9 +33,11 @@ struct GroupsView: View {
     @State private var showUploadAlert = false
     @State private var uploadMessage = ""
     @State private var showingFilterSheet = false
-    
+    @State var showHorizontalCategory = false
+    @State private var selectedCategoryForOverlay: String? = nil
+   
     private let radiusInMiles: Double = 50
-    
+    @State var seeAllCategories = false
     // Preview initializer
     init(previewGroups: [EventGroup]? = nil) {
         if let previewGroups = previewGroups {
@@ -72,147 +74,271 @@ struct GroupsView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView(showsIndicators: false) {
-            
-                VStack(alignment: .leading, spacing: 24) {
-                    // Header
-                    VStack(alignment: .leading) {
-                        HStack{
-                            Button(action: {}) {
-                                HStack {
-                                    Text("Abuja, Nigeria")
-                                    Image(systemName: "chevron.down")
-                                }
-                            }
-                            Spacer()
-                        }.padding(.horizontal)
+            ZStack {
+                ScrollView(showsIndicators: false) {
+                
+                    VStack(alignment: .leading, spacing: 24) {
                         
-                        VStack(alignment: .leading) {
-                            Text("Groups")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.purple, .blue]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                            Text("join a family :)")
-                                .font(.headline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.gray)
+                        
+                        
+                        
+                        
+                        // Upcoming Group Meeting
+                        if !showHorizontalCategory {
+                        if let nextGroup = groups.first {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Upcoming Meeting")
+                                    .font(.headline)
+                                    .padding(.horizontal)
+                                
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color.blue)
+                                    
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text(nextGroup.name)
+                                                .font(.title3)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.white)
+                                            Text(nextGroup.shortDescription)
+                                                .font(.subheadline)
+                                                .foregroundColor(.white.opacity(0.8))
+                                            HStack {
+                                                Image(systemName: "calendar")
+                                                Text("Next: \(Date().addingTimeInterval(86400), style: .date)")
+                                                Image(systemName: "clock")
+                                                Text("10:00 - 13:00")
+                                            }
+                                            .font(.caption)
+                                            .foregroundColor(.white.opacity(0.8))
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Button(action: {}) {
+                                            Image(systemName: "bird.fill")
+                                                .font(.system(size: 44))
+                                                .foregroundColor(Color.white)
+                                        }
+                                    }
+                                    .padding()
+                                }
+                                .padding(.horizontal)
+                            }.padding(.top, 155)
                         }
-                        .padding(.horizontal)
                     }
-                    
-                    
-                    searchBar
-                    
-                    // Upcoming Group Meeting
-                    if let nextGroup = groups.first {
+                        
+                        // Categories Grid
                         VStack(alignment: .leading, spacing: 16) {
-                            Text("Upcoming Meeting")
+                            HStack {
+                                Text("Group Category")
+                                    .font(.headline)
+                                Spacer()
+                                Button("See all") {
+                                    // Action
+                                    withAnimation(.spring()) {
+                                        seeAllCategories.toggle()
+                                        
+                                    }
+                                }
+                                .foregroundColor(.blue)
+                            }
+                            .padding(.horizontal)
+                            
+                           if showHorizontalCategory  {
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible())
+                                ], spacing: 20) {
+                                    ForEach(filterModel.categories.prefix(seeAllCategories ? 8 : 4), id: \.self) { category in
+                                        VStack {
+                                            Circle()
+                                                .fill(categoryColor(for: category))
+                                                .frame(width: 60, height: 60)
+                                                .overlay(
+                                                    Image(systemName: categoryIcon(for: category))
+                                                        .font(.system(size: 24))
+                                                        .foregroundColor(.white)
+                                                )
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(
+                                                            LinearGradient(
+                                                                gradient: Gradient(colors: [.red, .orange, .yellow]),
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            ),
+                                                            lineWidth: selectedCategoryForOverlay == category ? 3 : 0
+                                                        )
+                                                )
+                                            Text(category)
+                                                .font(.caption)
+                                                .multilineTextAlignment(.center)
+                                        }
+                                        .onTapGesture {
+                                            
+                                            withAnimation(.spring()) {
+                                                selectedCategoryForOverlay = category
+                                                showHorizontalCategory = true
+                                                seeAllCategories = false
+                                                filterModel.selectedCategory = category
+                                                if let index = filterModel.categories.firstIndex(of: category) {
+                                                    
+                                                    filterModel.categories.remove(at: index)
+                                                    filterModel.categories.insert(category, at: category == "All" ? 0 : 1)
+                                                }
+                                            }
+                                            
+                                        }
+                                    }
+                                }
+                            .padding(.horizontal)
+                           } else {
+                               LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                               ], spacing: 20) {
+                                   ForEach(filterModel.categories.prefix(8), id: \.self) { category in
+                                       VStack {
+                                           Circle()
+                                               .fill(categoryColor(for: category))
+                                               .frame(width: 60, height: 60)
+                                               .overlay(
+                                                Image(systemName: categoryIcon(for: category))
+                                                    .font(.system(size: 24))
+                                                    .foregroundColor(.white)
+                                               )
+                                               .overlay(
+                                                    Circle()
+                                                        .stroke(
+                                                            LinearGradient(
+                                                                gradient: Gradient(colors: [.red, .orange, .yellow]),
+                                                                startPoint: .topLeading,
+                                                                endPoint: .bottomTrailing
+                                                            ),
+                                                            lineWidth: selectedCategoryForOverlay == category ? 3 : 0
+                                                        )
+                                                
+                                               )
+                                           Text(category)
+                                               .font(.caption)
+                                               .multilineTextAlignment(.center)
+                                       }
+                                       .onTapGesture {
+                                           withAnimation(.spring()) {
+                                               selectedCategoryForOverlay = category
+                                               showHorizontalCategory = true
+                                               filterModel.selectedCategory = category
+                                               
+                                               if let index = filterModel.categories.firstIndex(of: category) {
+                                               
+                                                   filterModel.categories.remove(at: index)
+                                                   filterModel.categories.insert(category, at: category == "All" ? 0 : 1)
+                                               }
+                                           }
+                                       }
+                                   }
+                               }
+                               .padding(.horizontal)
+                           }
+                        }.padding(.top, showHorizontalCategory ? 155 : 0)
+                        
+                        // Popular Groups
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text((selectedCategoryForOverlay ?? "Popular") + " Groups")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.blue)
-                                
+                           
+                            if filteredGroups.isEmpty {
                                 HStack {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text(nextGroup.name)
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
-                                        Text(nextGroup.shortDescription)
-                                            .font(.subheadline)
-                                            .foregroundColor(.white.opacity(0.8))
-                                        HStack {
-                                            Image(systemName: "calendar")
-                                            Text("Next: \(Date().addingTimeInterval(86400), style: .date)")
-                                            Image(systemName: "clock")
-                                            Text("10:00 - 13:00")
-                                        }
-                                        .font(.caption)
-                                        .foregroundColor(.white.opacity(0.8))
-                                    }
-                                    
                                     Spacer()
-                                    
-                                    Button(action: {}) {
-                                        Image(systemName: "phone.circle.fill")
-                                            .font(.system(size: 44))
-                                            .foregroundColor(.white)
+                                    VStack(alignment: .center) {
+                                        Image("hmm")
+                                            .resizable()
+                                            .renderingMode(.original)
+                                            .aspectRatio(contentMode: .fit)
+                                        .frame(height:200)
+                                        
+                                        // Subtitle
+                                        Text("Hmm! nothing yet..")
+                                            .font(.subheadline)
+                                            .foregroundColor(Color.invert)
+                                            .multilineTextAlignment(.center)
                                     }
+                                    Spacer()
                                 }
-                                .padding()
+                            } else {
+                                ForEach(filteredGroups.prefix(3)) { group in
+                                    GroupCard(group: group)
+                                }
+                                
                             }
-                            .padding(.horizontal)
+                           
                         }
                     }
-                    
-                    // Categories Grid
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Groups specialty")
-                                .font(.headline)
-                            Spacer()
-                            Button("See all") {
-                                // Action
-                            }
-                            .foregroundColor(.blue)
-                        }
-                        .padding(.horizontal)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 20) {
-                            ForEach(filterModel.categories.prefix(8), id: \.self) { category in
-                                VStack {
-                                    Circle()
-                                        .fill(categoryColor(for: category))
-                                        .frame(width: 60, height: 60)
-                                        .overlay(
-                                            Image(systemName: categoryIcon(for: category))
-                                                .font(.system(size: 24))
-                                                .foregroundColor(.white)
-                                        )
-                                    Text(category)
-                                        .font(.caption)
-                                        .multilineTextAlignment(.center)
-                                }
-                                .onTapGesture {
-                                    filterModel.selectedCategory = category
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Popular Groups
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Popular Groups")
-                            .font(.headline)
-                            .padding(.horizontal)
-                        
-                        ForEach(filteredGroups.prefix(3)) { group in
-                            GroupCard(group: group)
-                        }
+                    .padding(.vertical)
+                    // Add safe area and tabbar padding at the bottom
+                    .safeAreaInset(edge: .bottom) {
+                        Color.clear.frame(height: 50) // Account for tabbar height + extra padding
                     }
                 }
-                .padding(.vertical)
-                // Add safe area and tabbar padding at the bottom
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 50) // Account for tabbar height + extra padding
+                .background(Color(.systemBackground))
+            .navigationBarTitleDisplayMode(.inline)
+                
+                // Header
+                VStack(alignment: .leading) {
+
+                    VStack {
+                        HStack{
+                        Button(action: {}) {
+                            HStack {
+                                Text("Abuja, Nigeria")
+                                Image(systemName: "chevron.down")
+                            }
+                        }
+                        Spacer()
+                    }.padding(.horizontal)
+                    
+                    
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text("Groups")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color.purple, .blue]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                Text("join a family :)")
+                                    .font(.headline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.horizontal)
+                            Spacer()
+                        }
+                        searchBar
+                    }.padding(.bottom, 15)
+                        
+                        .background(LinearGradient(
+                            gradient: Gradient(colors: [Color.dynamic, Color.dynamic,Color.dynamic.opacity(0.90)]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ))
+                        
+                    
+                    Spacer()
                 }
             }
-            .background(Color(.systemBackground))
-            .navigationBarTitleDisplayMode(.inline)
             
         }
         .onAppear {
@@ -384,6 +510,7 @@ struct GroupCard: View {
                         
                         Text(group.shortDescription)
                             .font(.subheadline)
+                            .multilineTextAlignment(.leading)
                             .foregroundColor(Color.invert.opacity(0.8))
                             .lineLimit(2)
                         
@@ -449,268 +576,14 @@ struct GroupDetailView: View {
     @State private var scrollOffset: CGFloat = 0
     let colors = [Color.red, Color.blue, Color.green, Color.purple, Color.orange]
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
-    
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                // Hero Section with Parallax
-                GeometryReader { geometry in
-                    let minY = geometry.frame(in: .global).minY
-                    ZStack {
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, .blue]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                        .opacity(0.9)
-                        .frame(height: 300 + (minY > 0 ? minY : 0))
-                        .offset(y: minY > 0 ? -minY : 0)
-                        
-                        VStack {
-                            Spacer()
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(group.name)
-                                        .font(.system(size: 32, weight: .bold))
-                                        .foregroundColor(.white)
-                                    
-                                    Text(group.category)
-                                        .font(.headline)
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                Spacer()
-                                
-                                Image(systemName: categoryIcon(for: group.category))
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white.opacity(0.8))
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 50)
-                        }
-                    }
-                }
-                .frame(height: 300)
-                
-                // Content Section
-                VStack(spacing: 24) {
-                    // Admin Card
-                    HStack(spacing: 16) {
-                        Circle()
-                            .fill(LinearGradient(
-                                gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ))
-                            .frame(width: 60, height: 60)
-                            .overlay(
-                                Text(group.createdBy.prefix(1).uppercased())
-                                    .font(.title2.bold())
-                                    .foregroundColor(.white)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(group.createdBy)
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Text("Group Admin")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: {}) {
-                            Text("Message")
-                                .font(.subheadline.bold())
-                                .foregroundColor(.blue)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(20)
-                    
-                        }
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    
-                    // Stats Grid
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 16) {
-                        StatCard(title: "Members", value: "\(group.memberCount)")
-                        StatCard(title: "Rating", value: "4.9")
-                        StatCard(title: "Posts", value: "\(group.tags.count)")
-                    }
-                    
-                    // Description Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("About")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(group.description)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .lineSpacing(4)
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    
-                    // Tags Cloud
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Topics")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        FlowLayout(spacing: 8) {
-                            ForEach(group.tags, id: \.self) { tag in
-                                Text(tag)
-                                    .font(.subheadline)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue.opacity(0.1))
-                                    .foregroundColor(.blue)
-                                    .cornerRadius(12)
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                    
-                    // Members Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Members")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            Spacer()
-                            Button("See All") {
-                                // Action
-                            }
-                            .foregroundColor(.blue)
-                        }
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 16) {
-                                ForEach(group.members.prefix(6), id: \.self) { member in
-                                    VStack(spacing: 8) {
-                                        Circle()
-                                            .fill(LinearGradient(
-                                                gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ))
-                                            .frame(width: 60, height: 60)
-                                            .overlay(
-                                                Text(member.prefix(1).uppercased())
-                                                    .font(.title2.bold())
-                                                    .foregroundColor(.white)
-                                            )
-                                        
-                                        Text(member.split(separator: "@").first ?? "")
-                                            .font(.caption)
-                                            .lineLimit(1)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                   
-                    
-                    
-                    //Join Group Section
-                    // Join Button
-                    VStack {
-                        Button(action: { showJoinAlert = true }) {
-                            Text("Join Group")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(20)
-                   
-                                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
-                                .padding()
-                        }
-                       
-                    }
-                }
-                .padding()
-                .background(Color.dynamic)
-            }
-        }.navigationBarBackButtonHidden()
-        .edgesIgnoringSafeArea(.top)
-        .onAppear{
-            tabBarManager.hideTab = true
-        }
-        .overlay(
-            // Navigation Bar
-            HStack {
-                Button(action: { presentationMode.wrappedValue.dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(Color.black.opacity(0.3))
-                        .clipShape(Circle())
-                }
-                Spacer()
-                
-                Button(action: {}) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.title3)
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(Color.black.opacity(0.3))
-                        .clipShape(Circle())
-                }
-            }
-            .padding()
-            .padding(.top, 0)
-            , alignment: .top
-        )
-        
-        .alert("Join Group", isPresented: $showJoinAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Join") {
-                // Handle join action
-            }
-        } message: {
-            Text("Would you like to join \(group.name)?")
-        }
-    }
-    
+    @State private var isDescriptionExpanded = false
+    @State private var pageAppeared = false
+    @State private var bottomBarAppeared = false
+    @State private var currentPage = 0
+    @State private var memberCount: Int = 0
+    @State private var randomColor = Color.randomizetextcolor
+    @State private var randomColor2 = Color.randomizetextcolor
+    // MARK: - Helper Functions
     private func categoryIcon(for category: String) -> String {
         switch category {
         case "Sports": return "figure.run"
@@ -725,6 +598,329 @@ struct GroupDetailView: View {
         case "Health & Wellness": return "heart.fill"
         default: return "star.fill"
         }
+    }
+    
+    // MARK: - Header Section
+    private var headerSection: some View {
+        ZStack(alignment: .top) {
+           
+            
+            VStack {
+                Spacer()
+                
+                   
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Image("smilepov")
+                            .resizable()
+                            .renderingMode(.original)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width:200,height:200)
+                            .background( Circle().fill(Color.clear).background(LinearGradient(
+                                gradient: Gradient(colors: [randomColor2, Color.clear, randomColor.opacity(0.30)]),
+                                startPoint: .bottom,
+                                endPoint: .center
+                            )).clipShape(Circle()))
+                        Spacer()
+                    }
+                 
+                .padding(.horizontal)
+                .padding(.bottom, 50)
+            }.scaleEffect(bottomBarAppeared ? 1 : 0.97)
+                .animation(.spring(), value: bottomBarAppeared)
+        }
+    }
+    
+    // MARK: - Stats Section
+    private var statsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 16) {
+                GroupTypeIcon(
+                    icon: categoryIcon(for: group.category),
+                    text: group.category
+                )
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 40)
+                GroupTypeIcon(
+                    icon: "eye",
+                    text: "\(group.memberCount) Views"
+                )
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 40)
+                
+                GroupTypeIcon(
+                    icon: "person.2",
+                    text: "\(group.memberCount) Members"
+                )
+                
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 40)
+                
+                GroupTypeIcon(
+                    icon: "mappin.circle",
+                    text: "New York"
+                )
+                
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 40)
+                
+                GroupTypeIcon(
+                    icon: group.isPrivate ? "lock.fill" : "lock.open.fill",
+                    text: group.isPrivate ? "Private" : "Public"
+                )
+            }
+        }
+        .padding(.vertical)
+        .background(Color.dynamic)
+        .cornerRadius(16)
+        .padding(.top, -15)
+        .padding(.bottom, -20)
+    }
+    
+    // MARK: - Description Section
+    private var descriptionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("About")
+                .font(.title3)
+                .fontWeight(.bold)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(group.description)
+                    .foregroundColor(.secondary)
+                    .lineLimit(isDescriptionExpanded ? nil : 2)
+                    .animation(.easeInOut, value: isDescriptionExpanded)
+                
+                Button(action: {
+                    withAnimation {
+                        isDescriptionExpanded.toggle()
+                    }
+                }) {
+                    Text(isDescriptionExpanded ? "Read Less" : "Read More")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(randomColor2)
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+    
+    // MARK: - Admin Section
+    private var adminSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Group Admin")
+                .font(.title3)
+                .fontWeight(.bold)
+            
+            HStack {
+                Circle()
+                    .fill(LinearGradient(
+                        gradient: Gradient(colors: [randomColor2, .blue]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 60, height: 60)
+                    .overlay(
+                      //  Text(group.createdBy.prefix(1).uppercased())
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                    )
+                
+                VStack(alignment: .leading) {
+                    Text(group.createdBy)
+                        .fontWeight(.semibold)
+                    Text("Group Admin")
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Button(action: {}) {
+                    Text("Message")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(20)
+                }
+            }
+            .padding()
+            .background(Color(.secondarySystemGroupedBackground))
+            .cornerRadius(20)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+    
+    // MARK: - Members Section
+    private var membersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Members")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                Spacer()
+                Button("See All") {
+                    // Action
+                }
+                .foregroundColor(.blue)
+            }
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(group.members.prefix(6), id: \.self) { member in
+                        VStack(spacing: 8) {
+                            Circle()
+                                .fill(LinearGradient(
+                                    gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Text(member.prefix(1).uppercased())
+                                        .font(.title2.bold())
+                                        .foregroundColor(.white)
+                                )
+                            
+                            Text(member.split(separator: "@").first ?? "")
+                                .font(.caption)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Join Button Section
+    private var joinButtonSection: some View {
+        Button(action: { showJoinAlert = true }) {
+            Text("Join Group")
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [randomColor, .blue]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(20)
+                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
+                .padding()
+        }
+        .opacity(bottomBarAppeared ? 1 : 0)
+        .offset(y: bottomBarAppeared ? 0 : 50)
+    }
+    
+    var body: some View {
+        ZStack {
+            ScrollableNavigationBar(
+                title: group.category,
+                icon: "person.3.fill",
+                isInline: true,
+                showBackButton: true
+            ) {
+                VStack(spacing: 0) {
+                    headerSection
+                        .frame(height: 400)
+                    
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Title and Stats
+                        VStack {
+                            
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(group.name)
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [.invert, randomColor],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                    HStack {
+                                        Text("New York City")
+                                        Image(systemName: "location")
+                                        
+                                      
+                                    }
+                                    .foregroundColor(.gray)
+                                    
+                                   
+                                }
+                                Spacer()
+                               
+                            }
+                            
+                            statsSection
+                        }
+                        
+                        descriptionSection
+                        adminSection
+                        membersSection
+                    }
+                    .padding()
+                    .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
+                }.padding(.bottom, 140)
+            }
+            
+            VStack {
+                Spacer()
+                joinButtonSection
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                pageAppeared = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    bottomBarAppeared = true
+                }
+            }
+            tabBarManager.hideTab = true
+        }
+        .onDisappear {
+            tabBarManager.hideTab = false
+        }
+        .alert("Join Group", isPresented: $showJoinAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Join") {
+                // Handle join action
+            }
+        } message: {
+            Text("Would you like to join \(group.name)?")
+        }
+    }
+}
+
+struct GroupTypeIcon: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+            Text(text)
+                .font(.caption)
+                .lineLimit(1)
+        }
+        .foregroundColor(.secondary)
     }
 }
 
@@ -808,184 +1004,14 @@ struct FlowLayout: Layout {
     }
 }
 
-// Sample groups for previews
-let sampleGroups = [
-    EventGroup(
-        id: "1",
-        name: "Tech Enthusiasts NYC",
-        description: "A community of tech lovers in New York City. We meet weekly to discuss the latest in technology, share knowledge, and network with fellow tech enthusiasts.",
-        shortDescription: "Weekly tech meetups and discussions in NYC",
-        memberCount: 156,
-        imageURL: "desktopcomputer",
-        location: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
-        createdAt: Date(),
-        createdBy: "user1",
-        isPrivate: false,
-        category: "Technology",
-        tags: ["Programming", "AI", "Networking"],
-        pendingRequests: [],
-        members: ["user1", "user2", "user3"],
-        admins: ["user1"]
-    ),
-    EventGroup(
-        id: "2",
-        name: "Foodies United",
-        description: "Join us for culinary adventures! We explore new restaurants, share recipes, and host cooking workshops. From street food to fine dining, we celebrate all things food.",
-        shortDescription: "Exploring culinary delights together",
-        memberCount: 89,
-        imageURL: "leaf.fill",
-        location: CLLocationCoordinate2D(latitude: 40.7589, longitude: -73.9851),
-        createdAt: Date().addingTimeInterval(-86400),
-        createdBy: "user2",
-        isPrivate: false,
-        category: "Lifestyle",
-        tags: ["Cooking", "Restaurants", "Recipes"],
-        pendingRequests: [],
-        members: ["user2", "user4", "user5"],
-        admins: ["user2"]
-    ),
-    EventGroup(
-        id: "3",
-        name: "Art & Design Collective",
-        description: "A vibrant community of artists and designers. We organize exhibitions, workshops, and collaborative projects. All skill levels welcome!",
-        shortDescription: "Creative community for artists and designers",
-        memberCount: 234,
-        imageURL: "paintbrush.fill",
-        location: CLLocationCoordinate2D(latitude: 40.7829, longitude: -73.9654),
-        createdAt: Date().addingTimeInterval(-172800),
-        createdBy: "user3",
-        isPrivate: false,
-        category: "Art & Culture",
-        tags: ["Design", "Exhibition", "Workshop"],
-        pendingRequests: [],
-        members: ["user3", "user6", "user7", "user8"],
-        admins: ["user3"]
-    ),
-    EventGroup(
-        id: "4",
-        name: "Fitness Warriors",
-        description: "Get fit together! We organize group workouts, running sessions, and fitness challenges. Motivation and support guaranteed!",
-        shortDescription: "Group workouts and fitness challenges",
-        memberCount: 178,
-        imageURL: "figure.dance",
-        location: CLLocationCoordinate2D(latitude: 40.7549, longitude: -73.9840),
-        createdAt: Date().addingTimeInterval(-259200),
-        createdBy: "user4",
-        isPrivate: false,
-        category: "Sports",
-        tags: ["Fitness", "Workout", "Running"],
-        pendingRequests: [],
-        members: ["user4", "user9", "user10"],
-        admins: ["user4"]
-    ),
-    EventGroup(
-        id: "5",
-        name: "Music Lovers Club",
-        description: "Share your passion for music! We organize concerts, jam sessions, and music appreciation meetups. All genres welcome!",
-        shortDescription: "Music appreciation and jam sessions",
-        memberCount: 145,
-        imageURL: "music.note.list",
-        location: CLLocationCoordinate2D(latitude: 40.7580, longitude: -73.9855),
-        createdAt: Date().addingTimeInterval(-345600),
-        createdBy: "user5",
-        isPrivate: false,
-        category: "Entertainment",
-        tags: ["Concerts", "Jam Sessions", "Music"],
-        pendingRequests: [],
-        members: ["user5", "user11", "user12"],
-        admins: ["user5"]
-    ),
-    EventGroup(
-        id: "6",
-        name: "Environmental Action Group",
-        description: "Join us in making a difference for our planet! We organize cleanups, tree plantings, and educational events about sustainability.",
-        shortDescription: "Making a difference for our planet",
-        memberCount: 112,
-        imageURL: "leaf.arrow.triangle.circlepath",
-        location: CLLocationCoordinate2D(latitude: 40.7500, longitude: -73.9900),
-        createdAt: Date().addingTimeInterval(-432000),
-        createdBy: "user6",
-        isPrivate: false,
-        category: "Environmental",
-        tags: ["Sustainability", "Cleanup", "Education"],
-        pendingRequests: [],
-        members: ["user6", "user13", "user14"],
-        admins: ["user6"]
-    ),
-    EventGroup(
-        id: "7",
-        name: "Book Lovers Society",
-        description: "A community for book enthusiasts! We discuss literature, host author meetups, and organize book swaps.",
-        shortDescription: "For book enthusiasts and readers",
-        memberCount: 98,
-        imageURL: "book.fill",
-        location: CLLocationCoordinate2D(latitude: 40.7600, longitude: -73.9800),
-        createdAt: Date().addingTimeInterval(-518400),
-        createdBy: "user7",
-        isPrivate: false,
-        category: "Literature",
-        tags: ["Books", "Reading", "Authors"],
-        pendingRequests: [],
-        members: ["user7", "user15", "user16"],
-        admins: ["user7"]
-    ),
-    EventGroup(
-        id: "8",
-        name: "Corporate Networking",
-        description: "Connect with professionals from various industries. Perfect for career growth, mentorship, and business opportunities.",
-        shortDescription: "Professional networking and career growth",
-        memberCount: 267,
-        imageURL: "building.2.fill",
-        location: CLLocationCoordinate2D(latitude: 40.7450, longitude: -73.9950),
-        createdAt: Date().addingTimeInterval(-604800),
-        createdBy: "user8",
-        isPrivate: false,
-        category: "Corporate",
-        tags: ["Networking", "Career", "Business"],
-        pendingRequests: [],
-        members: ["user8", "user17", "user18", "user19"],
-        admins: ["user8"]
-    ),
-    EventGroup(
-        id: "9",
-        name: "Health & Wellness Community",
-        description: "Focus on mental and physical well-being. We offer meditation sessions, wellness workshops, and support groups.",
-        shortDescription: "Mental and physical well-being support",
-        memberCount: 143,
-        imageURL: "heart.fill",
-        location: CLLocationCoordinate2D(latitude: 40.7700, longitude: -73.9750),
-        createdAt: Date().addingTimeInterval(-691200),
-        createdBy: "user9",
-        isPrivate: false,
-        category: "Health & Wellness",
-        tags: ["Meditation", "Wellness", "Support"],
-        pendingRequests: [],
-        members: ["user9", "user20", "user21"],
-        admins: ["user9"]
-    ),
-    EventGroup(
-        id: "10",
-        name: "Other Interests Group",
-        description: "A diverse group for various interests that don't fit into other categories. Share your unique hobbies and discover new ones!",
-        shortDescription: "For diverse and unique interests",
-        memberCount: 76,
-        imageURL: "calendar",
-        location: CLLocationCoordinate2D(latitude: 40.7550, longitude: -73.9700),
-        createdAt: Date().addingTimeInterval(-777600),
-        createdBy: "user10",
-        isPrivate: false,
-        category: "Other",
-        tags: ["Diverse", "Unique", "Hobbies"],
-        pendingRequests: [],
-        members: ["user10", "user22", "user23"],
-        admins: ["user10"]
-    )
-]
+
 
 struct GroupsView_Previews: PreviewProvider {
     static var previews: some View {
-        //GroupsView(previewGroups: sampleGroups)
+      //  GroupsView(previewGroups: sampleGroups)
         GroupDetailView(group: sampleGroups[0])
+        
+      // GroupFilterView(isPresented: .constant(false), selectedCategory: .constant("All"), memberCountRange: .constant(0...500), radius: .constant(50), categories: [])
     }
 }
 
@@ -996,69 +1022,179 @@ struct GroupFilterView: View {
     @Binding var radius: Double
     let categories: [String]
     @Environment(\.presentationMode) var presentationMode
+    @State private var showAllCategories = false
+    @State private var selectedRating: Int = 4
     
     var body: some View {
-        Form {
-            Section(header: Text("Group Type")) {
-                ForEach(categories, id: \.self) { category in
-                    HStack {
-                        Text(category)
-                        Spacer()
-                        if category == selectedCategory {
-                            Image(systemName: "checkmark")
-                                .foregroundColor(.blue)
+        
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack {
+                    Spacer()
+                    Image("smilepov")
+                        .resizable()
+                        .renderingMode(.original)
+                        .aspectRatio(contentMode: .fit)
+                    .frame(width:200,height:200)
+                    Spacer()
+                }
+                
+                // Header
+              
+                HStack {
+                    Text("Category")
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .foregroundColor(.gray)
+                }.padding(.horizontal)
+                    .padding(.top,20)
+                // Category Section
+                VStack(alignment: .leading, spacing: 12) {
+                   
+                    
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(categories.prefix(showAllCategories ? categories.count : 3), id: \.self) { category in
+                                CategoryPill(text: category, isSelected: selectedCategory == category) {
+                                    selectedCategory = category
+                                }
+                            }
                         }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedCategory = category
-                    }
                 }
-            }
-            
-            Section(header: Text("Member Count")) {
-                VStack {
+                .padding(.horizontal)
+                
+                // Member Count Range
+                VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("\(Int(memberCountRange.lowerBound))")
-                        Spacer()
-                        Text("\(Int(memberCountRange.upperBound))")
-                    }
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    
-                    GroupRangeSlider(range: $memberCountRange, in: 0...500)
-                        .frame(height: 44)
-                }
-            }
-            
-            Section(header: Text("Distance")) {
-                VStack(alignment: .leading) {
-                    HStack {
-                        Text("\(Int(radius)) miles")
+                        Text("Member Count")
                             .font(.headline)
                         Spacer()
+                        Text("\(Int(memberCountRange.lowerBound))-\(Int(memberCountRange.upperBound))")
+                            .foregroundColor(.gray)
+                    }
+                    
+                    GroupRangeSlider(range: $memberCountRange, in: 0...600)
+                        
+                        .padding(.horizontal,10)
+                        .padding(.top,20)
+                        .padding(.bottom,35)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                // Distance
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Distance")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(Int(radius)) miles")
+                            .foregroundColor(.gray)
                     }
                     
                     Slider(value: $radius, in: 1...100, step: 1)
+                        .accentColor(.orange)
+                        .padding(.horizontal,10)
+                        .padding(.top,15)
+                        .padding(.bottom,15)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                // Rating Section
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Rating")
+                            .font(.headline)
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .foregroundColor(.gray)
+                    }
+                    
+                    VStack(spacing: 16) {
+                        ForEach((2...4).reversed(), id: \.self) { rating in
+                            Button(action: { selectedRating = rating }) {
+                                HStack {
+                                    HStack(spacing: 4) {
+                                        ForEach(0..<rating, id: \.self) { _ in
+                                            Image(systemName: "star.fill")
+                                        }
+                                        Text("& up")
+                                    }
+                                    .foregroundColor(.primary)
+                                    
+                                    Spacer()
+                                    
+                                    if selectedRating == rating {
+                                        Image(systemName: "checkmark.square.fill")
+                                            .foregroundColor(.invert)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                // Show Results Button
+                Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                    Text("Show Results")
+                        .font(.headline)
+                        .foregroundColor(.dynamic)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.invert)
+                        .cornerRadius(12)
+                }
+                .padding()
+            }.padding(.bottom, 60)
+        }
+        .navigationTitle("Filter")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                withAnimation(.spring()) {
+                    Button("Reset") {
+                        selectedCategory = "All"
+                        memberCountRange = 0...500
+                        radius = 50
+                        //showAllCategories.toggle()
+                    }
                 }
             }
         }
-        .navigationTitle("Group Filters")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Reset") {
-                    selectedCategory = "All"
-                    memberCountRange = 0...500
-                    radius = 50
-                }
-            }
             
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    presentationMode.wrappedValue.dismiss()
+                .foregroundColor(.invert)
+        
+                .background(Color.dynamic)
+        .edgesIgnoringSafeArea(.bottom)
+    }
+}
+
+struct CategoryPill: View {
+    let text: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(text)
+                if isSelected {
+                    Image(systemName: "checkmark")
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.black : Color.gray.opacity(0.1))
+            .foregroundColor(isSelected ? .white : .primary)
+            .cornerRadius(20)
         }
     }
 }
@@ -1080,7 +1216,7 @@ struct GroupRangeSlider: View {
                     .frame(height: 4)
                 
                 Rectangle()
-                    .fill(Color.blue)
+                    .fill(Color.orange)
                     .frame(width: CGFloat((range.upperBound - range.lowerBound) / (bounds.upperBound - bounds.lowerBound)) * geometry.size.width,
                            height: 4)
                     .offset(x: CGFloat((range.lowerBound - bounds.lowerBound) / (bounds.upperBound - bounds.lowerBound)) * geometry.size.width)
