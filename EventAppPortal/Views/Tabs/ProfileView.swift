@@ -15,103 +15,80 @@ struct ProfileView: View {
     @State private var showEventImageUpdate = false
     @StateObject private var locationManager = LocationManager()
     @State private var showLocationSettings = false
+    @State private var userName: String = ""
+    @State private var userEmail: String = ""
     
     var body: some View {
         NavigationView {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                // Profile Header
-                    ZStack(alignment: .top) {
-                        // Cover Image
-//                        LinearGradient(
-//                            colors: [.purple.opacity(0.8), .blue.opacity(0.8)],
-//                            startPoint: .topLeading,
-//                            endPoint: .bottomTrailing
-//                        )
-                      
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Profile")
+                        .font(.system(size: 34, weight: .bold))
+                        .padding()
+                        .padding(.top)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    
+                    // INFO Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Profile Information")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
                         
-                        HStack {
-                            // Profile Image
-                            Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                                .frame(width: 100, height: 100)
-                                .foregroundStyle(.white)
-                                .background(Circle().fill(.white.opacity(0.2)).blur(radius: 10))
-                                .overlay(
-                                    Circle()
-                                        .stroke(.white.opacity(0.6), lineWidth: 4)
-                                )
-                                .shadow(color: .invert.opacity(0.1), radius: 10, x: 0, y: 5)
-                            
-                            Spacer()
-                            // Profile Info
-                            VStack {
-                                Text(userData?["name"] as? String ?? "Loading...")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                    .foregroundColor(.primary)
+                        VStack(spacing: 1) {
+                            // Name Row
+                            HStack(spacing: 15) {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.gray)
                                 
-                                
-                                Text(firebaseManager.currentUser?.email ?? "")
-                                .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                // Stats
-                                HStack(spacing: 40) {
-                                    StatView(number: "\(userData?["eventsCreated"] as? Int ?? 0)", title: "Events")
-                                    StatView(number: "0", title: "Followers")
-                                    StatView(number: "0", title: "Following")
+                                VStack(alignment: .leading) {
+                                    Text("Name")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    Text(userName)
+                                        .font(.body)
                                 }
-                                .padding(.top, 10)
-                                
-                                // Add Upload Photos Button
-//                                Button(action: { showPhotoUpload = true }) {
-//                                    Label("Upload Photos", systemImage: "photo.stack")
-//                                        .font(.caption)
-//                                        .padding(.horizontal, 12)
-//                                        .padding(.vertical, 6)
-//                                        .background(Color.blue)
-//                                        .foregroundColor(.white)
-//                                        .cornerRadius(15)
-//                                }
-//                                .padding(.top, 8)
+                                Spacer()
                             }
+                            .padding()
+                            .background(Color(.systemBackground))
                             
+                            // Email Row
+                            HStack(spacing: 15) {
+                                Image(systemName: "envelope.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.gray)
+                                
+                                VStack(alignment: .leading) {
+                                    Text("Email")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                    Text(userEmail)
+                                        .font(.body)
+                                }
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
                         }
-                        .padding(.top, 10)
-                        .padding(.bottom, 10)
-                        .padding(.horizontal,25)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                        .padding(.horizontal)
                     }
                     
-                    // Display uploaded photos grid
-//                    if !userPhotos.isEmpty {
-//                        VStack(alignment: .leading) {
-//                            Text("My Photos")
-//                                .font(.headline)
-//                                .padding(.horizontal)
-//
-//                            ScrollView(.horizontal, showsIndicators: false) {
-//                                LazyHStack(spacing: 10) {
-//                                    ForEach(userPhotos, id: \.self) { photoUrl in
-//                                        AsyncImage(url: URL(string: photoUrl)) { image in
-//                                            image
-//                                                .resizable()
-//                                                .scaledToFill()
-//                                        } placeholder: {
-//                                            ProgressView()
-//                                        }
-//                                        .frame(width: 100, height: 100)
-//                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-//                                    }
-//                                }
-//                                .padding(.horizontal)
-//                            }
-//                        }
-//                        .padding(.vertical)
-//                    }
+                 
                     
-                    Divider()
-                        .padding(.horizontal,25)
                     // Settings Cards
                     VStack(spacing: 16) {
                         SettingsCard(title: "Account Settings", items: [
@@ -122,7 +99,8 @@ struct ProfileView: View {
                             SettingsItem(icon: "bell.fill", title: "Notifications", color: .purple),
                             SettingsItem(icon: "lock.fill", title: "Privacy", color: .green)
                         ], showEventImageUpdate: $showEventImageUpdate)
-                        // Add this section to your existing settings or create a new one
+                        
+                        // Location Section
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Location")
                                 .font(.headline)
@@ -140,8 +118,8 @@ struct ProfileView: View {
                                         .foregroundColor(.gray)
                                         .lineLimit(1)
                                     Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
+                                        .foregroundColor(.gray)
+                                }
                                 .padding()
                                 .background(Color(.systemBackground))
                                 .cornerRadius(12)
@@ -149,14 +127,16 @@ struct ProfileView: View {
                             }
                         }
                         
-                        
                         SettingsCard(title: "Support", items: [
                             SettingsItem(icon: "questionmark.circle.fill", title: "Help Center", color: .orange),
                             SettingsItem(icon: "envelope.fill", title: "Contact Us", color: .pink),
                             SettingsItem(icon: "star.fill", title: "Rate App", color: .yellow)
                         ], showEventImageUpdate: $showEventImageUpdate)
                         
-                        // Add Admin Tools section if user is admin
+                        SettingsCard(title: "Activity", items: [
+                            SettingsItem(icon: "clock.fill", title: "History", color: .blue)
+                        ], showEventImageUpdate: $showEventImageUpdate)
+                        
                         if firebaseManager.currentUser?.email == "zabloncharles@gmail.com" {
                             SettingsCard(title: "Admin Tools", items: [
                                 SettingsItem(icon: "photo.stack", title: "Update Event Images", color: .purple)
@@ -180,15 +160,16 @@ struct ProfileView: View {
                             .cornerRadius(12)
                         }
                         .padding(.top)
+                        .padding(.bottom, 70)
                     }
                     .padding()
-                    
-                    
-                }.padding(.bottom, 70) //to not hide the tabbar
-            }.navigationTitle("Profile")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbarBackground(Color.dynamic)
-            
+                }
+            }
+            .background(Color.dynamic)
+            .onAppear {
+                fetchUserProfile()
+                loadUserData()
+            }
             .alert("Sign Out", isPresented: $showingLogoutAlert) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {
@@ -197,35 +178,31 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: resetAndPopulateEvents) {
-                        if isResettingEvents {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                        }
-                    }
-                    .disabled(isResettingEvents)
+            .sheet(isPresented: $showPhotoUpload) {
+                PhotoUploadView { urls in
+                    self.userPhotos.append(contentsOf: urls)
+                    savePhotosToUserProfile(urls)
                 }
             }
-        }
-        .sheet(isPresented: $showPhotoUpload) {
-            PhotoUploadView { urls in
-                self.userPhotos.append(contentsOf: urls)
-                savePhotosToUserProfile(urls)
+            .sheet(isPresented: $showEventImageUpdate) {
+                EventImageUpdateView()
+            }
+            .sheet(isPresented: $showLocationSettings) {
+                LocationSettingsView(locationManager: locationManager, userId: userID, locationString: userData?["locationString"] as? String ?? "Not Set")
             }
         }
-        .sheet(isPresented: $showEventImageUpdate) {
-            EventImageUpdateView()
-        }
-        .sheet(isPresented: $showLocationSettings) {
-            LocationSettingsView(locationManager: locationManager, userId: userID, locationString:userData?["locationString"] as? String ?? "Not Set")
-        }
-        .onAppear {
-            loadUserData()
-          //  loadUserPhotos()
+    }
+    
+    private func fetchUserProfile() {
+        guard let userId = firebaseManager.currentUser?.uid else { return }
+        let db = Firestore.firestore()
+        
+        db.collection("users").document(userId).getDocument { document, error in
+            if let document = document, document.exists {
+                let data = document.data()
+                userName = data?["name"] as? String ?? ""
+                userEmail = data?["email"] as? String ?? ""
+            }
         }
     }
     
@@ -233,6 +210,21 @@ struct ProfileView: View {
         firebaseManager.getUserData { data, error in
             if let data = data {
                 self.userData = data
+            }
+        }
+    }
+    
+    private func savePhotosToUserProfile(_ urls: [String]) {
+        guard !userID.isEmpty else { return }
+        
+        let db = Firestore.firestore()
+        let userRef = db.collection("users").document(userID)
+        
+        userRef.updateData([
+            "photos": FieldValue.arrayUnion(urls)
+        ]) { error in
+            if let error = error {
+                print("Error saving photos to profile: \(error)")
             }
         }
     }
@@ -496,21 +488,6 @@ struct ProfileView: View {
         }
     }
     
-    private func savePhotosToUserProfile(_ urls: [String]) {
-        guard !userID.isEmpty else { return }
-        
-        let db = Firestore.firestore()
-        let userRef = db.collection("users").document(userID)
-        
-        userRef.updateData([
-            "photos": FieldValue.arrayUnion(urls)
-        ]) { error in
-            if let error = error {
-                print("Error saving photos to profile: \(error)")
-            }
-        }
-    }
-    
     private func loadUserPhotos() {
         guard !userID.isEmpty else { return }
         
@@ -578,7 +555,11 @@ struct SettingsCard: View {
             }
             .background(Color(.systemBackground))
             .cornerRadius(12)
-            .shadow(color: Color.invert.opacity(0.05), radius: 5, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+            )
+           
         }
     }
     
@@ -607,6 +588,8 @@ struct SettingsCard: View {
             HelpCenterView()
         case "Rate App":
             Text("Rate App")
+        case "History":
+            HistoryView()
         default:
             Text(title)
         }
@@ -637,35 +620,131 @@ struct EditProfileView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // Profile Image
+            VStack(spacing: 25) {
+                Text("Edit Profile")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [Color.purple, .blue]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                
+                // Profile Image Section
                 Button(action: { showImagePicker = true }) {
                     ZStack {
-                        Image(systemName: "person.crop.circle.fill")
-                            .resizable()
-                            .scaledToFit()
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.purple.opacity(0.8), Color.blue.opacity(0.8)]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                             .frame(width: 100, height: 100)
-                            .foregroundColor(.blue)
+                            .overlay(
+                                Image(systemName: "person.crop.circle.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .foregroundColor(.white)
+                                    .padding(20)
+                            )
                         
                         Circle()
-                            .fill(Color.invert.opacity(0.4))
+                            .fill(Color.black.opacity(0.2))
                             .frame(width: 100, height: 100)
                             .overlay(
                                 Image(systemName: "camera.fill")
                                     .foregroundColor(.white)
                             )
+                            .opacity(0.7)
                     }
                 }
+                .padding(.vertical, 10)
                 
                 // Form Fields
-                VStack(spacing: 15) {
-                    ProfileTextField(title: "Full Name", text: $fullName)
-                    ProfileTextField(title: "Email", text: $email)
-                    ProfileTextEditor(title: "Bio", text: $bio)
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Personal Information")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .padding(.horizontal)
+                            .padding(.bottom, 8)
+                        
+                        VStack(spacing: 20) {
+                            // Name Field
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "person.fill")
+                                        .foregroundColor(.gray)
+                                    Text("Full Name")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.horizontal)
+                                .padding(.top, 12)
+                                
+                                TextField("Enter your full name", text: $fullName)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 12)
+                                    .background(Color(.systemBackground))
+                            }
+                            
+                            // Email Field
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "envelope.fill")
+                                        .foregroundColor(.gray)
+                                    Text("Email Address")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.horizontal)
+                                .padding(.top, 12)
+                                
+                                TextField("Enter your email", text: $email)
+                                    .textFieldStyle(PlainTextFieldStyle())
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 12)
+                                    .background(Color(.systemBackground))
+                            }
+                            
+                            // Bio Field
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Image(systemName: "text.quote")
+                                        .foregroundColor(.gray)
+                                    Text("Bio")
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                }
+                                .padding(.horizontal)
+                                .padding(.top, 12)
+                                
+                                TextEditor(text: $bio)
+                                    .frame(height: 100)
+                                    .padding(8)
+                                    .background(Color(.systemBackground))
+                                    .padding(.bottom, 12)
+                            }
+                        }
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(15)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                    }
                 }
-                .padding()
+                .padding(.horizontal)
                 
-                    Button(action: {
+                // Save Button
+                Button(action: {
                     // Save changes
                     dismiss()
                 }) {
@@ -673,16 +752,23 @@ struct EditProfileView: View {
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(12)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, Color.blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(15)
+                        .padding(.horizontal)
                 }
-                .padding()
+                .padding(.top, 20)
+                .padding(.bottom, 30)
             }
         }
-        .navigationTitle("Edit Profile")
+        .background(Color.dynamic)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.dynamic)
     }
 }
 
@@ -764,7 +850,7 @@ struct MyEventsView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         ForEach(filteredEvents) { event in
-                            EventCard(event: event)
+                            RegularEventCard(event: event)
                                 .padding(.horizontal)
                         }
                     }
@@ -781,6 +867,7 @@ struct MyEventsView: View {
             } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
+            .hideTabOnAppear()
     }
     
     private func fetchUserEvents() {
@@ -1146,52 +1233,6 @@ struct ProfileTextEditor: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(8)
         }
-    }
-}
-
-struct EventCard: View {
-    var event: Event
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(event.name)
-                    .font(.headline)
-                Spacer()
-                Text(event.startDate > Date() ? "Upcoming" : "Ongoing")
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.green.opacity(0.2))
-                    .foregroundColor(.green)
-                    .cornerRadius(4)
-            }
-            
-            Text(formatDate(event.startDate))
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            Text(event.location)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(
-            ZStack {
-                CompactImageViewer(imageUrls: event.images, height: 200)
-                LinearGradient(colors: [.invert.opacity(0.7), .clear],
-                             startPoint: .bottom, 
-                             endPoint: .top)
-            }
-        )
-        .cornerRadius(12)
-        .shadow(color: Color.invert.opacity(0.1), radius: 5, x: 0, y: 2)
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
     }
 }
 

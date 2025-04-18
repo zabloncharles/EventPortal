@@ -304,12 +304,12 @@ struct CalendarView: View {
                         // Weekday headers
                         HStack(spacing: 15) {
                             ForEach(["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], id: \.self) { day in
-                                Text(day)
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.gray)
-                                    .frame(maxWidth: .infinity)
-                            }
+                                    Text(day)
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.gray)
+                                        .frame(maxWidth: .infinity)
+                                }
                         }
                         .padding(.horizontal)
                         
@@ -356,10 +356,10 @@ struct CalendarView: View {
                                             )
                                         )
                                     Spacer()
-                                    
-                                    Image(systemName: "text.badge.plus")
-                                        .font(.title2)
-                                        .foregroundColor(.white.opacity(0.7))
+                                   
+                                        Image(systemName: "text.badge.plus")
+                                            .font(.title2)
+                                            .foregroundColor(.white.opacity(0.7))
                                 }
                                 Text("Events happening today")
                                     .foregroundColor(.secondary)
@@ -380,7 +380,7 @@ struct CalendarView: View {
                         }
                     }
                     .fontWeight(.bold)
-                    .padding(.horizontal)
+                        .padding(.horizontal)
                 }
                 .animation(.easeInOut, value: selectedDate)
             }

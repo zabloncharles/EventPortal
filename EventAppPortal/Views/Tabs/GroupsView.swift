@@ -35,6 +35,7 @@ struct GroupsView: View {
     @State private var showingFilterSheet = false
     @State var showHorizontalCategory = false
     @State private var selectedCategoryForOverlay: String? = nil
+    @State private var showNotifications = false
    
     private let radiusInMiles: Double = 50
     @State var seeAllCategories = false
@@ -325,6 +326,11 @@ struct GroupsView: View {
                             }
                             .padding(.horizontal)
                             Spacer()
+                            Button(action: { showNotifications.toggle() }) {
+                                Image(systemName: "bell.fill")
+                                    .font(.title3)
+                                    .foregroundColor(.primary)
+                            }.padding(.horizontal)
                         }
                         searchBar
                     }.padding(.bottom, 15)
@@ -343,6 +349,17 @@ struct GroupsView: View {
         }
         .onAppear {
             fetchNearbyGroups()
+        }
+        .sheet(isPresented: $showNotifications) {
+            GroupNotificationsView()
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showNotifications.toggle() }) {
+                    Image(systemName: "bell.fill")
+                        .foregroundColor(.primary)
+                }
+            }
         }
     }
     
@@ -569,345 +586,6 @@ struct GroupCard: View {
     }
 }
 
-struct GroupDetailView: View {
-    let group: EventGroup
-    @Environment(\.presentationMode) var presentationMode
-    @State private var showJoinAlert = false
-    @State private var scrollOffset: CGFloat = 0
-    let colors = [Color.red, Color.blue, Color.green, Color.purple, Color.orange]
-    @StateObject private var tabBarManager = TabBarVisibilityManager.shared
-    @State private var isDescriptionExpanded = false
-    @State private var pageAppeared = false
-    @State private var bottomBarAppeared = false
-    @State private var currentPage = 0
-    @State private var memberCount: Int = 0
-    @State private var randomColor = Color.randomizetextcolor
-    @State private var randomColor2 = Color.randomizetextcolor
-    // MARK: - Helper Functions
-    private func categoryIcon(for category: String) -> String {
-        switch category {
-        case "Sports": return "figure.run"
-        case "Music": return "music.note"
-        case "Art": return "paintbrush.fill"
-        case "Technology": return "desktopcomputer"
-        case "Food": return "fork.knife"
-        case "Travel": return "airplane"
-        case "Environmental": return "leaf.arrow.triangle.circlepath"
-        case "Literature": return "book.fill"
-        case "Corporate": return "building.2.fill"
-        case "Health & Wellness": return "heart.fill"
-        default: return "star.fill"
-        }
-    }
-    
-    // MARK: - Header Section
-    private var headerSection: some View {
-        ZStack(alignment: .top) {
-           
-            
-            VStack {
-                Spacer()
-                
-                   
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Image("smilepov")
-                            .resizable()
-                            .renderingMode(.original)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width:200,height:200)
-                            .background( Circle().fill(Color.clear).background(LinearGradient(
-                                gradient: Gradient(colors: [randomColor2, Color.clear, randomColor.opacity(0.30)]),
-                                startPoint: .bottom,
-                                endPoint: .center
-                            )).clipShape(Circle()))
-                        Spacer()
-                    }
-                 
-                .padding(.horizontal)
-                .padding(.bottom, 50)
-            }.scaleEffect(bottomBarAppeared ? 1 : 0.97)
-                .animation(.spring(), value: bottomBarAppeared)
-        }
-    }
-    
-    // MARK: - Stats Section
-    private var statsSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 16) {
-                GroupTypeIcon(
-                    icon: categoryIcon(for: group.category),
-                    text: group.category
-                )
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                GroupTypeIcon(
-                    icon: "eye",
-                    text: "\(group.memberCount) Views"
-                )
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
-                GroupTypeIcon(
-                    icon: "person.2",
-                    text: "\(group.memberCount) Members"
-                )
-                
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
-                GroupTypeIcon(
-                    icon: "mappin.circle",
-                    text: "New York"
-                )
-                
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
-                GroupTypeIcon(
-                    icon: group.isPrivate ? "lock.fill" : "lock.open.fill",
-                    text: group.isPrivate ? "Private" : "Public"
-                )
-            }
-        }
-        .padding(.vertical)
-        .background(Color.dynamic)
-        .cornerRadius(16)
-        .padding(.top, -15)
-        .padding(.bottom, -20)
-    }
-    
-    // MARK: - Description Section
-    private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("About")
-                .font(.title3)
-                .fontWeight(.bold)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(group.description)
-                    .foregroundColor(.secondary)
-                    .lineLimit(isDescriptionExpanded ? nil : 2)
-                    .animation(.easeInOut, value: isDescriptionExpanded)
-                
-                Button(action: {
-                    withAnimation {
-                        isDescriptionExpanded.toggle()
-                    }
-                }) {
-                    Text(isDescriptionExpanded ? "Read Less" : "Read More")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(randomColor2)
-                }
-                .padding(.top, 4)
-            }
-        }
-    }
-    
-    // MARK: - Admin Section
-    private var adminSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Group Admin")
-                .font(.title3)
-                .fontWeight(.bold)
-            
-            HStack {
-                Circle()
-                    .fill(LinearGradient(
-                        gradient: Gradient(colors: [randomColor2, .blue]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
-                    .frame(width: 60, height: 60)
-                    .overlay(
-                      //  Text(group.createdBy.prefix(1).uppercased())
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.title2.bold())
-                            .foregroundColor(.white)
-                    )
-                
-                VStack(alignment: .leading) {
-                    Text(group.createdBy)
-                        .fontWeight(.semibold)
-                    Text("Group Admin")
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                Button(action: {}) {
-                    Text("Message")
-                        .font(.subheadline.bold())
-                        .foregroundColor(.blue)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(20)
-                }
-            }
-            .padding()
-            .background(Color(.secondarySystemGroupedBackground))
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-            )
-        }
-    }
-    
-    // MARK: - Members Section
-    private var membersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Members")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                Spacer()
-                Button("See All") {
-                    // Action
-                }
-                .foregroundColor(.blue)
-            }
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(group.members.prefix(6), id: \.self) { member in
-                        VStack(spacing: 8) {
-                            Circle()
-                                .fill(LinearGradient(
-                                    gradient: Gradient(colors: [colors.randomElement() ?? .blue, .blue]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 60, height: 60)
-                                .overlay(
-                                    Text(member.prefix(1).uppercased())
-                                        .font(.title2.bold())
-                                        .foregroundColor(.white)
-                                )
-                            
-                            Text(member.split(separator: "@").first ?? "")
-                                .font(.caption)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Join Button Section
-    private var joinButtonSection: some View {
-        Button(action: { showJoinAlert = true }) {
-            Text("Join Group")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [randomColor, .blue]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(20)
-                .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
-                .padding()
-        }
-        .opacity(bottomBarAppeared ? 1 : 0)
-        .offset(y: bottomBarAppeared ? 0 : 50)
-    }
-    
-    var body: some View {
-        ZStack {
-            ScrollableNavigationBar(
-                title: group.category,
-                icon: "person.3.fill",
-                isInline: true,
-                showBackButton: true
-            ) {
-                VStack(spacing: 0) {
-                    headerSection
-                        .frame(height: 400)
-                    
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Title and Stats
-                        VStack {
-                            
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(group.name)
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.invert, randomColor],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                    HStack {
-                                        Text("New York City")
-                                        Image(systemName: "location")
-                                        
-                                      
-                                    }
-                                    .foregroundColor(.gray)
-                                    
-                                   
-                                }
-                                Spacer()
-                               
-                            }
-                            
-                            statsSection
-                        }
-                        
-                        descriptionSection
-                        adminSection
-                        membersSection
-                    }
-                    .padding()
-                    .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
-                }.padding(.bottom, 140)
-            }
-            
-            VStack {
-                Spacer()
-                joinButtonSection
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
-                pageAppeared = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    bottomBarAppeared = true
-                }
-            }
-            tabBarManager.hideTab = true
-        }
-        .onDisappear {
-            tabBarManager.hideTab = false
-        }
-        .alert("Join Group", isPresented: $showJoinAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Join") {
-                // Handle join action
-            }
-        } message: {
-            Text("Would you like to join \(group.name)?")
-        }
-    }
-}
-
 struct GroupTypeIcon: View {
     let icon: String
     let text: String
@@ -1004,14 +682,261 @@ struct FlowLayout: Layout {
     }
 }
 
+struct GroupNotificationsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedTab = 0
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    @State private var myGroups: [EventGroup] = []
+    @State private var pendingGroups: [EventGroup] = []
+    @State private var createdGroups: [EventGroup] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Custom Tab Bar
+                HStack(spacing: 0) {
+                    TabButton(title: "My Groups", isSelected: selectedTab == 0) {
+                        withAnimation { selectedTab = 0 }
+                    }
+                    TabButton(title: "Pending", isSelected: selectedTab == 1) {
+                        withAnimation { selectedTab = 1 }
+                    }
+                    TabButton(title: "Created", isSelected: selectedTab == 2) {
+                        withAnimation { selectedTab = 2 }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top)
+                
+                // Tab Content
+                TabView(selection: $selectedTab) {
+                    // My Groups Tab
+                    GroupList(groups: myGroups, emptyMessage: "You haven't joined any groups yet")
+                        .tag(0)
+                    
+                    // Pending Groups Tab
+                    GroupList(groups: pendingGroups, emptyMessage: "No pending group requests")
+                        .tag(1)
+                    
+                    // Created Groups Tab
+                    GroupList(groups: createdGroups, emptyMessage: "You haven't created any groups")
+                        .tag(2)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
+            .navigationTitle("Group Notifications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+            .onAppear {
+                fetchGroups()
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.2))
+                }
+            }
+        }
+    }
+    
+    private func fetchGroups() {
+        guard let userId = firebaseManager.currentUser?.uid else { return }
+        
+        // Reset loading state
+        isLoading = true
+        errorMessage = nil
+        
+        let db = Firestore.firestore()
+        
+        // Fetch groups user is a member of
+        db.collection("groups")
+            .whereField("members", arrayContains: userId)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                    return
+                }
+                
+                myGroups = snapshot?.documents.compactMap { document in
+                    EventGroup.fromFirestore(document)
+                } ?? []
+                
+                // Fetch pending groups
+                db.collection("groups")
+                    .whereField("pendingMembers", arrayContains: userId)
+                    .getDocuments { snapshot, error in
+                        if let error = error {
+                            errorMessage = error.localizedDescription
+                            isLoading = false
+                            return
+                        }
+                        
+                        pendingGroups = snapshot?.documents.compactMap { document in
+                            EventGroup.fromFirestore(document)
+                        } ?? []
+                        
+                        // Fetch created groups
+                        db.collection("groups")
+                            .whereField("owner", isEqualTo: userId)
+                            .getDocuments { snapshot, error in
+                                isLoading = false
+                                
+                                if let error = error {
+                                    errorMessage = error.localizedDescription
+                                    return
+                                }
+                                
+                                createdGroups = snapshot?.documents.compactMap { document in
+                                    EventGroup.fromFirestore(document)
+                                } ?? []
+                            }
+                    }
+            }
+    }
+}
 
+struct GroupList: View {
+    let groups: [EventGroup]
+    let emptyMessage: String
+    
+    var body: some View {
+        ScrollView {
+            if groups.isEmpty {
+                EmptyStateView(message: emptyMessage)
+            } else {
+                LazyVStack(spacing: 16) {
+                    ForEach(groups) { group in
+                        GroupNotificationCard(group: group)
+                    }
+                }
+                .padding()
+            }
+        }
+    }
+}
+
+struct GroupNotificationCard: View {
+    let group: EventGroup
+    
+    var body: some View {
+        NavigationLink(destination: GroupDetailView(group: group)) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(group.name)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                    Spacer()
+                    Text("\(group.memberCount) members")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                
+                if let description = group.description {
+                    Text(description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                
+                HStack {
+                    CategoryPill(
+                        text: group.category,
+                        isSelected: false,
+                        action: {}
+                    )
+                    Spacer()
+                    Text(group.isPrivate ? "Private" : "Public")
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(group.isPrivate ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
+                        .foregroundColor(group.isPrivate ? .red : .green)
+                        .cornerRadius(8)
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+    }
+}
+
+struct TabButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                
+                Rectangle()
+                    .fill(isSelected ? Color.blue : Color.clear)
+                    .frame(height: 2)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct EmptyStateView: View {
+    let message: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 50))
+                .foregroundStyle(
+                    LinearGradient(colors: [.blue.opacity(0.7), .purple.opacity(0.7)],
+                                 startPoint: .topLeading,
+                                 endPoint: .bottomTrailing)
+                )
+            
+            Text(message)
+                .font(.headline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+}
+
+struct GroupNotificationsView_Previews: PreviewProvider {
+    static var previews: some View {
+        GroupNotificationsView()
+            .environmentObject(FirebaseManager.shared)
+    }
+}
+
+// Add this extension for preview purposes
+extension GroupNotificationsView {
+    static var preview: some View {
+        GroupNotificationsView()
+            .environmentObject(FirebaseManager.shared)
+    }
+}
 
 struct GroupsView_Previews: PreviewProvider {
     static var previews: some View {
-      //  GroupsView(previewGroups: sampleGroups)
-        GroupDetailView(group: sampleGroups[0])
-        
-      // GroupFilterView(isPresented: .constant(false), selectedCategory: .constant("All"), memberCountRange: .constant(0...500), radius: .constant(50), categories: [])
+        GroupsView(previewGroups: sampleGroups)
+            .environmentObject(FirebaseManager.shared)
     }
 }
 
@@ -1251,4 +1176,4 @@ struct GroupRangeSlider: View {
             }
         }
     }
-} 
+}
