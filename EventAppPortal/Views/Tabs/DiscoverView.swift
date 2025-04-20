@@ -1,6 +1,7 @@
 import SwiftUI
 import FirebaseFirestore
 import MapKit
+import CoreLocation
 
 enum FilterType: String, CaseIterable, Identifiable {
     case all = "All"
@@ -178,6 +179,16 @@ struct DiscoverView: View {
     @State private var bottomSheetPosition: BottomSheetPosition = .middle
     @State private var dragOffset: CGFloat = 0
     @State private var nearestEvents: [Event] = []
+    @State private var selectedEvent: Event?
+    @State private var visibleEvents: [Event] = []
+    @State private var showingFilters = false
+    @State private var currentPage = 0
+    
+    let categories = [
+        "All", "Concert", "Corporate", "Marketing", "Health & Wellness",
+        "Technology", "Art & Culture", "Charity", "Literature", "Lifestyle",
+        "Environmental", "Entertainment"
+    ]
     
     enum ViewMode {
         case list
@@ -206,8 +217,8 @@ struct DiscoverView: View {
     
     // Add computed property for displayed events
     private var displayedEvents: [Event] {
-        if searchText.isEmpty {
-            // Show top 3 most viewed events
+        if searchText.isEmpty && selectedFilter == .all {
+            // Show top 3 most viewed events when no search or filter
             return filterModel.filteredEvents
                 .sorted { 
                     let views1 = Int($0.views) ?? 0
@@ -217,7 +228,7 @@ struct DiscoverView: View {
                 .prefix(3)
                 .map { $0 }
         } else {
-            // Show search results
+            // Show filtered results
             return filteredEvents
         }
     }
@@ -227,15 +238,127 @@ struct DiscoverView: View {
             ZStack {
                 // Map Background
                 mainMapView
-                    .offset(y: -180)
+                    .offset(y: showSearchView ? 0 : -180)
+                    .blur(radius: showSearchView ? 5 : 0)
+                 
                 
                 // Top Bar
-                topBar
-                
+                VStack {
+                    VStack {
+                        if !showSearchView {
+                    HStack {
+                                Image(systemName: "figure.walk")
+                                    .font(.title)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 40, height: 60)
+                                    .cornerRadius(70)
+                                    .padding(.leading, 4)
+                                
+                        VStack(alignment: .leading) {
+                                    Text("Explore by:")
+                                        .font(.callout)
+                                        .bold()
+                                        .foregroundColor(.blue)
+                                    
+                                    Text(locationManager.locationString.split(separator: ",")[0] == "Not Set" ? "not logged in!" : locationManager.locationString.split(separator: ",")[0])
+                                        .font(.subheadline)
+                                .foregroundColor(.gray)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: "magnifyingglass")
+                                    .font(.title)
+                                    .foregroundColor(.blue)
+                                    .onTapGesture {
+                                        showSearchView = true
+                                    }
+                                
+                                if clickedEvent {
+                            Button(action: {
+                                        withAnimation(.spring()) {
+                                            clickedEvent = false
+                                            hideTab = false
+                                            zoomOut()
+                                        }
+                                    }) {
+                                        Image(systemName: "xmark")
+                                            .font(.title)
+                                            .foregroundColor(.dynamic)
+                                            .padding(10)
+                                            .background(Circle().fill(.red))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 5)
+                    .background(Color.dynamic)
+                    .cornerRadius(50)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 50)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.invert, .red, .blue, Color.invert]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1
+                            )
+                            .opacity(showSearchView ? 0 : 1)
+                    )
+                    .padding(.top, 20)
+                    .padding(.horizontal, showSearchView ? 0 : 20)
+                        Spacer()
+                }
+               
                 // Bottom Sheet with Closest Events
                 if !showSearchView {
                     VStack(spacing: 0) {
                         Spacer()
+                        
+                        // Map Control Buttons
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 12) {
+                        Button(action: {
+                                    withAnimation {
+                                        region.span = MKCoordinateSpan(
+                                            latitudeDelta: region.span.latitudeDelta / 2,
+                                            longitudeDelta: region.span.longitudeDelta / 2
+                                        )
+                                    }
+                                }) {
+                                    Image(systemName: "plus.magnifyingglass")
+                                .font(.title2)
+                                        .foregroundColor(.invert)
+                                        .padding(12)
+                                        .background(Color.dynamic)
+                                        .clipShape(Circle())
+                                        .shadow(radius: 3)
+                                }
+                                
+                        Button(action: {
+                                    withAnimation {
+                                        region.span = MKCoordinateSpan(
+                                            latitudeDelta: region.span.latitudeDelta * 2,
+                                            longitudeDelta: region.span.longitudeDelta * 2
+                                        )
+                                    }
+                                }) {
+                                    Image(systemName: "minus.magnifyingglass")
+                                    .font(.title2)
+                                        .foregroundColor(.invert)
+                                        .padding(12)
+                                        .background(Color.dynamic)
+                                        .clipShape(Circle())
+                                        .shadow(radius: 3)
+                                }
+                            }
+                            .padding(.trailing)
+                        }
+                        .padding(.bottom, 10)
                         
                         VStack(spacing: 0) {
                             // Handle
@@ -247,62 +370,62 @@ struct DiscoverView: View {
                             
                             // Title and Count
                     HStack {
-                                Text("Nearby Events")
+                                Text("Catch the Trending Events")
                                     .font(.title3)
                                     .bold()
                                 
                                 Spacer()
                                 
-                                Text("\(nearestEvents.count) found")
-                            .foregroundColor(.gray)
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 10)
-                            
-                            // Events List
-                            ScrollView {
-                                LazyVStack(spacing: 15) {
-                                    ForEach(nearestEvents) { event in
-                                        EventListItem(event: event, isSelected: event.id == clickedData?.id)
-                                            .onTapGesture {
-                                                clickedData = event
-                                                withAnimation(.spring()) {
-                                                    zoomToEvent(event: event)
-                                                    clickedEvent = true
-                                                }
-                            }
+                            Button(action: {
+                                    // Handle explore more action
+                            }) {
+                                    Text("Explore More")
+                                        .font(.subheadline)
+                                    .foregroundColor(.gray)
                         }
                     }
                     .padding(.horizontal)
-                                .padding(.bottom,80)
+                            .padding(.bottom, 10)
+                            
+                            // Events TabView
+                            TabView(selection: $currentPage) {
+                                ForEach(Array(nearestEvents.enumerated()), id: \.element.id) { index, event in
+                                    NavigationLink(destination: {
+                                        ViewEventDetail(event:event)
+                                    }, label: {
+                                        EventListItem(event: event, isSelected: event.id == selectedEvent?.id, userLocation: locationManager.location)
+                                            .padding(.horizontal, 10)
+                                            .tag(index)
+                                    })
+                                } .padding(.bottom, 50)
                             }
-                        }
-                        .frame(height: bottomSheetPosition.rawValue + dragOffset)
-                        .background(
-                            RoundedRectangle(cornerRadius: 0)
-                                .fill(Color.dynamic)
-                        )
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let translation = value.translation.height
-                                    dragOffset = translation
-                                }
-                                .onEnded { value in
-                                    dragOffset = 0
-                                    let translation = value.translation.height
-                                    let dragDirection: DragDirection = translation > 0 ? .down : .up
-                                    
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        bottomSheetPosition = bottomSheetPosition.nextPosition(dragDirection: dragDirection)
+                            .frame(height: 230)
+                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                            .padding(.bottom, 50)
+                            .onChange(of: currentPage) { newPage in
+                                if newPage >= 0 && newPage < nearestEvents.count {
+                                    let event = nearestEvents[newPage]
+                                    selectedEvent = event
+                                    withAnimation {
+                                        region.center = CLLocationCoordinate2D(
+                                            latitude: event.coordinates[0],
+                                            longitude: event.coordinates[1]
+                                        )
+                                        region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
                                     }
                                 }
-                        )
+                            }
+                            .onAppear {
+                                // Center on first event when TabView appears
+                                if let firstEvent = nearestEvents.first {
+                                    selectedEvent = firstEvent
+                                    currentPage = 0
+                                }
+                            }
+                        }
+                        .background(Color.dynamic)
                     }
-                    .edgesIgnoringSafeArea(.bottom)
                 }
-                
-                
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showFilterSheet) {
@@ -316,6 +439,13 @@ struct DiscoverView: View {
             }
             .sheet(isPresented: $showCategoryFilter) {
                 CategoryFilterView(selectedCategory: $selectedCategory, categories: FilterType.allCases.map { $0.rawValue })
+            }
+            .sheet(isPresented: $showSearchView) {
+                SearchView(
+                    searchText: $searchText,
+                    selectedFilter: $selectedFilter,
+                    displayedEvents: displayedEvents
+                )
             }
             .onChange(of: searchText) { newValue in
                 filterEvents()
@@ -351,280 +481,55 @@ struct DiscoverView: View {
                 longitude: event.coordinates[1]
             )) {
                 ZStack {
-                    if clickedEvent && clickedData?.id == event.id {
+                    if selectedEvent?.id == event.id {
                         PulsatingRingsView()
                             .frame(width: 10, height: 10)
                     }
                     
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.title)
-                        .foregroundColor(clickedData?.id == event.id ? .blue : .red)
-                        .background(Circle().fill(Color.dynamic))
-                        .scaleEffect(clickedData?.id == event.id && clickedEvent ? 1.7 : 1)
-                        .animation(.spring(), value: clickedEvent)
-                }
-                .onTapGesture {
-                    searching = false
-                    clickedData = event
-                    withAnimation(.spring()) {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            zoomToEvent(event: event)
+                    Image(systemName: {
+                        switch event.type {
+                            case "Concert": return "figure.dance"
+                            case "Corporate": return "building.2.fill"
+                            case "Marketing": return "megaphone.fill"
+                            case "Health & Wellness": return "heart.fill"
+                            case "Technology": return "desktopcomputer"
+                            case "Art & Culture": return "paintbrush.fill"
+                            case "Charity": return "heart.circle.fill"
+                            case "Literature": return "book.fill"
+                            case "Lifestyle": return "leaf.fill"
+                            case "Environmental": return "leaf.arrow.triangle.circlepath"
+                            case "Entertainment": return "music.note.list"
+                            default: return "calendar"
                         }
-                    }
+                    }())
+                    .font(.headline)
+                    .foregroundColor(selectedEvent?.id == event.id ? .invert : .green)
+                    .background(
+                        
+                        Circle()
+                            .fill(
+                                RadialGradient(gradient: Gradient(colors: [event.participants.count > 10 ? Color.red.opacity(0.90) : Color.green, .yellow.opacity(0.50), .clear]), center: .center, startRadius: 15, endRadius: 40)
+                            )
+                            .frame(width:180, height: 180)
+                          
+                    )
+                   
+                    .scaleEffect(selectedEvent?.id == event.id ? 1.2 : 1)
+                    .animation(.spring(), value: selectedEvent)
+                }  .onTapGesture {
                     withAnimation(.spring()) {
-                        clickedEvent = true
+                        selectedEvent = event
+                        region.center = CLLocationCoordinate2D(
+                            latitude: event.coordinates[0],
+                            longitude: event.coordinates[1]
+                        )
+                        region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
                     }
                 }
+               
             }
         }
         .ignoresSafeArea()
-    }
-    
-    var topBar: some View {
-        VStack {
-                VStack {
-                    HStack {
-                        Image(systemName: "figure.walk")
-                            .font(.title)
-                            .foregroundColor(.blue)
-                            .frame(width: 40, height: 60)
-                            .cornerRadius(70)
-                            .padding(.leading, 4)
-                        
-                        VStack(alignment: .leading) {
-                            Text("Explore by:")
-                                .font(.callout)
-                                .bold()
-                                .foregroundColor(.blue)
-                            
-                            Text(locationManager.locationString.split(separator: ",")[0] == "Not Set" ? "not logged in!" : locationManager.locationString.split(separator: ",")[0])
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                        
-                        Spacer()
-                        
-                        if !showSearchView && !clickedEvent {
-                            Image(systemName: "magnifyingglass")
-                                .font(.title)
-                                .foregroundColor(.blue)
-                                .onTapGesture {
-                                    withAnimation(.spring()) {
-                                        showSearchView = true
-                                        hideTab = true
-                                    }
-                                }
-                        }
-                        
-                        if clickedEvent {
-                            Button(action: {
-                                withAnimation(.spring()) {
-                                    if !showSearchView {
-                                        clickedEvent = false
-                                        hideTab = false
-                                        zoomOut()
-                                    } else {
-                                        withAnimation(.spring()) {
-                                            showSearchView = false
-                                            hideTab = false
-                                        }
-                                    }
-                                }
-                            }) {
-                                Image(systemName: "xmark")
-                                    .font(.title)
-                                    .foregroundColor(.dynamic)
-                                    .padding(10)
-                                    .background(Circle().fill(.red))
-                            }
-                        }
-                    }
-                    
-                    
-                    // Search View Overlay
-                    if showSearchView {
-                        searchBox
-                        VStack(spacing: 0) {
-                            // Filter Buttons
-//                            VStack {
-//                                HStack(alignment: .center, spacing: 8) {
-//                                    Button(action: {
-//                                        showFilterSheet = true
-//                                    }) {
-//                                        HStack {
-//                                            Text("Filters")
-//                                                .foregroundColor(.blue)
-//                                            Image(systemName: "line.3.horizontal.decrease.circle")
-//                                                .foregroundColor(.blue)
-//                                        }
-//                                        .padding(.horizontal, 12)
-//                                        .padding(.vertical, 8)
-//                                        .background(Color.invert.opacity(0.8))
-//                                        .cornerRadius(10)
-//                                        .overlay(
-//                                            RoundedRectangle(cornerRadius: 10)
-//                                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-//                                        )
-//                                    }
-//
-//                                    Text("|")
-//                                        .foregroundColor(.gray.opacity(0.5))
-//
-//                                    Button(action: {
-//                                        showDatePicker = true
-//                                    }) {
-//                                        Text("Date")
-//                                            .padding(.horizontal, 12)
-//                                            .padding(.vertical, 8)
-//                                            .background(Color.invert.opacity(0.8))
-//
-//                                            .cornerRadius(10)
-//                                            .overlay(
-//                                                RoundedRectangle(cornerRadius: 10)
-//                                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-//                                            )
-//                                    }
-//
-//                                    Text("|")
-//                                        .foregroundColor(.gray.opacity(0.5))
-//
-//                                    Button(action: {
-//                                        showPriceFilter = true
-//                                    }) {
-//                                        Text("Price")
-//                                            .padding(.horizontal, 12)
-//                                            .padding(.vertical, 8)
-//                                            .background(Color.invert.opacity(0.8))
-//                                            .cornerRadius(10)
-//                                            .overlay(
-//                                                RoundedRectangle(cornerRadius: 10)
-//                                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-//                                            )
-//                                    }
-//
-//                                    Text("|")
-//                                        .foregroundColor(.gray.opacity(0.5))
-//
-//                                    Button(action: {
-//                                        showCategoryFilter = true
-//                                    }) {
-//                                        Text("Category")
-//                                            .padding(.horizontal, 12)
-//                                            .padding(.vertical, 8)
-//                                            .background(Color.invert.opacity(0.8))
-//                                            .cornerRadius(10)
-//                                            .overlay(
-//                                                RoundedRectangle(cornerRadius: 10)
-//                                                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-//                                            )
-//                                    }
-//
-//                                    Spacer()
-//                                }
-//                                .padding(.horizontal)
-//                                .padding(.top, 15)
-//                                Divider()
-//                            }
-                            
-                            // Search suggestions
-                            ScrollView {
-                                LazyVStack(spacing: 0) {
-                                    if searchText.isEmpty {
-                                        Text("Most Popular Events")
-                                            .font(.headline)
-                                            .foregroundColor(.gray)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal)
-                                            .padding(.vertical, 10)
-                                    }
-                                    
-                                    ForEach(displayedEvents) { event in
-                                        EventSearchResult(event: event) {
-                                            withAnimation(.spring()) {
-                                                showSearchView = false
-                                                clickedData = event
-                                                hideTab = false
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                                    zoomToEvent(event: event)
-                                                    clickedEvent = true
-                                                }
-                                            }
-                                        }
-                                        Divider()
-                                            .background(Color.gray.opacity(0.3))
-                                    }
-                                    
-                                    if searchText.isEmpty && !displayedEvents.isEmpty {
-                                        Button(action: {
-                                            withAnimation(.spring()) {
-                                                showSearchView = false
-                                                hideTab = false
-                                            }
-                                        }) {
-                                            Text("View All Events")
-                                                .foregroundColor(.blue)
-                                                .frame(maxWidth: .infinity)
-                                                .padding(.vertical, 15)
-                                        }
-                                    }
-                                }
-                            }
-                            .background(Color.dynamic)
-                            
-                            Spacer()
-                        }
-                        
-                        .edgesIgnoringSafeArea(.bottom)
-                        .safeAreaInset(edge: .top) {
-                            Color.clear.frame(height: 0)
-                        }
-                        .transition(.move(edge: .bottom))
-                    }
-                }.padding(.horizontal)
-                    .padding(.vertical, 5)
-                    .background(Color.dynamic)
-                    .cornerRadius(showSearchView ? 25 : 50)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: showSearchView ? 25 : 50)
-                            .stroke(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.dynamic, .red, .blue, Color.dynamic]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
-                                lineWidth: 2
-                            )
-                    )
-                    .scaleEffect(showSearchView ? 1 : topbarPressed ? 0.97 : 1)
-                    .padding(.top, 20)
-                    .padding(.horizontal)
-                
-            
-            
-            Spacer()
-        }
-    }
-    
-    var searchBox: some View {
-       
-            
-                    HStack {
-                TextField("Search event, party...", text: $searchText)
-                    .padding()
-                    .background(Color.dynamic)
-                    .cornerRadius(12)
-                    .foregroundColor(.invert)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                    )
-                
-               
-            }
-            .padding(.horizontal)
-            .padding(.bottom)
-          
-        
     }
     
     var showEventCard: some View {
@@ -766,16 +671,24 @@ struct DiscoverView: View {
     }
     
     private func filterEvents() {
-        if searchText.isEmpty {
-            filteredEvents = filterModel.filteredEvents
-        } else {
-            filteredEvents = filterModel.filteredEvents.filter { event in
+        var filtered = filterModel.filteredEvents
+        
+        // Apply category filter first
+        if selectedFilter != .all {
+            filtered = filtered.filter { $0.type == selectedFilter.rawValue }
+        }
+        
+        // Then apply search text filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { event in
                 event.name.localizedCaseInsensitiveContains(searchText) ||
                 event.description.localizedCaseInsensitiveContains(searchText) ||
                 event.location.localizedCaseInsensitiveContains(searchText) ||
                 event.type.localizedCaseInsensitiveContains(searchText)
             }
         }
+        
+        filteredEvents = filtered
     }
     
     private func updateNearestEvents() {
@@ -897,55 +810,84 @@ struct CustomFilterButton: View {
     }
 }
 
-struct SearchResultRow: View {
+struct EventSearchResult: View {
     let event: Event
+    let action: () -> Void
     
     var body: some View {
-        NavigationLink(destination: ViewEventDetail(event: event)) {
-            HStack(spacing: 12) {
-                AsyncImage(url: URL(string: event.images[0])) { image in
-                    image
-                .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.3)
-                }
-                .frame(width: 60, height: 60)
-                .cornerRadius(8)
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: {
+                    switch event.type {
+                        case "Concert": return "figure.dance"
+                        case "Corporate": return "building.2.fill"
+                        case "Marketing": return "megaphone.fill"
+                        case "Health & Wellness": return "heart.fill"
+                        case "Technology": return "desktopcomputer"
+                        case "Art & Culture": return "paintbrush.fill"
+                        case "Charity": return "heart.circle.fill"
+                        case "Literature": return "book.fill"
+                        case "Lifestyle": return "leaf.fill"
+                        case "Environmental": return "leaf.arrow.triangle.circlepath"
+                        case "Entertainment": return "music.note.list"
+                        default: return "calendar"
+                    }
+                }())
+                .foregroundColor(.gray)
+                .font(.title2)
+                .padding(.top, 4)
             
             VStack(alignment: .leading, spacing: 4) {
+                    HStack {
                     Text(event.name)
                     .font(.headline)
-                
-                    Text(event.location)
+                            .foregroundColor(.invert)
+                        
+                        Spacer()
+                        
+                        // Event Type Tag
+                        Text(event.type)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [.blue, .purple]),
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                    }
+                    
+                    Text(event.description)
                         .font(.subheadline)
                     .foregroundColor(.gray)
-                
-                HStack {
-                    Image(systemName: "calendar")
-                            .foregroundColor(.blue)
-                        Text(event.startDate.formatted(date: .abbreviated, time: .omitted))
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                    
+                    HStack(spacing: 12) {
+                        Label(event.location.split(separator: ",")[0], systemImage: "location")
                         .font(.caption)
                             .foregroundColor(.gray)
+                            .lineLimit(1)
                         
-                        Image(systemName: "person.2")
-                            .foregroundColor(.blue)
-                        Text("\(event.participants.count) going")
+                        Label(event.price, systemImage: "dollarsign.circle")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            
+                        Label("\(event.views) views", systemImage: "eye.fill")
                         .font(.caption)
                             .foregroundColor(.gray)
                     }
                 }
-                
-                Spacer()
-                
-                Text(event.price)
-                    .font(.headline)
-                .foregroundColor(.blue)
             }
             .padding()
-            .background(Color(UIColor.secondarySystemBackground))
-            .cornerRadius(12)
-            .padding(.horizontal)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -1410,7 +1352,7 @@ struct RangeSlider: View {
             }
         }
     }
-}
+} 
 
 // Add MapView component
 struct MapView: View {
@@ -1475,16 +1417,42 @@ struct MapView: View {
                     latitude: event.coordinates.count >= 2 ? event.coordinates[0] : 37.3361,
                     longitude: event.coordinates.count >= 2 ? event.coordinates[1] : -122.0090
                 )) {
-                    VStack(spacing: 0) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.title)
-                            .foregroundColor(event.id == selectedEvent?.id ? .blue : .red)
-                            .background(Circle().fill(Color.dynamic))
-                            .padding(4)
+                    ZStack {
+                        if selectedEvent?.id == event.id {
+                            PulsatingRingsView()
+                                .frame(width: 10, height: 10)
+                        }
+                        
+                        Image(systemName: {
+                            switch event.type {
+                                case "Concert": return "figure.dance"
+                                case "Corporate": return "building.2.fill"
+                                case "Marketing": return "megaphone.fill"
+                                case "Health & Wellness": return "heart.fill"
+                                case "Technology": return "desktopcomputer"
+                                case "Art & Culture": return "paintbrush.fill"
+                                case "Charity": return "heart.circle.fill"
+                                case "Literature": return "book.fill"
+                                case "Lifestyle": return "leaf.fill"
+                                case "Environmental": return "leaf.arrow.triangle.circlepath"
+                                case "Entertainment": return "music.note.list"
+                                default: return "calendar"
+                            }
+                        }())
+                        .font(.title)
+                        .foregroundColor(selectedEvent?.id == event.id ? .blue : .red)
+                        .background(Circle().fill(Color.dynamic))
+                        .scaleEffect(selectedEvent?.id == event.id ? 1.7 : 1)
+                        .animation(.spring(), value: selectedEvent)
                     }
                     .onTapGesture {
-                        withAnimation {
+                        withAnimation(.spring()) {
                             selectedEvent = event
+                            region.center = CLLocationCoordinate2D(
+                                latitude: event.coordinates[0],
+                                longitude: event.coordinates[1]
+                            )
+                            region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
                         }
                     }
                 }
@@ -1602,9 +1570,9 @@ struct MapView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(visibleEvents, id: \.id) { event in
-                                EventListItem(event: event, isSelected: selectedEvent?.id == event.id)
+                                EventListItem(event: event, isSelected: selectedEvent?.id == event.id, userLocation: locationManager.location)
                                     .onTapGesture {
-                                        withAnimation {
+                                        withAnimation(.spring()) {
                                             selectedEvent = event
                                             if event.coordinates.count >= 2 {
                                                 region.center = CLLocationCoordinate2D(
@@ -1619,6 +1587,7 @@ struct MapView: View {
                     }
                     .frame(height: 300)
                     .background(Color.dynamic)
+                   
                 }
             }
             .background(Color.dynamic)
@@ -1746,139 +1715,265 @@ extension MKCoordinateRegion {
 struct EventListItem: View {
     let event: Event
     let isSelected: Bool
-    @StateObject private var locationManager = LocationManager()
+    let userLocation: CLLocation?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
+            // Event Image and Title Section
             HStack(spacing: 12) {
-                if !event.images.isEmpty {
-                    AsyncImage(url: URL(string: event.images[0])) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Color.gray.opacity(0.3)
-                    }
-                    .frame(width: 80, height: 80)
-                    .cornerRadius(8)
-                } else {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 80, height: 80)
-                        .cornerRadius(8)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .foregroundColor(.gray)
-                        )
+                // Event Image
+                AsyncImage(url: URL(string: event.images[0])) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Color.gray.opacity(0.2)
                 }
+                .frame(width: 100, height: 80)
+                .cornerRadius(12)
                 
+                // Event Details
                 VStack(alignment: .leading, spacing: 4) {
                     Text(event.name)
                         .font(.headline)
-                        .foregroundColor(.invert)
-                        .lineLimit(1)
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
                     
-                    Text(event.location)
+                    // Price Tag
+                    Text(event.price == "0" ? "Free" : event.price)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .lineLimit(1)
+                        .fontWeight(.medium)
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(8)
                     
+                    // Participants Section
                     HStack {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.blue)
-                        Text(event.startDate.formatted(date: .abbreviated, time: .omitted))
+                        // Participant Avatars
+                        HStack(spacing: -8) {
+                            ForEach(0..<min(event.participants.count, 3), id: \.self) { index in
+                                Circle()
+                                    .fill(Color.randomize)
+                                    .frame(width: 24, height: 24)
+                                    .background(.ultraThinMaterial)
+                                    .cornerRadius(60)
+                                    .overlay(
+                                        Text(String(event.participants[index].prefix(1)))
+                                            .font(.caption2)
+                                            .foregroundColor(.invert)
+                                    )
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.gray, lineWidth: 1)
+                                    )
+                                    
+                                    
+                            }
+                            
+                            if event.participants.count > 3 {
+                               
+                                        Text("+\(event.participants.count - 3)")
+                                            .font(.caption2)
+                                            .foregroundColor(.gray)
+                                            .padding(.leading,15)
+                                    
+                                    
+                            }
+                        }
+                        
+                        Text("\(event.participants.count)/\(event.maxParticipants)")
                             .font(.caption)
                             .foregroundColor(.gray)
-                        
-                        if let userLocation = locationManager.location {
-                            let eventLocation = CLLocation(
-                                latitude: event.coordinates[0],
-                                longitude: event.coordinates[1]
-                            )
-                            let distance = eventLocation.distance(from: userLocation)
-                            Text(String(format: "%.1f km", distance / 1000))
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                        }
                     }
                 }
-                
                 Spacer()
-                
-                Text(event.price)
-                    .font(.headline)
-                    .foregroundColor(.blue)
             }
-            .padding()
-            .background(isSelected ? Color.blue.opacity(0.1) : Color.clear)
-            .cornerRadius(12)
-//            .overlay(
-//                RoundedRectangle(cornerRadius: 12)
-//                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-//            )
-            Divider()
+            
+            // Bottom Date and Location Section
+            HStack(spacing: 16) {
+                Spacer()
+                // Date
+                HStack(spacing: 4) {
+                    Text(event.startDate.formatted(.dateTime.day().month(.wide)))
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                // Divider
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 12)
+                
+                // City
+                Text(event.location.split(separator: ",")[0])
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                
+                // Divider
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 1, height: 12)
+                
+                // Time
+                Text(event.startDate.formatted(.dateTime.hour().minute()))
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
         }
+        .padding(12)
+        .background(Color.dynamic)
+        .cornerRadius(16)
+      
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 
-struct EventSearchResult: View {
-    let event: Event
-    let action: () -> Void
+// First, add the SearchView struct
+struct SearchView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var searchText: String
+    @Binding var selectedFilter: FilterType
+    let displayedEvents: [Event]
     
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: {
-                    switch event.type {
-                        case "Concert": return "figure.dance"
-                        case "Corporate": return "building.2.fill"
-                        case "Marketing": return "megaphone.fill"
-                        case "Health & Wellness": return "heart.fill"
-                        case "Technology": return "desktopcomputer"
-                        case "Art & Culture": return "paintbrush.fill"
-                        case "Charity": return "heart.circle.fill"
-                        case "Literature": return "book.fill"
-                        case "Lifestyle": return "leaf.fill"
-                        case "Environmental": return "leaf.arrow.triangle.circlepath"
-                        case "Entertainment": return "music.note.list"
-                        default: return "calendar"
-                    }
-                }())
-                .foregroundColor(.gray)
-                    .font(.title2)
-                    .padding(.top, 4)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.name)
-                        .font(.headline)
-                        .foregroundColor(.invert)
-                    
-                    Text(event.description)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
-                    
-                    
-                        HStack(spacing: 12) {
-                            Label(event.location.split(separator: ",")[0], systemImage: "location")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                .lineLimit(1)
-                            
-                            Label(event.price, systemImage: "dollarsign.circle")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                                
-                            Label("\(event.views) views", systemImage: "eye.fill")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+        VStack(spacing: 0) {
+            // Header
+            VStack {
+                HStack {
+                    Button(action: {}) {
+                        HStack {
+                            Text("Abuja, Nigeria")
+                            Image(systemName: "chevron.down")
                         }
+                    }
+                    Spacer()
                     
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.title2)
+                            .foregroundColor(.gray)
+                    }
+                }.padding(.horizontal)
+                
+                VStack(alignment: .leading) {
+                    Text("Search")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.purple, .blue]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    Text("join a family :)")
+                        .font(.headline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.gray)
+                }
+                .padding(.horizontal)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Search Box
+                HStack {
+                    TextField("Search event, party...", text: $searchText)
+                        .padding()
+                        .background(Color.dynamic)
+                        .cornerRadius(12)
+                        .foregroundColor(.invert)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
+            }.padding(.top,40)
+                .background(Color.dynamic)
+            
+            // Category Filter
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(FilterType.allCases) { type in
+                        Button(action: {
+                            selectedFilter = type
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: type.icon)
+                                    .font(.title2)
+                                    .foregroundColor(selectedFilter == type ? .white : .gray)
+                                    .frame(width: 50, height: 50)
+                                    .background(selectedFilter == type ? Color.blue : Color.dynamic)
+                                    .clipShape(Circle())
+                                    .shadow(color: selectedFilter == type ? .blue.opacity(0.3) : .clear, radius: 5)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 60)
+                                            .stroke(selectedFilter == type ? .blue.opacity(0.3) : .clear.opacity(0.3), lineWidth: 1)
+                                    )
+                                
+                                Text(type.rawValue)
+                                    .font(.caption)
+                                    .foregroundColor(selectedFilter == type ? .primary : .gray)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+            }.background(Color.dynamic)
+            
+            // Search Results
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 0) {
+                    Text(searchText.isEmpty ? "Most Popular Events" : "Results")
+                        .font(.headline)
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                    
+                    if displayedEvents.count > 0 {
+                        ForEach(displayedEvents) { event in
+                            EventSearchResult(event: event) {
+                                dismiss()
+                                // Add any additional action here
+                            }
+                            Divider()
+                                .background(Color.gray.opacity(0.3))
+                        }
+                    } else {
+                        HStack {
+                            Spacer()
+                            VStack(alignment: .center) {
+                                Image("hmm")
+                                    .resizable()
+                                    .renderingMode(.original)
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(height: 200)
+                                
+                                Text("Hmm! nothing yet..")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color.invert)
+                                    .multilineTextAlignment(.center)
+                            }
+                            Spacer()
+                        }.padding(.top, 30)
+                    }
                 }
             }
-            .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.dynamic)
         }
     }
 } 
+

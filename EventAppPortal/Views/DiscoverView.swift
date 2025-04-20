@@ -48,15 +48,11 @@ class EventViewModel: ObservableObject {
         events.filter { event in
             let matchesSearch = filters.searchText.isEmpty || 
                 event.title.localizedCaseInsensitiveContains(filters.searchText) ||
-                event.description.localizedCaseInsensitiveContains(filters.searchText) ||
-                event.type.localizedCaseInsensitiveContains(filters.searchText)
-            
-            let matchesType = filters.selectedTypes.isEmpty || 
-                filters.selectedTypes.contains(event.type)
-            
-            let matchesPrice = event.price.map { filters.priceRange.contains($0) } ?? true
-            
-            let matchesDate = filters.dateRange.contains(event.date)
+                event.description.localizedCaseInsensitiveContains(filters.searchText)
+            let matchesType = filters.selectedTypes.isEmpty || filters.selectedTypes.contains(event.type)
+            let matchesPrice = event.price == nil || 
+                (event.price! >= filters.priceRange.lowerBound && event.price! <= filters.priceRange.upperBound)
+            let matchesDate = event.date >= filters.dateRange.lowerBound && event.date <= filters.dateRange.upperBound
             
             return matchesSearch && matchesType && matchesPrice && matchesDate
         }

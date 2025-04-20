@@ -42,6 +42,7 @@ struct ChatDetailView: View {
     @State private var isLoading = true
     @State private var showScrollToBottom = false
     @State private var isTyping = false
+    @State private var showGroupDetail = false
     @FocusState private var isFocused: Bool
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
@@ -91,7 +92,7 @@ struct ChatDetailView: View {
                             Spacer()
                             
                             Menu {
-                                Button(action: {}) {
+                                Button(action: { showGroupDetail = true }) {
                                     Label("Group Info", systemImage: "info.circle")
                                 }
                                 Button(action: {}) {
@@ -167,21 +168,21 @@ struct ChatDetailView: View {
                 VStack(spacing: 0) {
                     Divider()
                     HStack(spacing: 15) {
-                        Menu {
-                            Button(action: {}) {
-                                Label("Photo", systemImage: "photo")
-                            }
-                            Button(action: {}) {
-                                Label("Camera", systemImage: "camera")
-                            }
-                            Button(action: {}) {
-                                Label("Document", systemImage: "doc")
-                            }
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                        }
+//                        Menu {
+//                            Button(action: {}) {
+//                                Label("Photo", systemImage: "photo")
+//                            }
+//                            Button(action: {}) {
+//                                Label("Camera", systemImage: "camera")
+//                            }
+//                            Button(action: {}) {
+//                                Label("Document", systemImage: "doc")
+//                            }
+//                        } label: {
+//                            Image(systemName: "plus.circle.fill")
+//                                .font(.title2)
+//                                .foregroundColor(.blue)
+//                        }
                         
                         HStack {
                             TextField("Message", text: $newMessage, axis: .vertical)
@@ -207,7 +208,7 @@ struct ChatDetailView: View {
                         .cornerRadius(20)
                         
                         Button(action: sendMessage) {
-                            Image(systemName: isTyping ? "paperplane.fill" : "mic.fill")
+                            Image(systemName: isTyping ? "paperplane.fill" : "paperplane")
                                 .font(.title3)
                                 .foregroundColor(.blue)
                                 .frame(width: 30)
@@ -222,6 +223,11 @@ struct ChatDetailView: View {
         }
         .navigationBarHidden(true)
         .hideTabOnAppear()
+        .background(
+            NavigationLink(destination: GroupDetailView(group: group), isActive: $showGroupDetail) {
+                EmptyView()
+            }
+        )
         .onAppear {
             fetchMessages()
         }
@@ -338,15 +344,12 @@ struct MessageBubble: View {
 struct EmptyMessagesView: View {
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "bubble.left.and.bubble.right")
-                .font(.system(size: 50))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.blue.opacity(0.7), .purple.opacity(0.7)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            Image("hmm")
+                .resizable()
+                .renderingMode(.original)
+                .aspectRatio(contentMode: .fit)
+                .frame(width:200,height:200)
+              
             
             Text("No Messages Yet")
                 .font(.title3.bold())
