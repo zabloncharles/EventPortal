@@ -212,42 +212,73 @@ struct ViewEventDetail: View {
     // MARK: - Header Section
     private var headerSection: some View {
         ZStack(alignment: .top) {
-            CompactImageViewer(imageUrls: event.images, height: 400, scroll:true)
+            CompactImageViewer(imageUrls: event.images, height: 400, scroll: true)
+               
             
-            HStack(spacing: 8) {
-                ForEach(0..<event.images.count, id: \.self) { index in
-                    Circle()
-                        .fill(currentPage == index ? Color.white : Color.white.opacity(0.5))
-                        .frame(width: 8, height: 8)
+            // Back button and bookmark overlay
+            HStack {
+                Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(.white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                
+                Spacer()
+                
+                Button(action: { toggleBookmark() }) {
+                    Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
+                        .font(.title2)
+                        .foregroundColor(bookmarked ? .yellow : .white)
+                        .padding(12)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
                 }
             }
-            .padding(.top, 370)
+            .padding(.horizontal)
+            .padding(.top, 38)
+            .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
         }
     }
 
     // MARK: - Title and Views Section
     private var titleAndViewsSection: some View {
-        VStack {
-            HStack {
-                VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(event.name)
                         .font(.title)
                         .fontWeight(.bold)
-                        .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    HStack {
-                        Text("New York City")
-                        Image(systemName: "location")
-                    } .foregroundColor(.gray)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.primary, .primary.opacity(0.8)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .foregroundColor(.blue)
+                        Text(event.location.split(separator: ",")[0])
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 4) {
-                    Image(systemName: "eyes")
-                    Divider().padding(.vertical)
+                HStack(spacing: 8) {
+                    Image(systemName: "eye.fill")
+                        .foregroundColor(.blue)
                     Text(viewCount > 1000 ? String(format: "%.1fk", Double(viewCount)/1000.0) : "\(viewCount)")
+                        .foregroundColor(.secondary)
                 }
-                .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(20)
             }
         }
     }
@@ -255,7 +286,8 @@ struct ViewEventDetail: View {
     // MARK: - Event Type Icons Section
     private var eventTypeIconsSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(spacing: 24) {
+                Spacer()
                 EventTypeIcon(icon: {
                     switch event.type {
                     case "Concert": return "figure.dance"
@@ -273,111 +305,114 @@ struct ViewEventDetail: View {
                     }
                 }(), text: event.type)
                 
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
                 EventTypeIcon(
                     icon: "calendar",
                     text: formatDate(event.startDate)
                 )
                 
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
                 EventTypeIcon(
-                    icon: "person.2",
-                    text: "Going \(event.participants.count)"
+                    icon: "person.2.fill",
+                    text: "\(event.participants.count) Going"
                 )
                 
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 1, height: 40)
-                
                 EventTypeIcon(
-                    icon: "dollarsign.circle",
-                    text: event.price
+                    icon: "dollarsign.circle.fill",
+                    text: event.price == "0" ? "Free" : event.price
                 )
+                Spacer()
             }
+            .padding(.horizontal)
         }
         .padding(.vertical)
-        .background(Color.dynamic)
-        .cornerRadius(16)
-        .padding(.top,-15)
-        .padding(.bottom,-20)
     }
 
     // MARK: - Description Section
     private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Description")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("About Event")
                 .font(.title3)
                 .fontWeight(.bold)
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.description)
-                    .foregroundColor(.secondary)
-                    .lineLimit(isDescriptionExpanded ? nil : 2)
-                    .animation(.easeInOut, value: isDescriptionExpanded)
-                
-                Button(action: {
-                    withAnimation {
-                        isDescriptionExpanded.toggle()
+            HStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(event.description)
+                        .foregroundColor(.secondary)
+                        .lineLimit(isDescriptionExpanded ? nil : 3)
+                        .animation(.easeInOut, value: isDescriptionExpanded)
+                    
+                    Button(action: {
+                        withAnimation {
+                            isDescriptionExpanded.toggle()
+                        }
+                    }) {
+                        Text(isDescriptionExpanded ? "Read Less" : "Read More")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
                     }
-                }) {
-                    Text(isDescriptionExpanded ? "Read Less" : "Read More")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.blue)
                 }
-                .padding(.top, 4)
-            }
+               Spacer()
+            } .padding()
+                .background(Color.blue.opacity(0.05))
+                .cornerRadius(12)
         }
     }
 
     // MARK: - Event Organizer Section
     private var eventOrganizerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Event Organizer")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Organizer")
                 .font(.title3)
                 .fontWeight(.bold)
             
-            HStack {
+            HStack(spacing: 16) {
                 Image(systemName: "person.circle.fill")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 50, height: 50)
-                    .foregroundColor(.gray)
+                    .frame(width: 60, height: 60)
+                    .foregroundColor(.blue)
+                    .background(Color.blue.opacity(0.1))
                     .clipShape(Circle())
                 
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(event.organizerName)
-                        .fontWeight(.semibold)
+                        .font(.headline)
                     Text("Event Organizer")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 16) {
+                HStack(spacing: 20) {
                     Button(action: {}) {
-                        Image(systemName: "message")
+                        Image(systemName: "message.fill")
+                            .font(.title3)
                             .foregroundColor(.blue)
+                            .padding(12)
+                            .background(Color.blue.opacity(0.1))
+                            .clipShape(Circle())
                     }
                     
                     Button(action: {}) {
-                        Image(systemName: "phone")
+                        Image(systemName: "phone.fill")
+                            .font(.title3)
                             .foregroundColor(.blue)
+                            .padding(12)
+                            .background(Color.blue.opacity(0.1))
+                            .clipShape(Circle())
                     }
                 }
             }
+            .padding()
+            .background(Color.blue.opacity(0.05))
+            .cornerRadius(12)
         }
     }
 
     // MARK: - Location Section
     private var locationSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Location")
                 .font(.title3)
                 .fontWeight(.bold)
@@ -388,19 +423,40 @@ struct ViewEventDetail: View {
             ))
             .frame(height: 200)
             .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
             
             HStack {
-                Text(event.location)
+                HStack(spacing: 8) {
+                    Image(systemName: "location.fill")
+                        .foregroundColor(.blue)
+                    Text(event.location)
+                        .foregroundColor(.secondary)
+                }
+                
                 Spacer()
+                
                 if event.coordinates.count >= 2 {
-                    Link("Get directions", destination: URL(string: "http://maps.apple.com/?ll=\(event.coordinates[0]),\(event.coordinates[1])")!)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.blue)
+                    Link(destination: URL(string: "http://maps.apple.com/?ll=\(event.coordinates[0]),\(event.coordinates[1])")!) {
+                        HStack(spacing: 4) {
+                            Text("Get directions")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Image(systemName: "arrow.right")
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .cornerRadius(20)
+                    }
                 }
             }
-            .foregroundColor(.secondary)
-            .padding(.top, 8)
+            .padding()
+            .background(Color.blue.opacity(0.05))
+            .cornerRadius(12)
         }
     }
 
@@ -410,7 +466,6 @@ struct ViewEventDetail: View {
             Text("Similar Events")
                 .font(.title3)
                 .fontWeight(.bold)
-                .padding(.horizontal)
             
             if viewModel.isLoading {
                 HStack {
@@ -434,7 +489,7 @@ struct ViewEventDetail: View {
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 16) {
-                        ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }) { event in
+                        ForEach(viewModel.recommendedEvents.filter { $0.id != event.id }.prefix(3)) { event in
                             Button {
                                 showRecommendedEventDetails = event
                                 showRecommendedEvent = true
@@ -443,9 +498,9 @@ struct ViewEventDetail: View {
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    
                 }
-                .padding(.bottom,150)
+                .padding(.bottom,120)
             }
         }
         .onAppear {
@@ -457,178 +512,138 @@ struct ViewEventDetail: View {
     // MARK: - Bottom Bar Section
     private var bottomBarSection: some View {
         VStack {
-            if !showTicket {
-                Spacer()
-            }
+            Spacer()
             
             VStack(spacing: 0) {
-                if showTicket {
-                    TicketView(event: event, isShowing: $showTicket)
-                        .transition(.move(edge: .bottom))
-                }
+                Divider()
                 
-                HStack(alignment: .center, spacing: 16) {
-                    // Price and Description
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text("$")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text(String(format: "%.2f", 29.99))
-                                .font(.title2)
-                                .fontWeight(.bold)
+                HStack(spacing: 20) {
+                    if hasTicket {
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                showTicket = true
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "ticket.fill")
+                                Text("View Ticket")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.green)
+                            .cornerRadius(25)
                         }
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [.pink, .blue]),
-                                startPoint: .leading,
-                                endPoint: .trailing
+                    } else {
+                        Button(action: {
+                            showPurchaseView = true
+                        }) {
+                            HStack {
+                                Image(systemName: "ticket.fill")
+                                Text(event.price == "0" ? "Get Free Ticket" : "Buy Ticket")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(
+                                LinearGradient(
+                                    colors: [.blue, .blue.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
                             )
-                        )
-                        
-                        Text("This is a paid technology event")
-                            .foregroundColor(.secondary)
-                            .font(.callout)
-                    }
-                    
-                    Spacer()
-                    
-                    // Action Button
-                    Button(action: {
-                        hapticFeedback.notificationOccurred(.success)
-                        if hasTicket {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                showTicket.toggle()
-                            }
-                        } else {
-                            showPurchaseView.toggle()
+                            .cornerRadius(25)
                         }
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: hasTicket ? (showTicket ? "ticket.fill" : "ticket") : "cart.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                            
-                            Text(hasTicket ? (showTicket ? "Hide Ticket" : "View Ticket") : "Purchase")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(
-                            Group {
-                                if showTicket {
-                                    Color.gray
-                                } else if hasTicket {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.green, .green.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                } else {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [.blue, .blue.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                }
-                            }
-                        )
-                        .clipShape(Capsule())
-                        .shadow(color: (showTicket ? Color.gray : (hasTicket ? Color.green : Color.blue)).opacity(0.3),
-                                radius: 8, x: 0, y: 4)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
-                .padding(.bottom,20)
+                .padding(.bottom, 20)
             }
-            .background(
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        Rectangle()
-                            .frame(height: 1)
-                            .foregroundColor(.gray.opacity(0.2))
-                            .padding(.top, -1),
-                        alignment: .top
-                    )
-            )
+            .background(Color.dynamic)
             .clipShape(
                 RoundedRectangle(
                     cornerRadius: 0,
                     style: .continuous
                 )
             )
-        }.edgesIgnoringSafeArea(.bottom)
-        .offset(y: !bottomBarAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: bottomBarAppeared)
+        }
+        .edgesIgnoringSafeArea(.bottom)
+        
     }
 
     var body: some View {
-        
-            ZStack {
-                ScrollableNavigationBar(
-                    title: event.type,
-                    icon: "house.fill",
-                    isInline: true,
-                    showBackButton: true
-                ) {
-                    VStack(spacing: 0) {
-                        headerSection
-                        
+        ZStack {
+            ScrollableNavigationBar(
+                title: event.type,
+                isInline: false,
+                showBackButton: true
+            ) {
+                VStack(spacing: 0) {
+                    // Header section with image viewer
+                    headerSection
+                        .frame(height: 400)
+                    
+                    // Scrollable content
+                    ScrollView {
                         VStack(alignment: .leading, spacing: 24) {
                             titleAndViewsSection
                             eventTypeIconsSection
                             descriptionSection
                             eventOrganizerSection
                             locationSection
+                            
+                            if !hideRecommendedCards {
+                                recommendedEventsSection
+                            }
                         }
                         .padding()
-                        .offset(y: !pageAppeared ? UIScreen.main.bounds.height * 0.5 : 0)
-                        
-                        if !hideRecommendedCards {
-                            recommendedEventsSection
-                        }
+                        .padding(.bottom, hideRecommendedCards ? 120 : 0)
                     }
                 }
-               
-                
-                .offset(y: showTicket ? -90 : 0)
-                .animation(.spring(), value: showTicket)
-                
-                bottomBarSection
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showPurchaseView) {
-                PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
+            .offset(y: showTicket ? -90 : 0)
+            .animation(.spring(), value: showTicket)
+            
+            if showTicket {
+                TicketView(event: event, isShowing: $showTicket)
+                    .transition(.move(edge: .bottom))
+                    .zIndex(1)
             }
-            .sheet(isPresented: $showRecommendedEvent) {
-                NavigationView {
-                    ViewEventDetail(event:showRecommendedEventDetails,hideRecommendedCards:true)
-                        .navigationBarTitle(showRecommendedEventDetails.name)
-                        .toolbarBackground(Color.dynamic)
+            
+            bottomBarSection
+        }
+        .sheet(isPresented: $showPurchaseView) {
+            PurchaseTicketView(event: event, isPresented: $showPurchaseView, hasTicket: $hasTicket)
+        }
+        .sheet(isPresented: $showRecommendedEvent) {
+            ViewEventDetail(event: showRecommendedEventDetails, hideRecommendedCards: true)
+                .navigationBarTitle(showRecommendedEventDetails.name)
+                .toolbarBackground(Color.dynamic)
+                .padding(.top, -30)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
+                pageAppeared = true
+                DispatchQueue.main.asyncAfter(deadline:.now() + 0.5) {
+                    bottomBarAppeared = true
                 }
             }
-            .onAppear {
-                withAnimation(.spring(response: 0.7, dampingFraction: 0.8)) {
-                    pageAppeared = true
-                    DispatchQueue.main.asyncAfter(deadline:.now() + 0.5) {
-                        bottomBarAppeared = true
-                    }
-                }
-                // Increment views when the view appears
-                incrementViews()
-                //Record this event as an activity of the user
-                self.viewModel.recordEventInteraction(event, type: .view)
-                //hide tabbar
+            // Increment views when the view appears
+            incrementViews()
+            //Record this event as an activity of the user
+            self.viewModel.recordEventInteraction(event, type: .view)
+            //hide tabbar
+            tabBarManager.hideTab = true
+            //hide tabbar again a second time
+            DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
                 tabBarManager.hideTab = true
-                //hide tabbar again a second time
-                DispatchQueue.main.asyncAfter(deadline:.now() + 1) {
-                    tabBarManager.hideTab = true
-                   
-                }
-                
-                // Fetch organizer name from Firestore
+               
+            }
+            
+            // Fetch organizer name from Firestore
 //                let db = Firestore.firestore()
 //                db.collection("users").document(event.owner).getDocument { document, error in
 //                    if let document = document, document.exists {
@@ -645,43 +660,43 @@ struct ViewEventDetail: View {
                 checkIfBookmarked()
                 checkIfUserHasTicket()
                 checkTicketStatus()
-            }
-            .onDisappear {
-                tabBarManager.hideTab = false
+        }
+        .onDisappear {
+            tabBarManager.hideTab = false
         }
         
-            .toolbarBackground(Color.dynamic)
-            .toolbar {
-                Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
-                    .foregroundColor(bookmarked ? .blue : .white)
-                    .onTapGesture {
-                        toggleBookmark()
-                    }
-                    .padding(10)
-                    
-            }
-            
-            .alert("Purchase Error", isPresented: $showPurchaseError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(purchaseError ?? "An error occurred")
-            }
-            .alert("Success", isPresented: $showPurchaseSuccess) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Your ticket has been purchased successfully!")
-            }
-            .overlay(
-                Group {
-                    if isPurchasing {
-                        ProgressView("Purchasing ticket...")
-                            .padding()
-                            .background(Color(.systemBackground))
-                            .cornerRadius(10)
-                            .shadow(radius: 10)
-                    }
+        .toolbarBackground(Color.dynamic)
+        .toolbar {
+            Image(systemName: bookmarked ? "bookmark.fill" : "bookmark")
+                .foregroundColor(bookmarked ? .blue : .white)
+                .onTapGesture {
+                    toggleBookmark()
                 }
-            )
+                .padding(10)
+                
+        }
+        
+        .alert("Purchase Error", isPresented: $showPurchaseError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(purchaseError ?? "An error occurred")
+        }
+        .alert("Success", isPresented: $showPurchaseSuccess) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your ticket has been purchased successfully!")
+        }
+        .overlay(
+            Group {
+                if isPurchasing {
+                    ProgressView("Purchasing ticket...")
+                        .padding()
+                        .background(Color(.systemBackground))
+                        .cornerRadius(10)
+                        .shadow(radius: 10)
+                }
+            }
+        )
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -696,15 +711,19 @@ struct EventTypeIcon: View {
     let text: String
     
     var body: some View {
-       HStack(spacing: 8) {
+        VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 24))
+                .foregroundColor(.blue)
+                .frame(width: 50, height: 50)
+                .background(Color.blue.opacity(0.1))
+                .clipShape(Circle())
+            
             Text(text)
                 .font(.caption)
+                .foregroundColor(.secondary)
                 .lineLimit(1)
-           
-       }
-        .foregroundColor(.secondary)
+        }
     }
 }
 
@@ -713,6 +732,18 @@ struct TicketView: View {
     @Binding var isShowing: Bool
     @State private var offset: CGFloat = UIScreen.main.bounds.height
     @GestureState private var dragOffset: CGFloat = 0
+    
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter
+    }()
+    
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
     
     var body: some View {
         VStack(spacing: 0) {
@@ -739,120 +770,115 @@ struct TicketView: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    Text("Ticket Pass")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                    // Event Title and Type
+                    VStack(spacing: 8) {
+                        Text(event.type)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial)
+                            .foregroundColor(.primary)
+                            .clipShape(Capsule())
+                        
+                        Text(event.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                    .padding(.top)
                     
                     // Main Ticket Card
-                    VStack(spacing: 20) {
-                        // Cities and Time
-                        HStack(alignment: .top) {
-                            // Departure
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("CGK")
-                                    .font(.system(size: 32, weight: .bold))
-                                Text("New York")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text("14:35")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                    VStack(spacing: 24) {
+                        // Date and Time Section
+                        HStack(spacing: 30) {
+                            // Date
+                            VStack(spacing: 8) {
+                                Image(systemName: "calendar")
+                                    .font(.title2)
+                                    .foregroundColor(.blue)
+                                Text(dateFormatter.string(from: event.startDate))
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
                             }
                             
-                            Spacer()
-                            
-                            // Flight Icon and Duration
-                            VStack(spacing: 4) {
-                                Image(systemName: "airplane")
+                            // Time
+                            VStack(spacing: 8) {
+                                Image(systemName: "clock")
                                     .font(.title2)
+                                    .foregroundColor(.blue)
+                                Text(timeFormatter.string(from: event.startDate))
+                                    .font(.headline)
+                                    .foregroundColor(.primary)
+                            }
+                        }
+                        .padding(.vertical)
+                        
+                        // Location Section
+                        VStack(spacing: 8) {
+                            Image(systemName: "location.fill")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                            Text(event.location)
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(.vertical)
+                        
+                        // Divider
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 1)
+                            .padding(.horizontal)
+                        
+                        // Ticket Details
+                        VStack(spacing: 20) {
+                            // Ticket Code
+                            VStack(spacing: 8) {
+                                Text("TICKET CODE")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                Text("EVT-\(String(event.id.prefix(8)))")
+                                    .font(.system(.title3, design: .monospaced))
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                            }
+                            
+                            // QR Code
+                            VStack(spacing: 12) {
+                                Image(systemName: "qrcode")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 180, height: 180)
+                                    .foregroundColor(.primary)
+                                    .padding()
+                                    .background(Color.white)
+                                    .cornerRadius(16)
+                                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
                                 
-                                Text("16h 30m")
+                                Text("Scan to verify ticket")
                                     .font(.caption)
                                     .foregroundColor(.gray)
                             }
-                            .frame(width: 60)
                             
-                            Spacer()
-                            
-                            // Arrival
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("WAW")
-                                    .font(.system(size: 32, weight: .bold))
-                                Text("Warsawa")
-                                    .font(.subheadline)
-                                    .foregroundColor(.gray)
-                                Text("15:45")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                            // Additional Info
+                            VStack(spacing: 16) {
+                                InfoRow(title: "Price", value: event.price == "0" ? "Free" : event.price)
+                                InfoRow(title: "Organizer", value: event.organizerName)
+                                InfoRow(title: "Attendees", value: "\(event.participants.count)")
                             }
-                        }
-                        
-                        // Progress Line
-                        HStack(spacing: 0) {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 12, height: 12)
-                            
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(height: 1)
-                                .overlay(
-                                    Image(systemName: "clock")
-                                        .foregroundColor(.gray)
-                                        .background(Color.black)
-                                )
-                            
-                            Circle()
-                                .stroke(Color.gray, lineWidth: 1)
-                                .frame(width: 12, height: 12)
-                        }
-                        
-                        // Flight Details Grid
-                        HStack(spacing: 30) {
-                         
+                            .padding()
+                            .background(Color.blue.opacity(0.05))
+                            .cornerRadius(16)
                         }
                     }
                     .padding(24)
-                    .background(Color.black)
-                    .cornerRadius(20)
-                    
-                    // Ticket Code and Barcode
-                    VStack(spacing: 12) {
-                        Text("Ticket Code: C7G2K679H92")
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                        
-                        Image(systemName: "barcode")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 100)
-                            
-                        // Flight Details Grid
-                        HStack(spacing: 0) {
-                            TicketDetailColumn(title: "Class", value: "Economy")
-                            
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 1, height: 40)
-                            
-                            TicketDetailColumn(title: "Terminal", value: "F2")
-                            
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 1, height: 40)
-                            
-                            TicketDetailColumn(title: "Gate", value: "32")
-                            
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 1, height: 40)
-                            
-                            TicketDetailColumn(title: "Seat", value: "8A")
-                        }
-                        .padding(.vertical, 20)
-                        .background(Color.black)
-                        .cornerRadius(12)
-                    }
+                    .background(Color(.systemBackground))
+                    .cornerRadius(24)
+                    .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
                 }
                 .padding()
             }
@@ -896,20 +922,21 @@ struct TicketView: View {
     }
 }
 
-struct TicketDetailColumn: View {
+struct InfoRow: View {
     let title: String
     let value: String
     
     var body: some View {
-        VStack(spacing: 4) {
+        HStack {
             Text(title)
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundColor(.gray)
+            Spacer()
             Text(value)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(.primary)
         }
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -1344,7 +1371,7 @@ struct MapPin: Identifiable {
 
 struct ViewEventDetail_Previews: PreviewProvider {
     static var previews: some View {
-        ViewEventDetail(event: sampleEvent)
+        ViewEventDetail(event: sampleEvents[0])
             .environmentObject(FirebaseManager.shared)
     }
 }
@@ -1368,7 +1395,6 @@ struct RecommendedEventCard: View {
                             .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .padding(.horizontal,5)
                             .padding(.vertical,2)
-                            .background(.ultraThinMaterial)
                             .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
                             .cornerRadius(15)
                         }
@@ -1402,18 +1428,15 @@ struct RecommendedEventCard: View {
             .padding(.horizontal, 8)
             .padding(.bottom, 12)
             .padding(.top, 12)
-            .background(.ultraThinMaterial)
-            .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
+            .background(Color.dynamic)
+            
         }
-        .background(
-            CompactImageViewer(imageUrls: event.images, height: 200)
-                .blur(radius: 40)
-        )
+       
         .cornerRadius(16)
         .frame(width: 200)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.dynamic.opacity(1), lineWidth: 1)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
     }
 }
