@@ -104,9 +104,7 @@ struct HideTabOnAppear: ViewModifier {
             .onAppear {
                 tabBarManager.hideTab = hide
             }
-            .onDisappear {
-                tabBarManager.hideTab = false
-            }
+           
     }
 }
 
@@ -117,4 +115,9 @@ extension View {
     }
 }
 
-
+// Add this extension to make it easy to use the modifier
+extension View {
+    func showTabOnAppear(_ hide: Bool = false) -> some View {
+        self.modifier(HideTabOnAppear(hide: hide))
+    }
+}

@@ -34,6 +34,7 @@ struct MainTabView: View {
         }
         .onAppear {
             tabBarManager.hideTab = false
+            selectedTab = .home
         
         }
     }

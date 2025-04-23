@@ -95,12 +95,8 @@ struct ChatDetailView: View {
                                 Button(action: { showGroupDetail = true }) {
                                     Label("Group Info", systemImage: "info.circle")
                                 }
-                                Button(action: {}) {
-                                    Label("Search", systemImage: "magnifyingglass")
-                                }
-                                Button(action: {}) {
-                                    Label("Mute Notifications", systemImage: "bell.slash")
-                                }
+                               
+                              
                             } label: {
                                 Image(systemName: "ellipsis")
                                     .font(.title3)
@@ -222,7 +218,7 @@ struct ChatDetailView: View {
             }
         }
         .navigationBarHidden(true)
-        .hideTabOnAppear()
+        .hideTabOnAppear(true)
         .background(
             NavigationLink(destination: GroupDetailView(group: group), isActive: $showGroupDetail) {
                 EmptyView()

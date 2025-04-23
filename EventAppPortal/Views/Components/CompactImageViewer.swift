@@ -5,12 +5,14 @@ struct CompactImageViewer: View {
     let imageUrls: [String]
     let height: CGFloat
     @State private var currentIndex = 0
-    var scroll : Bool = true
+    @State private var validImageUrls: [String] = []
+    @State private var loadingStates: [String: Bool] = [:]
+    var scroll: Bool = true
     
     var body: some View {
         ZStack {
-            if imageUrls.isEmpty {
-                // Show placeholder when no images are available
+            if validImageUrls.isEmpty {
+                // Show placeholder when no valid images are available
                 Rectangle()
                     .fill(Color.gray.opacity(0.1))
                     .frame(height: height)
@@ -21,17 +23,25 @@ struct CompactImageViewer: View {
                     )
             } else {
                 TabView(selection: $currentIndex) {
-                    ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
+                    ForEach(Array(validImageUrls.enumerated()), id: \.offset) { index, url in
                         KFImage(URL(string: url))
                             .placeholder {
                                 ProgressView()
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .background(Color.gray.opacity(0.1))
                             }
+                            .onSuccess { result in
+                                print("Successfully loaded image at index \(index): \(url)")
+                                loadingStates[url] = true
+                            }
                             .onFailure { error in
-                                Image(systemName: "photo.fill")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
+                                print("Failed to load image at index \(index): \(url)")
+                                print("Error: \(error)")
+                                // Remove the failed image URL from the array
+                                if let index = validImageUrls.firstIndex(of: url) {
+                                    validImageUrls.remove(at: index)
+                                    loadingStates[url] = false
+                                }
                             }
                             .resizable()
                             .scaledToFill()
@@ -40,7 +50,7 @@ struct CompactImageViewer: View {
                             .tag(index)
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: !scroll ? .never : .automatic))
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: validImageUrls.count > 1 && scroll ? .automatic : .never))
                 .overlay {
                     scroll ? Color.clear :
                     Color.gray.opacity(0.02)
@@ -65,6 +75,21 @@ struct CompactImageViewer: View {
 //            }
         }
         .frame(height: height)
+        .onAppear {
+            print("CompactImageViewer appeared with \(imageUrls.count) URLs")
+            // Filter out invalid URLs and initialize loading states
+            validImageUrls = imageUrls.filter { urlString in
+                if let _ = URL(string: urlString) {
+                    print("Valid URL found: \(urlString)")
+                    loadingStates[urlString] = false
+                    return true
+                } else {
+                    print("Invalid URL found: \(urlString)")
+                    return false
+                }
+            }
+            print("Filtered to \(validImageUrls.count) valid URLs")
+        }
     }
 }
 
@@ -73,8 +98,7 @@ struct CompactImageViewer_Previews: PreviewProvider {
     static var previews: some View {
         CompactImageViewer(
             imageUrls: [
-                "https://example.com/image1.jpg",
-                "https://example.com/image2.jpg"
+                "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F0C974F1D-B873-4F1E-9F87-9FC3DF679AF1.jpg?alt=media"
             ],
             height: 200
         )

@@ -28,7 +28,7 @@ struct NotificationView: View {
     }
     
     var body: some View {
-        NavigationView {
+      
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     // Header Section
@@ -93,15 +93,15 @@ struct NotificationView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { dismiss() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                            Text("Back")
-                        }
-                        .foregroundColor(.primary)
-                    }
-                }
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    Button(action: { dismiss() }) {
+//                        HStack(spacing: 4) {
+//                            Image(systemName: "chevron.left")
+//                            Text("Back")
+//                        }
+//                        .foregroundColor(.primary)
+//                    }
+//                }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showCalendar.toggle() }) {
@@ -113,7 +113,7 @@ struct NotificationView: View {
             .sheet(isPresented: $showCalendar) {
                 CalendarView(selectedDate: $selectedDate, currentMonth: $currentMonth, viewMode: $viewMode)
             }
-        }
+        
     }
     
     private func eventsForSelectedDate() -> [Event] {

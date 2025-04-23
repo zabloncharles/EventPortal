@@ -5,9 +5,11 @@ struct ScrollableNavigationBar<Content: View>: View {
     // MARK: - Properties
     var title: String
     var icon: String = ""
+    var trailingicon: String = ""
     var isInline: Bool = false
     var showBackButton: Bool = false
     var onBackPressed: (() -> Void)? = nil
+    var onTrailingPressed: (() -> Void)? = nil
     let content: Content
     
     @Environment(\.presentationMode) var presentationMode
@@ -22,16 +24,20 @@ struct ScrollableNavigationBar<Content: View>: View {
     init(
         title: String,
         icon: String = "",
+        trailingicon: String = "",
         isInline: Bool = false,
         showBackButton: Bool = false,
         onBackPressed: (() -> Void)? = nil,
+        onTrailingPressed: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.icon = icon
         self.isInline = isInline
+        self.trailingicon = trailingicon
         self.showBackButton = showBackButton
         self.onBackPressed = onBackPressed
+        self.onTrailingPressed = onTrailingPressed
         self.content = content()
     }
     
@@ -55,9 +61,11 @@ struct ScrollableNavigationBar<Content: View>: View {
                 NavigationBarView(
                     title: title,
                     icon: icon,
+                    trailingicon: trailingicon,
                     isInline: isInline,
                     showBackButton: showBackButton,
-                    onBackPressed: onBackPressed ?? { presentationMode.wrappedValue.dismiss() }
+                    onBackPressed: onBackPressed ?? { presentationMode.wrappedValue.dismiss() },
+                    onTrailingPressed: onTrailingPressed ?? {}
                 )
                 .transition(.move(edge: .top).combined(with: .opacity))
                 .offset(y: animateScroll ? 36 : -50)
@@ -103,22 +111,17 @@ struct ScrollableNavigationBar<Content: View>: View {
 // MARK: - NavigationBarView
 struct NavigationBarView: View {
     let title: String
-    let icon: String
+    var icon: String
+    var trailingicon: String = ""
     var isInline: Bool = false
     var showBackButton: Bool = false
     var onBackPressed: () -> Void
+    var onTrailingPressed: () -> Void
     
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 if showBackButton && isInline {
-                    Button(action: onBackPressed) {
-                        Image(systemName: "chevron.left")
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary.opacity(0.70))
-                    }
-                    .padding(.trailing, 8)
                     Spacer()
                     Text(title)
                         .font(.headline)
@@ -145,8 +148,9 @@ struct NavigationBarView: View {
                         )
                     Spacer()
                 } else {
+                    Spacer()
                     Text(title)
-                        .font(.title)
+                        .font(.headline)
                         .bold()
                         .foregroundStyle(
                             LinearGradient(
@@ -156,6 +160,29 @@ struct NavigationBarView: View {
                             )
                         )
                     Spacer()
+                }
+            }
+            .overlay {
+                if showBackButton {
+                    HStack {
+                        Button(action: onBackPressed) {
+                            Image(systemName: "chevron.left")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary.opacity(0.70))
+                        }
+                        .padding(.trailing, 8)
+                        Spacer()
+                        if !trailingicon.isEmpty {
+                            Button(action: onTrailingPressed) {
+                                Image(systemName: trailingicon)
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary.opacity(0.70))
+                            }
+                            .padding(.trailing, 8)
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 16)

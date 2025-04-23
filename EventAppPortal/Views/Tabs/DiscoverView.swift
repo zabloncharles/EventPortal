@@ -183,6 +183,7 @@ struct DiscoverView: View {
     @State private var visibleEvents: [Event] = []
     @State private var showingFilters = false
     @State private var currentPage = 0
+    @State private var hasInitializedLocation = false
     
     let categories = [
         "All", "Concert", "Corporate", "Marketing", "Health & Wellness",
@@ -262,7 +263,7 @@ struct DiscoverView: View {
                                     
                                     Text(locationManager.locationString.split(separator: ",")[0] == "Not Set" ? "not logged in!" : locationManager.locationString.split(separator: ",")[0])
                                         .font(.subheadline)
-                                .foregroundColor(.gray)
+                            .foregroundColor(.gray)
                                 }
                                 
                                 Spacer()
@@ -313,7 +314,7 @@ struct DiscoverView: View {
                         Spacer()
                 }
                
-                // Bottom Sheet with Closest Events
+                // Bottom Sheet with Event Card
                 if !showSearchView {
                     VStack(spacing: 0) {
                         Spacer()
@@ -321,7 +322,7 @@ struct DiscoverView: View {
                         // Map Control Buttons
                         HStack {
                             Spacer()
-                            VStack(spacing: 12) {
+                                VStack(spacing: 12) {
                         Button(action: {
                                     withAnimation {
                                         region.span = MKCoordinateSpan(
@@ -368,62 +369,54 @@ struct DiscoverView: View {
                                 .padding(.top, 10)
                                 .padding(.bottom, 10)
                             
-                            // Title and Count
-                    HStack {
-                                Text("Catch the Trending Events")
-                                    .font(.title3)
-                                    .bold()
-                                
-                                Spacer()
-                                
-                            Button(action: {
-                                    // Handle explore more action
-                            }) {
-                                    Text("Explore More")
-                                        .font(.subheadline)
+                            if let selectedEvent = selectedEvent {
+                                // Selected Event Card
+                                NavigationLink(destination: ViewEventDetail(event: selectedEvent)) {
+                                    EventListItem(event: selectedEvent, isSelected: true, userLocation: locationManager.location)
+                                        .padding(.horizontal, 10)
+                                }
+                                .padding(.bottom, 90)
+                        } else {
+                                // Title and Count
+                                HStack {
+                                    Text("Catch the Trending Events")
+                                        .font(.title3)
+                                        .bold()
+                                    
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        // Handle explore more action
+                                    }) {
+                                        Text("Explore More")
+                                            .font(.subheadline)
                                     .foregroundColor(.gray)
-                        }
+                                    }
                     }
                     .padding(.horizontal)
-                            .padding(.bottom, 10)
-                            
-                            // Events TabView
-                            TabView(selection: $currentPage) {
-                                ForEach(Array(nearestEvents.enumerated()), id: \.element.id) { index, event in
-                                    NavigationLink(destination: {
-                                        ViewEventDetail(event:event)
-                                    }, label: {
-                                        EventListItem(event: event, isSelected: event.id == selectedEvent?.id, userLocation: locationManager.location)
-                                            .padding(.horizontal, 10)
-                                            .tag(index)
-                                    })
-                                } .padding(.bottom, 50)
-                            }
-                            .frame(height: 230)
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                            .padding(.bottom, 50)
-                            .onChange(of: currentPage) { newPage in
-                                if newPage >= 0 && newPage < nearestEvents.count {
-                                    let event = nearestEvents[newPage]
-                                    selectedEvent = event
-                                    withAnimation {
-                                        region.center = CLLocationCoordinate2D(
-                                            latitude: event.coordinates[0],
-                                            longitude: event.coordinates[1]
-                                        )
-                                        region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+                                .padding(.bottom, 10)
+                                
+                                // Events TabView
+                                TabView(selection: $currentPage) {
+                                    ForEach(Array(nearestEvents.enumerated()), id: \.element.id) { index, event in
+                                        NavigationLink(destination: {
+                                            ViewEventDetail(event:event)
+                                        }, label: {
+                                            EventListItem(event: event, isSelected: event.id == selectedEvent?.id, userLocation: locationManager.location)
+                                                .padding(.horizontal, 10)
+                                                .tag(index)
+                                        })
                                     }
                                 }
-                            }
-                            .onAppear {
-                                // Center on first event when TabView appears
-                                if let firstEvent = nearestEvents.first {
-                                    selectedEvent = firstEvent
-                                    currentPage = 0
-                                }
+                                .frame(height: 230)
+                                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
+                                .padding(.bottom, 90)
                             }
                         }
                         .background(Color.dynamic)
+                    }
+                    .safeAreaInset(edge: .bottom) {
+                        Color.clear.frame(height: 49)
                     }
                 }
             }
@@ -444,7 +437,9 @@ struct DiscoverView: View {
                 SearchView(
                     searchText: $searchText,
                     selectedFilter: $selectedFilter,
-                    displayedEvents: displayedEvents
+                    displayedEvents: displayedEvents,
+                    selectedEvent: $selectedEvent,
+                    region: $region
                 )
             }
             .onChange(of: searchText) { newValue in
@@ -458,11 +453,15 @@ struct DiscoverView: View {
                 
                 if clickedEvent {
                     hideTab = true
-                    } else {
+                } else {
                     hideTab = false
                 }
             }
-            .onChange(of: locationManager.location) { _ in
+            .onChange(of: locationManager.location) { newLocation in
+                if let location = newLocation, !hasInitializedLocation {
+                    region.center = location.coordinate
+                    hasInitializedLocation = true
+                }
                 updateNearestEvents()
             }
             .onChange(of: filterModel.filteredEvents) { _ in
@@ -474,7 +473,7 @@ struct DiscoverView: View {
     var mainMapView: some View {
         Map(coordinateRegion: $region,
             showsUserLocation: true,
-            userTrackingMode: .constant(.follow),
+            userTrackingMode: .constant(.none),
             annotationItems: filterModel.filteredEvents) { event in
             MapAnnotation(coordinate: CLLocationCoordinate2D(
                 latitude: event.coordinates[0],
@@ -505,18 +504,16 @@ struct DiscoverView: View {
                     .font(.headline)
                     .foregroundColor(selectedEvent?.id == event.id ? .invert : .green)
                     .background(
-                        
                         Circle()
                             .fill(
                                 RadialGradient(gradient: Gradient(colors: [event.participants.count > 10 ? Color.red.opacity(0.90) : Color.green, .yellow.opacity(0.50), .clear]), center: .center, startRadius: 15, endRadius: 40)
                             )
                             .frame(width:180, height: 180)
-                          
                     )
-                   
                     .scaleEffect(selectedEvent?.id == event.id ? 1.2 : 1)
                     .animation(.spring(), value: selectedEvent)
-                }  .onTapGesture {
+                }
+                .onTapGesture {
                     withAnimation(.spring()) {
                         selectedEvent = event
                         region.center = CLLocationCoordinate2D(
@@ -526,7 +523,6 @@ struct DiscoverView: View {
                         region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
                     }
                 }
-               
             }
         }
         .ignoresSafeArea()
@@ -1411,7 +1407,7 @@ struct MapView: View {
             // Map View
             Map(coordinateRegion: $region,
                 showsUserLocation: true,
-                userTrackingMode: .constant(.follow),
+                userTrackingMode: .constant(.none),
                 annotationItems: events) { event in
                 MapAnnotation(coordinate: CLLocationCoordinate2D(
                     latitude: event.coordinates.count >= 2 ? event.coordinates[0] : 37.3361,
@@ -1722,15 +1718,9 @@ struct EventListItem: View {
             // Event Image and Title Section
             HStack(spacing: 12) {
                 // Event Image
-                AsyncImage(url: URL(string: event.images[0])) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color.gray.opacity(0.2)
-                }
-                .frame(width: 100, height: 80)
-                .cornerRadius(12)
+                CompactImageViewer(imageUrls: event.images, height: 80, scroll: false)
+                    .frame(width: 100, height: 80)
+                    .cornerRadius(12)
                 
                 // Event Details
                 VStack(alignment: .leading, spacing: 4) {
@@ -1842,6 +1832,23 @@ struct SearchView: View {
     @Binding var searchText: String
     @Binding var selectedFilter: FilterType
     let displayedEvents: [Event]
+    @Binding var selectedEvent: Event?
+    @Binding var region: MKCoordinateRegion
+    
+    let filterTypes: [(type: FilterType, icon: String)] = [
+        (.all, "square.grid.2x2"),
+        (.concert, "music.note"),
+        (.corporate, "building.2"),
+        (.marketing, "megaphone"),
+        (.healthWellness, "heart"),
+        (.technology, "laptopcomputer"),
+        (.artCulture, "paintbrush"),
+        (.charity, "hand.raised"),
+        (.literature, "book"),
+        (.lifestyle, "figure.walk"),
+        (.environmental, "leaf"),
+        (.entertainment, "music.note.list")
+    ]
     
     var body: some View {
         VStack(spacing: 0) {
@@ -1904,26 +1911,26 @@ struct SearchView: View {
             // Category Filter
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(FilterType.allCases) { type in
+                    ForEach(filterTypes, id: \.type) { filterType in
                         Button(action: {
-                            selectedFilter = type
+                            selectedFilter = filterType.type
                         }) {
                             VStack(spacing: 8) {
-                                Image(systemName: type.icon)
+                                Image(systemName: filterType.icon)
                                     .font(.title2)
-                                    .foregroundColor(selectedFilter == type ? .white : .gray)
+                                    .foregroundColor(selectedFilter == filterType.type ? .white : .gray)
                                     .frame(width: 50, height: 50)
-                                    .background(selectedFilter == type ? Color.blue : Color.dynamic)
+                                    .background(selectedFilter == filterType.type ? Color.blue : Color.dynamic)
                                     .clipShape(Circle())
-                                    .shadow(color: selectedFilter == type ? .blue.opacity(0.3) : .clear, radius: 5)
+                                    .shadow(color: selectedFilter == filterType.type ? .blue.opacity(0.3) : .clear, radius: 5)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 60)
-                                            .stroke(selectedFilter == type ? .blue.opacity(0.3) : .clear.opacity(0.3), lineWidth: 1)
+                                            .stroke(selectedFilter == filterType.type ? .blue.opacity(0.3) : .clear.opacity(0.3), lineWidth: 1)
                                     )
                                 
-                                Text(type.rawValue)
+                                Text(filterType.type.rawValue)
                                     .font(.caption)
-                                    .foregroundColor(selectedFilter == type ? .primary : .gray)
+                                    .foregroundColor(selectedFilter == filterType.type ? .primary : .gray)
                                     .lineLimit(1)
                             }
                         }
@@ -1946,8 +1953,15 @@ struct SearchView: View {
                     if displayedEvents.count > 0 {
                         ForEach(displayedEvents) { event in
                             EventSearchResult(event: event) {
+                                selectedEvent = event
+                                withAnimation {
+                                    region.center = CLLocationCoordinate2D(
+                                        latitude: event.coordinates[0],
+                                        longitude: event.coordinates[1]
+                                    )
+                                    region.span = MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+                                }
                                 dismiss()
-                                // Add any additional action here
                             }
                             Divider()
                                 .background(Color.gray.opacity(0.3))

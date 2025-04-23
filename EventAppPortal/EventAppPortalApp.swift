@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Firebase
+import Kingfisher
 
 @main
 struct EventAppPortalApp: App {
@@ -14,6 +15,18 @@ struct EventAppPortalApp: App {
     
     init() {
         FirebaseApp.configure()
+        
+        // Configure Kingfisher
+        let cache = ImageCache(name: "eventportal.cache")
+        cache.memoryStorage.config.totalCostLimit = 300 * 1024 * 1024 // 300MB memory cache
+        cache.diskStorage.config.sizeLimit = 1000 * 1024 * 1024 // 1GB disk cache
+        
+        KingfisherManager.shared.defaultOptions = [
+            .cacheOriginalImage,
+            .scaleFactor(UIScreen.main.scale),
+            .backgroundDecode,
+            .keepCurrentImageWhileLoading
+        ]
     }
     
     var body: some Scene {

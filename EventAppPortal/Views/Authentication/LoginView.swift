@@ -33,8 +33,10 @@ struct LoginView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
                 isLoading = false
             }
-            self.isSuccessful = true
-            if !success {
+            if success {
+                self.isSuccessful = true
+                UserDefaults.standard.set(true, forKey: "isLoggedIn")
+            } else {
                 alertMessage = error ?? "An error occurred"
                 showAlert = true
             }

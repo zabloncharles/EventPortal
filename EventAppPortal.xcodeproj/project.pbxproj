@@ -24,6 +24,8 @@
 		F75F5B572DB30CD5000FBDC8 /* ChatDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */; };
 		F7633E332D77589E00644438 /* TabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7633E322D77589E00644438 /* TabBar.swift */; };
 		F764BB332D89CDC7002F53E3 /* Ghost.json in Resources */ = {isa = PBXBuildFile; fileRef = F764BB322D89CDC7002F53E3 /* Ghost.json */; };
+		F77067602DB5CAAA000C705E /* GroupCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F770675F2DB5CAAA000C705E /* GroupCard.swift */; };
+		F77067622DB82E35000C705E /* RequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77067612DB82E35000C705E /* RequestDetailView.swift */; };
 		F773EC5E2D7888B50009AC93 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F773EC5D2D7888B50009AC93 /* Assets.xcassets */; };
 		F773EC672D788A600009AC93 /* ColorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC662D788A600009AC93 /* ColorExtension.swift */; };
 		F773EC6A2D788DB90009AC93 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = F773EC692D788DB90009AC93 /* Event.swift */; };
@@ -78,6 +80,8 @@
 		F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatDetailView.swift; sourceTree = "<group>"; };
 		F7633E322D77589E00644438 /* TabBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBar.swift; sourceTree = "<group>"; };
 		F764BB322D89CDC7002F53E3 /* Ghost.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = Ghost.json; sourceTree = "<group>"; };
+		F770675F2DB5CAAA000C705E /* GroupCard.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = GroupCard.swift; path = EventAppPortal/Views/Components/GroupCard.swift; sourceTree = SOURCE_ROOT; };
+		F77067612DB82E35000C705E /* RequestDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestDetailView.swift; sourceTree = "<group>"; };
 		F773EC5D2D7888B50009AC93 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F773EC662D788A600009AC93 /* ColorExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorExtension.swift; sourceTree = "<group>"; };
 		F773EC692D788DB90009AC93 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
@@ -170,6 +174,7 @@
 		F75F5B512DB2EF0B000FBDC8 /* Cards */ = {
 			isa = PBXGroup;
 			children = (
+				F770675F2DB5CAAA000C705E /* GroupCard.swift */,
 			);
 			path = Cards;
 			sourceTree = "<group>";
@@ -243,6 +248,7 @@
 		F7855EB02D85439D00D668CD /* Detail */ = {
 			isa = PBXGroup;
 			children = (
+				F77067612DB82E35000C705E /* RequestDetailView.swift */,
 				F75F5B562DB30CD5000FBDC8 /* ChatDetailView.swift */,
 				F75F5B542DB307F7000FBDC8 /* ChatHomeView.swift */,
 				F75F5B522DB2F4A2000FBDC8 /* HistoryView.swift */,
@@ -404,10 +410,12 @@
 			files = (
 				F75F5B4E2DAEA433000FBDC8 /* ScrollableNavigationBar.swift in Sources */,
 				F79C82822D77564900C87783 /* HomeView.swift in Sources */,
+				F77067602DB5CAAA000C705E /* GroupCard.swift in Sources */,
 				F7FD39012DAB6DDA00682B6A /* EventCreationFlow.swift in Sources */,
 				F773EC802D79E1710009AC93 /* AIOrb.swift in Sources */,
 				F71515632D86A26F001D55C3 /* RecommendedEventsView.swift in Sources */,
 				F79C82832D77564900C87783 /* DiscoverView.swift in Sources */,
+				F77067622DB82E35000C705E /* RequestDetailView.swift in Sources */,
 				F7855E9F2D7D1DD700D668CD /* NotificationView.swift in Sources */,
 				F79545232D8673AA0053ED72 /* CompactImageViewer.swift in Sources */,
 				F75F5B502DB2EEE2000FBDC8 /* GroupDetailView.swift in Sources */,

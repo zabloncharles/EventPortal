@@ -1,14 +1,26 @@
 import Foundation
 import CoreLocation
 import FirebaseFirestore
+import SwiftUI
 
-class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+class LocationManager: NSObject, ObservableObject{
     static let shared = LocationManager()
     private let locationManager = CLLocationManager()
     @Published var location: CLLocation?
-    @Published var locationString: String = "Not set"
+    @Published var locationString: String = "Not Set"
+    @Published var coordinates: [Double] = [0.0, 0.0]
     @Published var authorizationStatus: CLAuthorizationStatus
     @Published var isLoading = false
+    
+    // AppStorage for persistent location data
+    @AppStorage("userLocationString") private var storedLocationString: String = "Not Set"
+    @AppStorage("userLatitude") private var storedLatitude: Double = 0.0
+    @AppStorage("userLongitude") private var storedLongitude: Double = 0.0
+    
+    // Add caching and rate limiting
+    private var geocodingCache: [String: String] = [:]
+    private var lastGeocodingRequest: Date?
+    private let minimumGeocodingInterval: TimeInterval = 1.0 // Minimum 1 second between requests
     
     override init() {
         authorizationStatus = locationManager.authorizationStatus
@@ -16,8 +28,50 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         super.init()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 10 // Update location when user moves 10 meters
+        locationManager.allowsBackgroundLocationUpdates = false
+        locationManager.pausesLocationUpdatesAutomatically = false
+        
+        // Load stored location on init
+        loadStoredLocation()
+        
+        // Request authorization and start updating immediately
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
+        
+        // Force an initial location update
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.forceLocationUpdate()
+        }
+    }
+    
+    private func loadStoredLocation() {
+        locationString = storedLocationString
+        coordinates = [storedLatitude, storedLongitude]
+        if storedLatitude != 0.0 && storedLongitude != 0.0 {
+            location = CLLocation(latitude: storedLatitude, longitude: storedLongitude)
+        }
+    }
+    
+    private func storeLocation(_ location: CLLocation, _ locationString: String) {
+        storedLocationString = locationString
+        storedLatitude = location.coordinate.latitude
+        storedLongitude = location.coordinate.longitude
+        self.locationString = locationString
+        self.coordinates = [location.coordinate.latitude, location.coordinate.longitude]
+        self.location = location
+    }
+    
+    func forceLocationUpdate() {
+        isLoading = true
+        locationManager.requestLocation()
+        
+        // If we don't get a location update within 5 seconds, try again
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
+            if self?.location == nil {
+                self?.locationManager.requestLocation()
+            }
+        }
     }
     
     func requestLocation() {
@@ -35,18 +89,31 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         self.location = location
         updateLocationString(for: location)
         isLoading = false
+        
+        // Stop updating location after we get a good fix
+        locationManager.stopUpdatingLocation()
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location manager failed with error: \(error.localizedDescription)")
         isLoading = false
+        
+        // If we fail to get location, try again after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.locationManager.requestLocation()
+        }
     }
     
     func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
         authorizationStatus = status
+        
+        // If we get authorization, request location immediately
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            forceLocationUpdate()
+        }
     }
     
-    private func updateLocationString(for location: CLLocation) {
+    func updateLocationString(for location: CLLocation) {
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, error) in
             DispatchQueue.main.async {
@@ -89,18 +156,45 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func fetchUserLocation(userId: String) {
         let db = Firestore.firestore()
+        
         db.collection("users").document(userId).getDocument { [weak self] document, error in
+            guard let self = self else { return }
+            
             if let error = error {
                 print("Error fetching user location: \(error.localizedDescription)")
                 return
             }
             
-            if let document = document,
-               let locationString = document.get("locationString") as? String {
-                DispatchQueue.main.async {
-                    self?.locationString = locationString
-                }
+            if let data = document?.data(),
+               let locationString = data["location"] as? String,
+               let coordinates = data["coordinates"] as? [Double],
+               coordinates.count >= 2 {
+                
+                let location = CLLocation(
+                    latitude: coordinates[0],
+                    longitude: coordinates[1]
+                )
+                
+                self.storeLocation(location, locationString)
             }
+        }
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+extension LocationManager: CLLocationManagerDelegate {
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+        
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.startUpdatingLocation()
+        case .denied, .restricted:
+            locationManager.stopUpdatingLocation()
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        @unknown default:
+            break
         }
     }
 } 

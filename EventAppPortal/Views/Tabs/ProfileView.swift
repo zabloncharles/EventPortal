@@ -20,26 +20,31 @@ struct ProfileView: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            ScrollableNavigationBar(title:"Profile"){
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("Profile")
-                        .font(.system(size: 34, weight: .bold))
-                        .padding()
-                        .padding(.top)
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.purple, .blue]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                  
                     
                     // INFO Section
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Profile Information")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .padding(.horizontal)
+                       
+                        VStack(alignment: .leading) {
+                            Text("Profile")
+                                .font(.title)
+                                .fontWeight(.bold)
+                            
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.purple, .blue]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            Text("Profile Information")
+                                .font(.headline)
+                                    .fontWeight(.bold)
+                               
+                        } .padding(.horizontal)
+                            .padding(.top,50)
                         
                         VStack(spacing: 1) {
                             // Name Row
@@ -50,7 +55,7 @@ struct ProfileView: View {
                                 
                                 VStack(alignment: .leading) {
                                     Text("Name")
-                                        .font(.subheadline)
+                                .font(.subheadline)
                                         .foregroundColor(.gray)
                                     Text(userName)
                                         .font(.body)
@@ -118,8 +123,8 @@ struct ProfileView: View {
                                         .foregroundColor(.gray)
                                         .lineLimit(1)
                                     Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                }
+                                .foregroundColor(.gray)
+                        }
                                 .padding()
                                 .background(Color(.systemBackground))
                                 .cornerRadius(12)
@@ -160,7 +165,7 @@ struct ProfileView: View {
                             .cornerRadius(12)
                         }
                         .padding(.top)
-                        .padding(.bottom, 70)
+                        .padding(.bottom, 90)
                     }
                     .padding()
                 }
@@ -177,17 +182,17 @@ struct ProfileView: View {
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
+        }
+        .sheet(isPresented: $showPhotoUpload) {
+            PhotoUploadView { urls in
+                self.userPhotos.append(contentsOf: urls)
+                savePhotosToUserProfile(urls)
             }
-            .sheet(isPresented: $showPhotoUpload) {
-                PhotoUploadView { urls in
-                    self.userPhotos.append(contentsOf: urls)
-                    savePhotosToUserProfile(urls)
-                }
-            }
-            .sheet(isPresented: $showEventImageUpdate) {
-                EventImageUpdateView()
-            }
-            .sheet(isPresented: $showLocationSettings) {
+        }
+        .sheet(isPresented: $showEventImageUpdate) {
+            EventImageUpdateView()
+        }
+        .sheet(isPresented: $showLocationSettings) {
                 LocationSettingsView(locationManager: locationManager, userId: userID, locationString: userData?["locationString"] as? String ?? "Not Set")
             }
         }
@@ -529,22 +534,16 @@ struct SettingsCard: View {
             
             VStack(spacing: 0) {
                 ForEach(items) { item in
-                    NavigationLink(destination: destinationView(for: item.title)) {
-                        HStack(spacing: 16) {
-                            Image(systemName: item.icon)
-                                .foregroundColor(item.color)
-                                .frame(width: 24, height: 24)
-                            
-                            Text(item.title)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.secondary)
+                    if item.title == "Update Event Images" {
+                        Button(action: { showEventImageUpdate = true }) {
+                            SettingsItemRow(item: item)
                         }
-                        .padding()
+                    } else {
+                        NavigationLink {
+                            destinationView(for: item.title)
+                        } label: {
+                            SettingsItemRow(item: item)
+                        }
                     }
                     
                     if item.id != items.last?.id {
@@ -559,17 +558,12 @@ struct SettingsCard: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.1), lineWidth: 1)
             )
-           
         }
     }
     
     @ViewBuilder
     private func destinationView(for title: String) -> some View {
         switch title {
-        case "Update Event Images":
-            Button(action: { showEventImageUpdate = true }) {
-                Text(title)
-            }
         case "Edit Profile":
             EditProfileView()
         case "My Events":
@@ -593,6 +587,28 @@ struct SettingsCard: View {
         default:
             Text(title)
         }
+    }
+}
+
+struct SettingsItemRow: View {
+    let item: SettingsItem
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: item.icon)
+                .foregroundColor(item.color)
+                .frame(width: 24, height: 24)
+            
+            Text(item.title)
+                .foregroundColor(.primary)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.secondary)
+        }
+        .padding()
     }
 }
 
@@ -647,9 +663,9 @@ struct EditProfileView: View {
                             )
                             .frame(width: 100, height: 100)
                             .overlay(
-                                Image(systemName: "person.crop.circle.fill")
-                                    .resizable()
-                                    .scaledToFit()
+                        Image(systemName: "person.crop.circle.fill")
+                            .resizable()
+                            .scaledToFit()
                                     .foregroundColor(.white)
                                     .padding(20)
                             )
@@ -744,7 +760,7 @@ struct EditProfileView: View {
                 .padding(.horizontal)
                 
                 // Save Button
-                Button(action: {
+                    Button(action: {
                     // Save changes
                     dismiss()
                 }) {
@@ -867,7 +883,6 @@ struct MyEventsView: View {
             } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
-            .hideTabOnAppear()
     }
     
     private func fetchUserEvents() {

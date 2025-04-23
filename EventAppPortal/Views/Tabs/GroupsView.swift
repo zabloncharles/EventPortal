@@ -28,6 +28,9 @@ struct GroupsView: View {
     @State private var selectedGroup: EventGroup?
     @State private var showingJoinConfirmation = false
     @State private var searchText = ""
+    @State private var searchResults: [EventGroup] = []
+    @State private var isSearching = false
+    @State private var searchTask: DispatchWorkItem?
     @StateObject private var filterModel = GroupFilterModel(categories: ["All", "Sports", "Music", "Art", "Technology", "Food", "Travel", "Other"])
     @State private var isUploading = false
     @State private var showUploadAlert = false
@@ -38,7 +41,8 @@ struct GroupsView: View {
     @State private var showNotifications = false
     @State private var showError = false
     @State private var errorMessage: String?
-   
+    @EnvironmentObject private var firebaseManager: FirebaseManager
+    
     private let radiusInMiles: Double = 50
     @State var seeAllCategories = false
     // Preview initializer
@@ -50,29 +54,96 @@ struct GroupsView: View {
     }
     
     var filteredGroups: [EventGroup] {
-        groups.filter { group in
-            let matchesSearch = searchText.isEmpty || 
-                group.name.localizedCaseInsensitiveContains(searchText) ||
-                group.description.localizedCaseInsensitiveContains(searchText)
-            
-            let matchesCategory = filterModel.selectedCategory == nil || 
-                filterModel.selectedCategory == "All" || 
-                group.category == filterModel.selectedCategory
-            
-            let matchesMemberCount = Double(group.memberCount) >= filterModel.memberCountRange.lowerBound &&
-                Double(group.memberCount) <= filterModel.memberCountRange.upperBound
-            
-            let matchesRadius = locationManager.location.map { userLocation in
-                let groupLocation = CLLocation(
-                    latitude: group.location.latitude,
-                    longitude: group.location.longitude
-                )
-                let distanceInMiles = userLocation.distance(from: groupLocation) / 1609.34
-                return distanceInMiles <= filterModel.radius
-            } ?? true
-            
-            return matchesSearch && matchesCategory && matchesMemberCount && matchesRadius
+        if searchText.isEmpty && searchResults.isEmpty {
+            print("📊 Using main groups list: \(groups.count) groups")
+            return groups
         }
+        print("📊 Using search results: \(searchResults.count) groups")
+        return searchResults
+    }
+    
+    private func searchGroups() {
+        // Cancel any existing search task
+        searchTask?.cancel()
+        
+        print("🔍 Starting search with text: '\(searchText)', category: \(filterModel.selectedCategory ?? "All")")
+        print("📊 Current groups count: \(groups.count)")
+        
+        // Create a new search task
+        let task = DispatchWorkItem {
+            self.isSearching = true
+            let db = Firestore.firestore()
+            
+            var query: Query = db.collection("groups")
+            
+            // Apply search text filter if not empty
+            if !self.searchText.isEmpty {
+                query = query.whereField("name", isGreaterThanOrEqualTo: self.searchText)
+                            .whereField("name", isLessThanOrEqualTo: self.searchText + "\u{f8ff}")
+                print("🔍 Applied text filter: \(self.searchText)")
+            }
+            
+            // Apply category filter if selected and not "All"
+            if let category = self.filterModel.selectedCategory, category != "All" {
+                query = query.whereField("category", isEqualTo: category)
+                print("🔍 Applied category filter: \(category)")
+            } else {
+                print("🔍 No category filter applied (All categories)")
+            }
+            
+            query.getDocuments { snapshot, error in
+                DispatchQueue.main.async {
+                    self.isSearching = false
+                    
+                    if let error = error {
+                        print("❌ Error fetching groups: \(error.localizedDescription)")
+                        self.errorMessage = error.localizedDescription
+                        self.showError = true
+                        return
+                    }
+                    
+                    guard let documents = snapshot?.documents else {
+                        print("❌ No documents found in snapshot")
+                        self.searchResults = []
+                        return
+                    }
+                    
+                    print("📄 Found \(documents.count) documents in Firestore")
+                    
+                    var filteredGroups = documents.compactMap { document -> EventGroup? in
+                        EventGroup.fromFirestore(document)
+                    }
+                    
+                    print("🔍 After parsing: \(filteredGroups.count) groups")
+                    
+                    // Apply member count and radius filters in memory
+                    filteredGroups = filteredGroups.filter { group in
+                        let matchesMemberCount = Double(group.memberCount) >= self.filterModel.memberCountRange.lowerBound &&
+                            Double(group.memberCount) <= self.filterModel.memberCountRange.upperBound
+                        
+                        let matchesRadius = self.locationManager.location.map { userLocation in
+                            let groupLocation = CLLocation(
+                                latitude: group.location.latitude,
+                                longitude: group.location.longitude
+                            )
+                            let distanceInMiles = userLocation.distance(from: groupLocation) / 1609.34
+                            return distanceInMiles <= self.filterModel.radius
+                        } ?? true
+                        
+                        return matchesMemberCount && matchesRadius
+                    }
+                    
+                    print("🔍 After filtering: \(filteredGroups.count) groups")
+                    print("🔍 Filtered groups: \(filteredGroups.map { $0.name })")
+                    
+                    self.searchResults = filteredGroups
+                }
+            }
+        }
+        
+        // Store the task and schedule it
+        searchTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
     }
     
     var body: some View {
@@ -87,7 +158,7 @@ struct GroupsView: View {
                         
                         
                         // Upcoming Group Meeting
-                        if !showHorizontalCategory {
+                        if !showHorizontalCategory && searchText.isEmpty {
                         if let nextGroup = groups.first {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("Upcoming Meeting")
@@ -128,11 +199,12 @@ struct GroupsView: View {
                                     .padding()
                                 }
                                 .padding(.horizontal)
-                            }.padding(.top, 155)
+                            }
                         }
                     }
                         
                         // Categories Grid
+                        if searchText.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             HStack {
                                 Text("Group Category")
@@ -206,7 +278,7 @@ struct GroupsView: View {
                                 GridItem(.flexible()),
                                 GridItem(.flexible())
                                ], spacing: 20) {
-                                   ForEach(filterModel.categories.prefix(8), id: \.self) { category in
+                                   ForEach(filterModel.categories, id: \.self) { category in
                                        VStack {
                                            Circle()
                                                .fill(categoryColor(for: category))
@@ -249,11 +321,12 @@ struct GroupsView: View {
                                }
                                .padding(.horizontal)
                            }
-                        }.padding(.top, showHorizontalCategory ? 155 : 0)
+                        }.padding(.top, showHorizontalCategory ? 0 : 0)
+                        }
                         
                         // Popular Groups
                         VStack(alignment: .leading, spacing: 16) {
-                            Text((selectedCategoryForOverlay ?? "Popular") + " Groups")
+                            Text(searchText.isEmpty ? (selectedCategoryForOverlay ?? "Popular") + " Groups" : "Results")
                                 .font(.headline)
                                 .padding(.horizontal)
                             
@@ -271,7 +344,8 @@ struct GroupsView: View {
                                         // Subtitle
                                         Text("Hmm! nothing yet..")
                                             .font(.subheadline)
-                                            .foregroundColor(Color.invert)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(Color.gray)
                                             .multilineTextAlignment(.center)
                                     }
                                     Spacer()
@@ -284,7 +358,14 @@ struct GroupsView: View {
                             }
                            
                         }
-                    }
+                        
+                        // Category-specific sections
+                        if selectedCategoryForOverlay == nil || selectedCategoryForOverlay == "All" {
+                            ForEach(filterModel.categories.filter { $0 != "All" }, id: \.self) { category in
+                                CategorySection(category: category, groups: groups)
+                            }
+                        }
+                    }.padding(.top,150)
                     .padding(.vertical)
                     // Add safe area and tabbar padding at the bottom
                     .safeAreaInset(edge: .bottom) {
@@ -301,7 +382,7 @@ struct GroupsView: View {
                         HStack{
                         Button(action: {}) {
                             HStack {
-                                Text("Abuja, Nigeria")
+                                Text(locationManager.locationString.split(separator: ",")[0])
                                 Image(systemName: "chevron.down")
                             }
                         }
@@ -356,8 +437,31 @@ struct GroupsView: View {
             }
             
         }
+        
+        .onChange(of: searchText) { _ in
+            searchGroups()
+        }
+        .onChange(of: filterModel.selectedCategory) { _ in
+            searchGroups()
+        }
+        .onChange(of: filterModel.memberCountRange) { _ in
+            searchGroups()
+        }
+        .onChange(of: filterModel.radius) { _ in
+            searchGroups()
+        }
         .onAppear {
+            print("GroupsView appeared - fetching groups")
+            
+            // Make sure "All" is selected by default
+            if filterModel.selectedCategory == nil {
+                filterModel.selectedCategory = "All"
+            }
             fetchNearbyGroups()
+            // Call searchGroups after a short delay to ensure groups are loaded
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                searchGroups()
+            }
         }
         .sheet(isPresented: $showNotifications) {
             GroupNotificationsView()
@@ -411,13 +515,13 @@ struct GroupsView: View {
             .getDocuments { snapshot, error in
                 if let error = error {
                     print("❌ Error fetching groups: \(error.localizedDescription)")
-                    isLoading = false
+                    self.isLoading = false
                     return
                 }
                 
                 guard let documents = snapshot?.documents else {
                     print("❌ No documents found in snapshot")
-                    isLoading = false
+                    self.isLoading = false
                     return
                 }
                 
@@ -428,7 +532,7 @@ struct GroupsView: View {
                     print("📝 First document data: \(firstDoc.data())")
                 }
                 
-                groups = documents.compactMap { document in
+                let fetchedGroups = documents.compactMap { document in
                     do {
                         if let group = EventGroup.fromFirestore(document) {
                             print("✅ Successfully parsed group: \(group.name)")
@@ -444,9 +548,19 @@ struct GroupsView: View {
                     }
                 }
                 
-                print("📊 Successfully loaded \(groups.count) groups")
-                print("Groups: \(groups.map { $0.name })")
-                isLoading = false
+                print("📊 Successfully loaded \(fetchedGroups.count) groups")
+                print("Groups: \(fetchedGroups.map { $0.name })")
+                
+                // Update on main thread
+                DispatchQueue.main.async {
+                    self.groups = fetchedGroups
+                    self.isLoading = false
+                    
+                    // If no search is active, update searchResults to match groups
+                    if self.searchText.isEmpty {
+                        self.searchResults = fetchedGroups
+                    }
+                }
             }
     }
     
@@ -499,6 +613,13 @@ struct GroupsView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
             TextField("Search groups", text: $searchText)
+                .onChange(of: searchText) { _ in
+                    searchGroups()
+                }
+            if isSearching {
+                ProgressView()
+                    .scaleEffect(0.8)
+            }
             NavigationLink(destination: GroupFilterView(
                 isPresented: $showingFilterSheet,
                 selectedCategory: .init(get: { filterModel.selectedCategory }, set: { filterModel.selectedCategory = $0 }),
@@ -517,88 +638,7 @@ struct GroupsView: View {
     }
 }
 
-struct GroupCard: View {
-    let group: EventGroup
-    let colors =  [Color.red,Color.blue,Color.green,Color.purple,Color.orange]
-    var body: some View {
-        NavigationLink(destination: GroupDetailView(group: group)) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.clear)
-                
-                HStack {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(group.name)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [colors.randomElement() ?? Color.red, .blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                        
-                        Text(group.shortDescription)
-                            .font(.subheadline)
-                            .multilineTextAlignment(.leading)
-                            .foregroundColor(Color.invert.opacity(0.8))
-                            .lineLimit(2)
-                        
-                        HStack(spacing: 12) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "person.2")
-                                Text("\(group.memberCount) members")
-                            }
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                Text("4.9")
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundColor(Color.invert.opacity(0.8))
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: categoryIcon(for: group.category))
-                        .font(.system(size: 44))
-                        .foregroundStyle(
-                            LinearGradient(
-                                gradient: Gradient(colors: [colors.randomElement() ?? Color.red, .blue]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                }
-                .padding()
-            }
-            
-        }.overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.invert.opacity(0.20), lineWidth: 1)
-        )
-        .padding(.horizontal)
-        
-    }
-    
-    private func categoryIcon(for category: String) -> String {
-        switch category {
-        case "Sports": return "figure.run"
-        case "Music": return "music.note"
-        case "Art": return "paintbrush.fill"
-        case "Technology": return "desktopcomputer"
-        case "Food": return "fork.knife"
-        case "Travel": return "airplane"
-        case "Environmental": return "leaf.arrow.triangle.circlepath"
-        case "Literature": return "book.fill"
-        case "Corporate": return "building.2.fill"
-        case "Health & Wellness": return "heart.fill"
-        default: return "star.fill"
-        }
-    }
-}
+
 
 struct GroupTypeIcon: View {
     let icon: String
@@ -1020,6 +1060,77 @@ struct GroupsView_Previews: PreviewProvider {
     static var previews: some View {
         GroupsView(previewGroups: sampleGroups)
             .environmentObject(FirebaseManager.shared)
+    }
+}
+
+// Category Section View
+struct CategorySection: View {
+    let category: String
+    let groups: [EventGroup]
+    @State private var showingAllGroups = false
+    
+    var filteredGroups: [EventGroup] {
+        groups.filter { $0.category == category }
+    }
+    
+    var body: some View {
+        // Only show the section if there are groups in this category
+        if !filteredGroups.isEmpty {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(category + " Groups")
+                        .font(.headline)
+                    Spacer()
+                    Button(action: {
+                        showingAllGroups = true
+                    }) {
+                        Text("View All")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                    }
+                }
+                .padding(.horizontal)
+                
+                ForEach(filteredGroups.prefix(3)) { group in
+                    GroupCard(group: group)
+                }
+            }
+            .sheet(isPresented: $showingAllGroups) {
+                CategoryGroupsView(category: category, groups: filteredGroups)
+            }
+        }
+    }
+}
+
+// Category Groups View for showing all groups in a category
+struct CategoryGroupsView: View {
+    let category: String
+    let groups: [EventGroup]
+    @Environment(\.presentationMode) var presentationMode
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    ForEach(groups) { group in
+                        GroupCard(group: group)
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("\(category) Groups")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+        }
     }
 }
 
