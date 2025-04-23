@@ -43,6 +43,7 @@ struct ChatDetailView: View {
     @State private var showScrollToBottom = false
     @State private var isTyping = false
     @State private var showGroupDetail = false
+    @State private var showLeaveConfirmation = false
     @FocusState private var isFocused: Bool
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var firebaseManager: FirebaseManager
@@ -95,8 +96,11 @@ struct ChatDetailView: View {
                                 Button(action: { showGroupDetail = true }) {
                                     Label("Group Info", systemImage: "info.circle")
                                 }
-                               
-                              
+                                
+                                Button(action: { leaveGroup() }) {
+                                    Label("Leave Group", systemImage: "person.fill.xmark")
+                                        .foregroundColor(.red)
+                                }
                             } label: {
                                 Image(systemName: "ellipsis")
                                     .font(.title3)
@@ -226,6 +230,15 @@ struct ChatDetailView: View {
         )
         .onAppear {
             fetchMessages()
+            observeTypingStatus()
+        }
+        .alert("Leave Group", isPresented: $showLeaveConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Leave", role: .destructive) {
+                confirmLeaveGroup()
+            }
+        } message: {
+            Text("Are you sure you want to leave this group? You can rejoin later if you change your mind.")
         }
     }
     
@@ -264,6 +277,74 @@ struct ChatDetailView: View {
                     newMessage = ""
                 }
             }
+    }
+    
+    private func leaveGroup() {
+        showLeaveConfirmation = true
+    }
+    
+    private func confirmLeaveGroup() {
+        guard let userId = firebaseManager.currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        let groupRef = db.collection("groups").document(group.id)
+        
+        // Remove user from members array
+        groupRef.updateData([
+            "members": FieldValue.arrayRemove([userId])
+        ]) { error in
+            if let error = error {
+                print("Error leaving group: \(error.localizedDescription)")
+                return
+            }
+            
+            // Navigate back to groups view
+            dismiss()
+        }
+    }
+    
+    private func observeTypingStatus() {
+        guard let userId = firebaseManager.currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        let groupRef = db.collection("groups").document(group.id)
+        
+        // Set up a listener for typing status changes
+        groupRef.addSnapshotListener { documentSnapshot, error in
+            guard let document = documentSnapshot else {
+                print("Error fetching typing status: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+            
+            if let data = document.data(),
+               let typingUsers = data["typingUsers"] as? [String: Bool] {
+                // Check if any user is typing
+                let isAnyoneTyping = typingUsers.values.contains(true)
+                
+                // Update the isTyping state
+                DispatchQueue.main.async {
+                    self.isTyping = isAnyoneTyping
+                }
+            }
+        }
+        
+        // Update the user's typing status when they start/stop typing
+        let typingRef = groupRef.collection("typing").document(userId)
+        
+        // Set up a timer to update typing status
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            if !newMessage.isEmpty {
+                // User is typing
+                typingRef.setData(["isTyping": true, "timestamp": Timestamp()])
+            } else {
+                // User stopped typing
+                typingRef.setData(["isTyping": false, "timestamp": Timestamp()])
+            }
+        }
+        
+        // Store the timer in a property to invalidate it when needed
+        // This is a workaround since we can't directly store the timer
+        RunLoop.current.add(timer, forMode: .common)
     }
 }
 
