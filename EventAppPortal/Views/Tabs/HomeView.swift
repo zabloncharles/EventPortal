@@ -10,6 +10,9 @@ struct HomeView: View {
     @State private var isSearching = false
     @State private var hasLoadedInitialContent = false
     @State private var hasAnimated = false
+    @State private var currentPage = 1
+    @State private var hasMoreResults = false
+    private let pageSize = 10
     
     // Firebase state
     @State private var popularEvents: [Event] = []
@@ -22,8 +25,11 @@ struct HomeView: View {
     @State private var isLoadingGroups = true
     @State private var errorMessage: String?
     @EnvironmentObject private var firebaseManager: FirebaseManager
+    @Binding var showlogo: Bool
     
     private var isLoading: Bool {
+        
+        
         isLoadingPopular || isLoadingNearby || isLoadingRecommended || isLoadingGroups
     }
     
@@ -37,71 +43,17 @@ struct HomeView: View {
         isLoadingRecommended = true
         isLoadingGroups = true
         errorMessage = nil
-        
-        // Fetch popular events (sorted by views)
+        showlogo = true
+
         do {
-            let popularSnapshot = try await db.collection("events")
+            // Single query to fetch all events with appropriate filters
+            let eventsQuery = db.collection("events")
                 .whereField("status", isEqualTo: "active")
                 .order(by: "views", descending: true)
-                .limit(to: 10)
-                .getDocuments()
+                .limit(to: 20) // Fetch more than needed to cover all sections
             
-            popularEvents = popularSnapshot.documents.compactMap { document -> Event? in
-                let data = document.data()
-                guard let id = data["id"] as? String,let name = data["name"] as? String,
-                      let description = data["description"] as? String,
-                      let type = data["type"] as? String,
-                      let location = data["location"] as? String,
-                      let price = data["price"] as? String,
-                      let owner = data["owner"] as? String,
-                      let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
-                      let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                      let images = data["images"] as? [String],
-                      let isTimed = data["isTimed"] as? Bool,
-                      let coordinates = data["coordinates"] as? [Double]
-                else { return nil }
-                
-                let maxParticipants = data["maxParticipants"] as? Int ?? 100
-                let participants = Array(repeating: "Participant", count: maxParticipants)
-                
-                return Event(
-                    id: id,
-                    name: name,
-                    description: description,
-                    type: type,
-                    views: data["views"] as? String ?? "0",
-                    location: location,
-                    price: price,
-                    owner: owner,
-                    organizerName: data["organizerName"] as? String ?? owner,
-                    shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
-                    startDate: startDate,
-                    endDate: endDate,
-                    images: images,
-                    participants: participants,
-                    maxParticipants: maxParticipants,
-                    isTimed: isTimed,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    coordinates: coordinates,
-                    status: data["status"] as? String ?? "active"
-                )
-            }
-            isLoadingPopular = false
-        } catch {
-            print("Error fetching popular events: \(error.localizedDescription)")
-            errorMessage = "Failed to load popular events"
-            isLoadingPopular = false
-        }
-        
-        // Fetch nearby events
-        do {
-            let nearbySnapshot = try await db.collection("events")
-                .whereField("status", isEqualTo: "active")
-                .order(by: "startDate")
-                .limit(to: 5)
-                .getDocuments()
-            
-            nearbyEvents = nearbySnapshot.documents.compactMap { document -> Event? in
+            let snapshot = try await eventsQuery.getDocuments()
+            let allEvents = snapshot.documents.compactMap { document -> Event? in
                 let data = document.data()
                 guard let id = data["id"] as? String,
                       let name = data["name"] as? String,
@@ -142,76 +94,40 @@ struct HomeView: View {
                     status: data["status"] as? String ?? "active"
                 )
             }
-            .filter { $0.startDate > Date() }
-            .sorted { $0.startDate < $1.startDate }
             
-            isLoadingNearby = false
-        } catch {
-            print("Error fetching nearby events: \(error.localizedDescription)")
-            errorMessage = "Failed to load nearby events"
-            isLoadingNearby = false
-        }
-        
-        // Fetch recommended events
-        do {
-            let recommendedSnapshot = try await db.collection("events")
-                .whereField("status", isEqualTo: "active")
-                .limit(to: 10)
-                .getDocuments()
+            // Process events for different sections
+            popularEvents = Array(allEvents.prefix(10))
+            nearbyEvents = Array(allEvents
+                .filter { $0.startDate > Date() }
+                .sorted { $0.startDate < $1.startDate }
+                .prefix(5))
+            recommendedEvents = Array(allEvents.shuffled().prefix(10))
             
-            recommendedEvents = recommendedSnapshot.documents.compactMap { document -> Event? in
-                let data = document.data()
-                guard let id = data["id"] as? String,
-                      let name = data["name"] as? String,
-                      let description = data["description"] as? String,
-                      let type = data["type"] as? String,
-                      let location = data["location"] as? String,
-                      let price = data["price"] as? String,
-                      let owner = data["owner"] as? String,
-                      let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
-                      let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                      let images = data["images"] as? [String],
-                      let isTimed = data["isTimed"] as? Bool,
-                      let coordinates = data["coordinates"] as? [Double]
-                else { return nil }
-                
-                let maxParticipants = data["maxParticipants"] as? Int ?? 100
-                let participants = Array(repeating: "Participant", count: maxParticipants)
-                
-                return Event(
-                    id: id,
-                    name: name,
-                    description: description,
-                    type: type,
-                    views: data["views"] as? String ?? "0",
-                    location: location,
-                    price: price,
-                    owner: owner,
-                    organizerName: data["organizerName"] as? String ?? owner,
-                    shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
-                    startDate: startDate,
-                    endDate: endDate,
-                    images: images,
-                    participants: participants,
-                    maxParticipants: maxParticipants,
-                    isTimed: isTimed,
-                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                    coordinates: coordinates,
-                    status: data["status"] as? String ?? "active"
-                )
+            if !showlogo {
+                isLoadingPopular = false
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isLoadingPopular = false
+                showlogo = false
+            }
+            isLoadingNearby = false
             isLoadingRecommended = false
         } catch {
-            print("Error fetching recommended events: \(error.localizedDescription)")
-            errorMessage = "Failed to load recommended events"
+            print("Error fetching events: \(error.localizedDescription)")
+            errorMessage = "Failed to load events"
+            isLoadingPopular = false
+            isLoadingNearby = false
             isLoadingRecommended = false
         }
     }
     
-    // Search events in Firestore
+    // Search events in Firestore with pagination
     private func searchEvents(query: String) {
         guard !query.isEmpty else {
             searchResults = []
+            isSearching = false
+            currentPage = 1
+            hasMoreResults = false
             return
         }
         
@@ -221,76 +137,98 @@ struct HomeView: View {
         // Create array of keywords from the search query
         let keywords = query.lowercased().split(separator: " ").map(String.init)
         
-        // Search in events collection
-        db.collection("events")
+        // Build the query with proper pagination
+        var searchQuery = db.collection("events")
             .whereField("status", isEqualTo: "active")
-            .getDocuments { snapshot, error in
-                if let error = error {
-                    print("Error searching events: \(error.localizedDescription)")
-                    errorMessage = "Failed to search events"
-                    isSearching = false
-                    return
-                }
-                
-                // Filter and sort results based on relevance
-                searchResults = snapshot?.documents.compactMap { document -> (Event, Int)? in
-                    let data = document.data()
-                    guard let id = data["id"] as? String,
-                          let name = data["name"] as? String,
-                          let description = data["description"] as? String,
-                          let type = data["type"] as? String,
-                          let location = data["location"] as? String,
-                          let price = data["price"] as? String,
-                          let owner = data["owner"] as? String,
-                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
-                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                          let images = data["images"] as? [String],
-                          let isTimed = data["isTimed"] as? Bool,
-                          let coordinates = data["coordinates"] as? [Double]
-                    else { return nil }
-                    
-                    // Calculate relevance score
-                    let searchableText = "\(name) \(description) \(type) \(location)".lowercased()
-                    let relevanceScore = keywords.reduce(0) { score, keyword in
-                        score + (searchableText.contains(keyword) ? 1 : 0)
-                    }
-                    
-                    // Only include results that match at least one keyword
-                    guard relevanceScore > 0 else { return nil }
-                    
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 100
-                    let participants = Array(repeating: "Participant", count: maxParticipants)
-                    
-                    let event = Event(
-                        id: id,
-                        name: name,
-                        description: description,
-                        type: type,
-                        views: data["views"] as? String ?? "0",
-                        location: location,
-                        price: price,
-                        owner: owner,
-                        organizerName: data["organizerName"] as? String ?? owner,
-                        shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
-                        startDate: startDate,
-                        endDate: endDate,
-                        images: images,
-                        participants: participants,
-                        maxParticipants: maxParticipants,
-                        isTimed: isTimed,
-                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates,
-                        status: data["status"] as? String ?? "active"
-                    )
-                    
-                    return (event, relevanceScore)
-                }
-                .sorted { $0.1 > $1.1 } // Sort by relevance score
-                .map { $0.0 } // Extract just the events
-                ?? []
-                
-                isSearching = false
+            .limit(to: pageSize)
+        
+        // If not first page, use startAfter for pagination
+        if currentPage > 1, let lastDocument = searchResults.last {
+            searchQuery = searchQuery.start(after: [lastDocument.name, lastDocument.startDate])
+        }
+        
+        // Execute the query
+        searchQuery.getDocuments { snapshot, error in
+            if let error = error {
+                print("Error searching events: \(error.localizedDescription)")
+                self.errorMessage = "Failed to search events"
+                self.isSearching = false
+                return
             }
+            
+            guard let snapshot = snapshot else {
+                self.isSearching = false
+                return
+            }
+            
+            // Process results
+            let newResults = snapshot.documents.compactMap { document -> Event? in
+                let data = document.data()
+                guard let id = data["id"] as? String,
+                      let name = data["name"] as? String,
+                      let description = data["description"] as? String,
+                      let type = data["type"] as? String,
+                      let location = data["location"] as? String,
+                      let price = data["price"] as? String,
+                      let owner = data["owner"] as? String,
+                      let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                      let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                      let images = data["images"] as? [String],
+                      let isTimed = data["isTimed"] as? Bool,
+                      let coordinates = data["coordinates"] as? [Double]
+                else { return nil }
+                
+                // Calculate relevance score
+                let searchableText = "\(name) \(description) \(type) \(location)".lowercased()
+                let relevanceScore = keywords.reduce(0) { score, keyword in
+                    score + (searchableText.contains(keyword) ? 1 : 0)
+                }
+                
+                // Only include results that match at least one keyword
+                guard relevanceScore > 0 else { return nil }
+                
+                let maxParticipants = data["maxParticipants"] as? Int ?? 100
+                let participants = Array(repeating: "Participant", count: maxParticipants)
+                
+                return Event(
+                    id: id,
+                    name: name,
+                    description: description,
+                    type: type,
+                    views: data["views"] as? String ?? "0",
+                    location: location,
+                    price: price,
+                    owner: owner,
+                    organizerName: data["organizerName"] as? String ?? owner,
+                    shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
+                    startDate: startDate,
+                    endDate: endDate,
+                    images: images,
+                    participants: participants,
+                    maxParticipants: maxParticipants,
+                    isTimed: isTimed,
+                    createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                    coordinates: coordinates,
+                    status: data["status"] as? String ?? "active"
+                )
+            }
+            
+            // Update results
+            if currentPage == 1 {
+                self.searchResults = newResults
+            } else {
+                self.searchResults.append(contentsOf: newResults)
+            }
+            
+            // Update pagination state
+            self.hasMoreResults = newResults.count == self.pageSize
+            self.isSearching = false
+        }
+    }
+    
+    private func loadMoreResults() {
+        currentPage += 1
+        searchEvents(query: searchText)
     }
     
     // Add this function to fetch recommended groups
@@ -303,7 +241,7 @@ struct HomeView: View {
             let userDoc = try await db.collection("users").document(userId).getDocument()
             let userData = userDoc.data() ?? [:]
             let userInterests = userData["interests"] as? [String] ?? []
-            let userLocation = userData["location"] as? GeoPoint
+            let _ = userData["location"] as? GeoPoint
             
             // Query groups based on user's interests and location
             var query = db.collection("groups")
@@ -341,9 +279,13 @@ struct HomeView: View {
     
     private func EmptyStateView(title: String, message: String) -> some View {
         VStack(alignment: .center, spacing: 10) {
-            Image(systemName: "calendar.badge.exclamationmark")
-                .font(.system(size: 50))
-                .foregroundColor(.gray)
+            Image("hmm")
+                .resizable()
+                .renderingMode(.original)
+                .aspectRatio(contentMode: .fit)
+                .frame(height:200)
+            
+              
             Text(title)
                 .font(.headline)
             Text(message)
@@ -352,6 +294,7 @@ struct HomeView: View {
                 .multilineTextAlignment(.center)
         }
         .padding()
+        .padding(.top,50)
     }
     
     private func SectionLoadingView() -> some View {
@@ -374,7 +317,7 @@ struct HomeView: View {
                     .padding(.top, 20)
                     .foregroundStyle(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.invert, .randomizetextcolor, Color.invert]),
+                            gradient: Gradient(colors: [Color.invert, .yellow, Color.purple]),
                             startPoint: startPoint,
                             endPoint: endPoint
                         )
@@ -431,36 +374,51 @@ struct HomeView: View {
                 HStack {
                     TextField("Search event, party...", text: $searchText)
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(Color.dynamic)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.dynamic, lineWidth: 2)
+                                .stroke(Color.gray.opacity(0.30), lineWidth: 1)
                         )
                         .onChange(of: searchText) { query in
-                            if !query.isEmpty {
-                                searchEvents(query: query)
-                            } else {
-                                searchResults = []
-                                isSearching = false
-                            }
+                            searchEvents(query: query)
                         }
-                }
-                .padding(10)
+                    
+                   
+                }.overlay(alignment:.trailing, content: {
+                    if !searchText.isEmpty {
+                        Button(action: {
+                            searchText = ""
+                            searchResults = []
+                            isSearching = false
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                                .padding(.trailing)
+                        }
+                    }
+                })
+                .padding(.vertical,10)
                 .padding(.top, 0)
-                
-                if searchText.isEmpty {
-                    if isLoadingRecommended {
-                        ProgressView()
-                            .padding()
-                    } else if !recommendedEvents.isEmpty {
-                        ForEach(recommendedEvents.shuffled().prefix(3)) { event in
-                            NavigationLink(destination: ViewEventDetail(event: event)) {
-                                VStack {
-                                    Divider()
-                                    HStack {
-                                        Image(systemName: {
-                                            switch event.type {
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    private var searchList: some View {
+        VStack {
+            if searchText.isEmpty {
+                if isLoadingRecommended {
+                    ProgressView()
+                        .padding()
+                } else if !recommendedEvents.isEmpty {
+                    ForEach(recommendedEvents.shuffled().prefix(3)) { event in
+                        NavigationLink(destination: ViewEventDetail(event: event)) {
+                            VStack {
+                                Divider()
+                                HStack {
+                                    Image(systemName: {
+                                        switch event.type {
                                             case "Concert": return "figure.dance"
                                             case "Corporate": return "building.2.fill"
                                             case "Marketing": return "megaphone.fill"
@@ -473,27 +431,81 @@ struct HomeView: View {
                                             case "Environmental": return "leaf.arrow.triangle.circlepath"
                                             case "Entertainment": return "music.note.list"
                                             default: return "calendar"
-                                            }
-                                        }())
-                                            .foregroundColor(.gray)
-                                        Text(event.name)
-                                            .font(.callout)
-                                            .foregroundColor(.primary)
-                                        Spacer()
-                                    }
-                                    .padding(.vertical, 7)
-                                    .padding(.horizontal, 10)
-                                    .cornerRadius(9)
-                                    .padding(.horizontal)
+                                        }
+                                    }())
+                                    .foregroundColor(.gray)
+                                    Text(event.name)
+                                        .font(.callout)
+                                        .foregroundColor(.primary)
+                                    Spacer()
                                 }
-                                .animation(.spring(), value: searchText.isEmpty)
+                                .padding(.vertical, 7)
+                                .padding(.horizontal, 10)
+                                .cornerRadius(9)
+                                .padding(.horizontal)
                             }
                         }
                     }
+                } else {
+                    EmptyStateView(
+                        title: "No Events Available",
+                        message: "Check back later for new events"
+                    )
                 }
-                Spacer()
-               
-            }.padding(.horizontal)
+            }
+        }
+    }
+
+    // MARK: - Search Results Section
+    private var searchResultsSection: some View {
+        VStack {
+            if !searchText.isEmpty {
+                if isSearching {
+                    ProgressView()
+                        .padding()
+                } else if searchResults.isEmpty {
+                    EmptyStateView(
+                        title: "No Results Found",
+                        message: "Try searching with different keywords"
+                    )
+                } else {
+                    VStack {
+                        HStack {
+                            Text("Results (\(searchResults.count))")
+                                .foregroundColor(.gray)
+                                .font(.headline)
+                            Spacer()
+                        }.padding(.horizontal)
+                        
+                        LazyVStack(spacing: 16) {
+                            ForEach(searchResults) { event in
+                                NavigationLink(destination: ViewEventDetail(event: event)) {
+                                    PopularEventCard(event: event)
+                                }
+                            }
+                            
+                            if hasMoreResults {
+                                Button(action: loadMoreResults) {
+                                    HStack {
+                                        Text("View More")
+                                            .font(.headline)
+                                            .foregroundColor(.blue)
+                                        Image(systemName: "chevron.down")
+                                            .foregroundColor(.blue)
+                                    }
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(10)
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.leading)
+                        .padding(.trailing, 10)
+                    }
+                }
+            }
         }
     }
 
@@ -523,17 +535,17 @@ struct HomeView: View {
                     message: "Be the first to create an exciting event!"
                 )
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 16) {
-                        ForEach(popularEvents) { event in
+             
+                    LazyVStack(spacing: 16) {
+                        ForEach(popularEvents.prefix(5)) { event in
                             NavigationLink(destination: ViewEventDetail(event: event)) {
                                 PopularEventCard(event: event)
-                                    .frame(width: 280)
+                                   
                             }
                         }
                     }.padding(.leading)
                         .padding(.trailing, 10)
-                }
+                
             }
         }
     }
@@ -583,7 +595,7 @@ struct HomeView: View {
 
     // MARK: - Recommended Events Section
     private var recommendedEventsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading) {
                     Text("Recommended Events")
@@ -612,10 +624,10 @@ struct HomeView: View {
                 ForEach(recommendedEvents.prefix(3)) { event in
                         NavigationLink(destination: ViewEventDetail(event: event)) {
                             EventListItem(event: event, isSelected: false, userLocation: nil)
-                                .frame(width: UIScreen.main.bounds.width - 32, height: 160)
+                                .frame(width: UIScreen.main.bounds.width - 32, height: 135)
                                 .padding(.horizontal)
                         }
-                    }
+                    }.padding(.top, 10)
                 
                
               
@@ -673,19 +685,28 @@ struct HomeView: View {
                     VStack {
                         headerSection
                         searchSection
-                        if !popularEvents.isEmpty {
-                            popularEventsSection
+                        if !isLoading {
+                            if searchText.isEmpty {
+                                searchList
+                            }
+                            searchResultsSection
+                            
+                            if searchText.isEmpty {
+                                if !popularEvents.isEmpty {
+                                    popularEventsSection
+                                }
+                                if !nearbyEvents.isEmpty {
+                                    nearbyEventsSection
+                                }
+                                if !recommendedEvents.isEmpty {
+                                    recommendedEventsSection
+                                }
+                                if !recommendedGroups.isEmpty {
+                                    recommendedGroupsSection
+                                }
+                            }
+                            Spacer()
                         }
-                        if !nearbyEvents.isEmpty {
-                            nearbyEventsSection
-                        }
-                        if !recommendedEvents.isEmpty {
-                            recommendedEventsSection
-                        }
-                        if !recommendedGroups.isEmpty {
-                            recommendedGroupsSection
-                        }
-                        Spacer()
                     }
                     
                 }
@@ -738,10 +759,113 @@ struct PopularEventCard: View {
     var body: some View {
         VStack {
             ZStack {
-                // Replace single image with CompactImageViewer
-                CompactImageViewer(imageUrls: event.images, height: 180)
+                VStack(alignment: .leading) {
+                    HStack {
+                        if event.endDate == Date.distantFuture {
+                            Text("Ongoing")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("Event")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                        } else {
+                            Text(returnMonthOrDay(from: event.startDate, getDayNumber: false).capitalized)
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Text(returnMonthOrDay(from: event.startDate, getDayNumber: true))
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                        }
+                        Spacer()
+                    }
+                    .padding(.top, 0)
+                    Spacer()
+                    HStack {
+                        Group{
+                            Image(systemName: "map")
+                            Text(event.location.components(separatedBy: ",")[0])
+                                .multilineTextAlignment(.leading)
+                                .lineLimit(2)
+                        } .font(.subheadline)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.white]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                        Spacer()
+                    }
+                }
+                .padding()
+            }
+            .background(
+                CompactImageViewer(imageUrls: event.images, scroll: false)
+            )
+            .cornerRadius(16)
+            
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(event.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.purple, Color.randomizetextcolor]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                        Spacer()
+                        Text("\(Int((Double(event.views) ?? 0).rounded())) \(Int(event.views) ?? 0 > 1 ? "Views" : "View")")
+                            .font(.footnote)
+                            .padding(.horizontal,6)
+                            .padding(.vertical, 3)
+                            .background(Color.randomizetextcolor)
+                            .cornerRadius(10)
+                            .foregroundColor(.dynamic)
+                    }
+                    Text(event.description)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                        .foregroundColor(.gray)
+                        .font(.subheadline)
+                }
+                .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 5)
+        }
+        .frame(height:250)
+    }
+    
+    func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {
+        let calendar = Calendar.current
+        if getDayNumber {
+            let day = calendar.component(.day, from: date)
+            return "\(day)"
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM"
+            return dateFormatter.string(from: date)
+        }
+    }
+}
+
+struct RegularEventCard: View {
+    var event: Event = sampleEvent
+    var showdescription = true
+    let colors: [Color] = [.red, .blue, .green, .orange]
+    
+    var body: some View {
+        VStack {
+            ZStack {
+                CompactImageViewer(imageUrls: event.images, scroll: false)
                     .overlay(
-                        LinearGradient(colors: [.black, .clear], 
+                        LinearGradient(colors: [.black, .black.opacity(0.40), .black.opacity(0.60)], 
                                      startPoint: .bottomLeading, 
                                      endPoint: .topTrailing)
                     )
@@ -749,7 +873,7 @@ struct PopularEventCard: View {
                 ZStack {
                     VStack(alignment: .leading) {
                         HStack {
-                            if event.endDate == nil {
+                            if event.endDate == Date.distantFuture {
                                 Text("Ongoing")
                                     .font(.headline)
                                     .foregroundColor(.white)
@@ -758,19 +882,31 @@ struct PopularEventCard: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.red)
                             } else {
-                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: false).capitalized)
+                                Text(returnMonthOrDay(from: event.startDate, getDayNumber: false).capitalized)
                                     .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.white)
-                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: true))
+                                Text(returnMonthOrDay(from: event.startDate, getDayNumber: true))
                                     .font(.title)
                                     .fontWeight(.bold)
                                     .foregroundColor(.red)
                             }
                         }
                         .padding(.top, 10)
-                        Spacer()
                         
+                        Spacer()
+                        HStack(alignment: .bottom) {
+                            Spacer()
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(event.description.split(separator: ".")[0] + ".")
+                                    .font(.callout)
+                                    .foregroundColor(.white)
+                                    .padding(.leading)
+                                    .lineLimit(2)
+                                    .opacity(showdescription ? 1 : 0)
+                            }
+                            .multilineTextAlignment(.trailing)
+                        }
                         HStack(alignment: .bottom) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(event.name)
@@ -801,122 +937,8 @@ struct PopularEventCard: View {
                                             .frame(width: 15, height: 15)
                                             .offset(x: CGFloat(index * 10 - 0))
                                     }
-                                }.padding(.trailing)
-                                Text("\(Int((Double(event.views) ?? 0).rounded())) \(Int(event.views) ?? 0 > 1 ? "Views" : "View")")
-                                    .font(.footnote)
-                            }
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                    }
-                    .padding()
-                }
-            }
-            .background(
-                Image(event.images[0])
-                    .resizable()
-                    .scaledToFill()
-            )
-            .cornerRadius(20)
-        }
-    }
-    
-    func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {
-        let calendar = Calendar.current
-        if getDayNumber {
-            let day = calendar.component(.day, from: date)
-            return "\(day)"
-        } else {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "MMM"
-            return dateFormatter.string(from: date)
-        }
-    }
-}
-
-struct RegularEventCard: View {
-    var event: Event = sampleEvent
-    var showdescription = true
-    let colors: [Color] = [.red, .blue, .green, .orange]
-    
-    var body: some View {
-        VStack {
-            ZStack {
-                // Replace single image with CompactImageViewer
-                CompactImageViewer(imageUrls: event.images, height: 200, scroll: false)
-                    .overlay(
-                        LinearGradient(colors: [.black, .black.opacity(0.40), .black.opacity(0.60)], 
-                                     startPoint: .bottomLeading, 
-                                     endPoint: .topTrailing)
-                    )
-                
-                ZStack {
-                    VStack(alignment: .leading) {
-                        HStack {
-                            if event.endDate == nil {
-                                Text("Ongoing")
-                                    .font(.headline)
-                                    .foregroundColor(.white)
-                                Text("Event")
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.red)
-                            } else {
-                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: false).capitalized)
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: true))
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.red)
-                            }
-                        }
-                        .padding(.top, 10)
-                        
-                        Spacer()
-                        HStack(alignment: .bottom) {
-                            Spacer()
-                            VStack(alignment: .leading, spacing: 3) {
-                                    Text(event.description.split(separator: ".")[0] + ".")
-                                        .font(.callout)
-                                        .foregroundColor(.white)
-                                        .padding(.leading)
-                                        .lineLimit(2)
-                                    .opacity(showdescription ? 1 : 0)
-                                
-                            }.multilineTextAlignment(.trailing)
-                        }
-                        HStack(alignment: .bottom) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(event.name)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.clear)
-                                    .overlay(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [colors.randomElement() ?? .blue, .purple]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                        .mask(
-                                            Text(event.name)
-                                                .font(.title2)
-                                                .fontWeight(.bold)
-                                        )
-                                    )
-                                Text(event.location.components(separatedBy: ",")[0])
-                            }.multilineTextAlignment(.leading)
-                            Spacer()
-                            VStack {
-                                ZStack {
-                                    ForEach(0..<colors.count, id: \.self) { index in
-                                        Circle()
-                                            .fill(colors[index])
-                                            .frame(width: 15, height: 15)
-                                            .offset(x: CGFloat(index * 10 - 0))
-                                    }
-                                }.padding(.trailing)
+                                }
+                                .padding(.trailing)
                                 Text("\(Int((Double(event.views) ?? 0).rounded())) \(Int(event.views) ?? 0 > 1 ? "Views" : "View")")
                                     .font(.footnote)
                             }
@@ -932,8 +954,8 @@ struct RegularEventCard: View {
                     .stroke(Color.dynamic.opacity(0.20), lineWidth: 1)
             )
             .cornerRadius(20)
-        }.frame(height: 200)
-        
+        }
+        .frame(height: 200)
     }
     
     func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {
@@ -951,7 +973,18 @@ struct RegularEventCard: View {
 
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
-        HomeView()
+       // HomeView(showlogo: .constant(false))
+        ScrollView{
+            LazyVStack(spacing: 16) {
+                ForEach(sampleEvents) { event in
+                    NavigationLink(destination: ViewEventDetail(event: event)) {
+                        PopularEventCard(event: event)
+                        
+                    }
+                }
+            }.padding(.leading)
+                .padding(.trailing, 10)
+        }.preferredColorScheme(.dark)
     }
 }
 
