@@ -42,7 +42,7 @@ struct GroupsView: View {
     @State private var showError = false
     @State private var errorMessage: String?
     @EnvironmentObject private var firebaseManager: FirebaseManager
-    
+   
     private let radiusInMiles: Double = 50
     @State var seeAllCategories = false
     // Preview initializer
@@ -120,18 +120,18 @@ struct GroupsView: View {
                     filteredGroups = filteredGroups.filter { group in
                         let matchesMemberCount = Double(group.memberCount) >= self.filterModel.memberCountRange.lowerBound &&
                             Double(group.memberCount) <= self.filterModel.memberCountRange.upperBound
-                        
+            
                         let matchesRadius = self.locationManager.location.map { userLocation in
-                            let groupLocation = CLLocation(
-                                latitude: group.location.latitude,
-                                longitude: group.location.longitude
-                            )
-                            let distanceInMiles = userLocation.distance(from: groupLocation) / 1609.34
+                let groupLocation = CLLocation(
+                    latitude: group.location.latitude,
+                    longitude: group.location.longitude
+                )
+                let distanceInMiles = userLocation.distance(from: groupLocation) / 1609.34
                             return distanceInMiles <= self.filterModel.radius
-                        } ?? true
-                        
+            } ?? true
+            
                         return matchesMemberCount && matchesRadius
-                    }
+        }
                     
                     print("🔍 After filtering: \(filteredGroups.count) groups")
                     print("🔍 Filtered groups: \(filteredGroups.map { $0.name })")
@@ -363,7 +363,7 @@ struct GroupsView: View {
                         if selectedCategoryForOverlay == nil || selectedCategoryForOverlay == "All" {
                             ForEach(filterModel.categories.filter { $0 != "All" }, id: \.self) { category in
                                 CategorySection(category: category, groups: groups)
-                            }
+                    }
                         }
                     }.padding(.top,150)
                     .padding(.vertical)
@@ -382,7 +382,7 @@ struct GroupsView: View {
                         HStack{
                         Button(action: {}) {
                             HStack {
-                                Text(locationManager.locationString.split(separator: ",")[0])
+                                Text(locationManager.locationString.isEmpty ? "Not Set" : locationManager.locationString.split(separator: ",")[0])
                                 Image(systemName: "chevron.down")
                             }
                         }
@@ -457,7 +457,7 @@ struct GroupsView: View {
             if filterModel.selectedCategory == nil {
                 filterModel.selectedCategory = "All"
             }
-            fetchNearbyGroups()
+                fetchNearbyGroups()
             // Call searchGroups after a short delay to ensure groups are loaded
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 searchGroups()

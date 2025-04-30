@@ -1718,7 +1718,7 @@ struct EventListItem: View {
             // Event Image and Title Section
             HStack(spacing: 12) {
                 // Event Image
-                CompactImageViewer(imageUrls: event.images, height: 80, scroll: false)
+                CompactImageViewer(imageUrls: event.images, scroll: false)
                     .frame(width: 100, height: 80)
                     .cornerRadius(12)
                 

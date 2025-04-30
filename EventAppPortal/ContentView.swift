@@ -12,55 +12,53 @@ struct ContentView: View {
     @EnvironmentObject private var firebaseManager: FirebaseManager
     @AppStorage("userID") private var userID: String = ""
     @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
-    @State var appeared = true
-    @State var hideLoadingView = false
+    @State var showLogo = true
     
     var body: some View {
         ZStack {
-            if !hideLoadingView {
+           
                 // Loading screen
-                ZStack {
+             
                     Color.dynamic.edgesIgnoringSafeArea(.all)
-                    LogoLoadingView()
-                        .onAppear {
-                            // Check if user is already logged in
-                            if let user = Auth.auth().currentUser {
-                                userID = user.uid
-                                isLoggedIn = true
-                            }
-                            
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                                withAnimation(.spring()) {
-                                    appeared = false
-                                }
-                            }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
-                                withAnimation {
-                                    hideLoadingView = true
-                                }
-                            }
+                    
+                    // Main content
+                    Group {
+                        if isLoggedIn,
+                           let currentUser = firebaseManager.currentUser,
+                           !currentUser.uid.isEmpty,
+                           let email = currentUser.email,
+                           !email.isEmpty {
+                            MainTabView(showLogo: $showLogo)
+                                
+                        } else {
+                            LoginView()
+                                
                         }
-                }
-                .offset(y: !appeared ? UIScreen.main.bounds.height * 1.3 : 0)
-            } else {
-                // Main content
-                Group {
-                    if isLoggedIn,
-                       let currentUser = firebaseManager.currentUser,
-                       !currentUser.uid.isEmpty,
-                       let email = currentUser.email,
-                       !email.isEmpty {
-                        MainTabView()
-                            .scaleEffect(!appeared ? 1 : 0.9)
-                    } else {
-                        LoginView()
-                            .scaleEffect(!appeared ? 1 : 0.9)
                     }
-                }
-                .transition(.opacity)
+                    .transition(.opacity)
+                    //Show the app logo
+            if showLogo {
+                LogoLoadingView()
             }
+                   
+                  
+            
         }
         .animation(.easeInOut, value: firebaseManager.currentUser != nil)
+        .onAppear {
+            // Check if user is already logged in
+            if let user = Auth.auth().currentUser {
+                userID = user.uid
+                isLoggedIn = true
+            }
+            
+            
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
+//                withAnimation {
+//                    showLogo = false
+//                }
+//            }
+        }
         .onChange(of: firebaseManager.currentUser) { newUser in
             if let user = newUser {
                 userID = user.uid

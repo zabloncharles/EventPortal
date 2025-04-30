@@ -336,27 +336,17 @@ struct HomeView: View {
                 
                 NavigationLink(destination: CreateView()) {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 26, weight: .medium))
                         .frame(width: 36, height: 36)
-                        .background(Color.dynamic)
-                        .cornerRadius(60)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 60)
-                                .stroke(Color.gray, lineWidth: 1)
-                        )
+                        .shadow(radius: 0.5)
                 }
                 
                 NavigationLink(destination: NotificationView()) {
                     Image(systemName: "calendar")
                         .renderingMode(.original)
-                        .font(.system(size: 16, weight: .medium))
-                        .frame(width: 36, height: 36)
-                        .background(Color.dynamic)
-                        .cornerRadius(60)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 60)
-                                .stroke(Color.gray, lineWidth: 1)
-                        )
+                        .font(.system(size: 26, weight: .medium))
+                        .frame(width: 25, height: 36)
+                        .shadow(radius: 0.5)
                 }
             }
             .padding(.horizontal)

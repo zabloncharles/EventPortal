@@ -119,7 +119,7 @@ struct ProfileView: View {
                                     Text("Update Location")
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Text(userData?["locationString"] as? String ?? "Not Set")
+                                    Text(locationManager.locationString.isEmpty ? "Not Set" : locationManager.locationString)
                                         .foregroundColor(.gray)
                                         .lineLimit(1)
                                     Image(systemName: "chevron.right")
@@ -1080,7 +1080,7 @@ struct BookmarkedEventCard: View {
     var body: some View {
         HStack(spacing: 16) {
             // Event Image
-            CompactImageViewer(imageUrls: event.images, height: 80)
+            CompactImageViewer(imageUrls: event.images)
                 .frame(width: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             

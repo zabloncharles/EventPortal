@@ -96,7 +96,7 @@ struct ChatDetailView: View {
                                 Button(action: { showGroupDetail = true }) {
                                     Label("Group Info", systemImage: "info.circle")
                                 }
-                                
+                               
                                 Button(action: { leaveGroup() }) {
                                     Label("Leave Group", systemImage: "person.fill.xmark")
                                         .foregroundColor(.red)

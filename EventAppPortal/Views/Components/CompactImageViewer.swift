@@ -3,7 +3,6 @@ import Kingfisher
 
 struct CompactImageViewer: View {
     let imageUrls: [String]
-    let height: CGFloat
     @State private var currentIndex = 0
     @State private var validImageUrls: [String] = []
     @State private var loadingStates: [String: Bool] = [:]
@@ -15,7 +14,7 @@ struct CompactImageViewer: View {
                 // Show placeholder when no valid images are available
                 Rectangle()
                     .fill(Color.gray.opacity(0.1))
-                    .frame(height: height)
+                    
                     .overlay(
                         Image(systemName: "photo.fill")
                             .font(.largeTitle)
@@ -45,8 +44,6 @@ struct CompactImageViewer: View {
                             }
                             .resizable()
                             .scaledToFill()
-                            .frame(height: height)
-                            .clipped()
                             .tag(index)
                     }
                 }
@@ -74,7 +71,6 @@ struct CompactImageViewer: View {
 //                }
 //            }
         }
-        .frame(height: height)
         .onAppear {
             print("CompactImageViewer appeared with \(imageUrls.count) URLs")
             // Filter out invalid URLs and initialize loading states
@@ -82,7 +78,7 @@ struct CompactImageViewer: View {
                 if let _ = URL(string: urlString) {
                     print("Valid URL found: \(urlString)")
                     loadingStates[urlString] = false
-                    return true
+                return true
                 } else {
                     print("Invalid URL found: \(urlString)")
                     return false
@@ -99,8 +95,7 @@ struct CompactImageViewer_Previews: PreviewProvider {
         CompactImageViewer(
             imageUrls: [
                 "https://firebasestorage.googleapis.com/v0/b/eventportal-37f4b.firebasestorage.app/o/user_uploads%2F0C974F1D-B873-4F1E-9F87-9FC3DF679AF1.jpg?alt=media"
-            ],
-            height: 200
+            ]
         )
     }
 } 

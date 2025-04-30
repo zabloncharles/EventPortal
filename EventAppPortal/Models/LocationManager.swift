@@ -3,7 +3,7 @@ import CoreLocation
 import FirebaseFirestore
 import SwiftUI
 
-class LocationManager: NSObject, ObservableObject{
+class LocationManager: NSObject, ObservableObject {
     static let shared = LocationManager()
     private let locationManager = CLLocationManager()
     @Published var location: CLLocation?
@@ -16,11 +16,13 @@ class LocationManager: NSObject, ObservableObject{
     @AppStorage("userLocationString") private var storedLocationString: String = "Not Set"
     @AppStorage("userLatitude") private var storedLatitude: Double = 0.0
     @AppStorage("userLongitude") private var storedLongitude: Double = 0.0
+    @AppStorage("lastLocationUpdate") private var lastLocationUpdate: Double = 0.0
     
     // Add caching and rate limiting
     private var geocodingCache: [String: String] = [:]
     private var lastGeocodingRequest: Date?
     private let minimumGeocodingInterval: TimeInterval = 1.0 // Minimum 1 second between requests
+    private let minimumLocationUpdateInterval: TimeInterval = 300 // 5 minutes between updates
     
     override init() {
         authorizationStatus = locationManager.authorizationStatus
@@ -43,6 +45,24 @@ class LocationManager: NSObject, ObservableObject{
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             self?.forceLocationUpdate()
         }
+        
+        // Add notification observers for app lifecycle
+        NotificationCenter.default.addObserver(self,
+                                             selector: #selector(appDidBecomeActive),
+                                             name: UIApplication.didBecomeActiveNotification,
+                                             object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    @objc private func appDidBecomeActive() {
+        // Check if enough time has passed since last update
+        let currentTime = Date().timeIntervalSince1970
+        if currentTime - lastLocationUpdate >= minimumLocationUpdateInterval {
+            forceLocationUpdate()
+        }
     }
     
     private func loadStoredLocation() {
@@ -57,6 +77,7 @@ class LocationManager: NSObject, ObservableObject{
         storedLocationString = locationString
         storedLatitude = location.coordinate.latitude
         storedLongitude = location.coordinate.longitude
+        lastLocationUpdate = Date().timeIntervalSince1970
         self.locationString = locationString
         self.coordinates = [location.coordinate.latitude, location.coordinate.longitude]
         self.location = location
@@ -128,9 +149,11 @@ class LocationManager: NSObject, ObservableObject{
                     let state = placemark.administrativeArea ?? ""
                     let country = placemark.country ?? ""
                     
-                    self?.locationString = [city, state, country]
+                    let newLocationString = [city, state, country]
                         .filter { !$0.isEmpty }
                         .joined(separator: ", ")
+                    
+                    self?.storeLocation(location, newLocationString)
                 }
             }
         }
@@ -166,7 +189,7 @@ class LocationManager: NSObject, ObservableObject{
             }
             
             if let data = document?.data(),
-               let locationString = data["location"] as? String,
+               let locationString = data["locationString"] as? String,
                let coordinates = data["coordinates"] as? [Double],
                coordinates.count >= 2 {
                 

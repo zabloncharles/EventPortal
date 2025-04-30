@@ -3,12 +3,12 @@ import SwiftUI
 struct MainTabView: View {
     @AppStorage("selectedTab") var selectedTab: Tab = .home
     @StateObject private var tabBarManager = TabBarVisibilityManager.shared
-    
+    @Binding var showLogo : Bool
     var body: some View {
         ZStack {
             switch selectedTab {
             case .home:
-                HomeView()
+                    HomeView(showlogo:$showLogo)
             case .explore:
                 DiscoverView()
                     
@@ -42,6 +42,6 @@ struct MainTabView: View {
 
 struct MainTabView_Previews: PreviewProvider {
     static var previews: some View {
-        MainTabView()
+        MainTabView(showLogo: .constant(false))
     }
 } 

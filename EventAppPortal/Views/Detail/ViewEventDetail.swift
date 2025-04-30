@@ -212,7 +212,7 @@ struct ViewEventDetail: View {
     // MARK: - Header Section
     private var headerSection: some View {
         ZStack(alignment: .top) {
-            CompactImageViewer(imageUrls: event.images, height: 400, scroll: true)
+            CompactImageViewer(imageUrls: event.images,  scroll: true)
                
             
             // Back button and bookmark overlay
@@ -1383,20 +1383,30 @@ struct RecommendedEventCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             // Event Image
-            CompactImageViewer(imageUrls: event.images, height: 160 , scroll:false)
+            CompactImageViewer(imageUrls: event.images,  scroll:false)
+                .frame(height:150)
                 .overlay(
                     VStack {
                         HStack {
                             Spacer()
-                            Text(event.type)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .lineLimit(1)
-                            .foregroundStyle(.linearGradient(colors: [.pink, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .padding(.horizontal,5)
-                            .padding(.vertical,2)
-                            .background(LinearGradient(colors: [.dynamic.opacity(0.60)], startPoint: .bottom, endPoint: .top))
-                            .cornerRadius(15)
+                            if event.endDate == nil {
+                                Text("Ongoing")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Text("Event")
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+                            } else {
+                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: false).capitalized)
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Text(returnMonthOrDay(from: event.startDate ?? Date(), getDayNumber: true))
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.red)
+                            }
                         }
                         Spacer()
                     }.padding()
@@ -1404,7 +1414,7 @@ struct RecommendedEventCard: View {
                 .padding(.bottom,-20)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Mar 20")
+                Text(event.type)
                     .font(.caption)
                     .foregroundColor(.gray)
                 
@@ -1419,7 +1429,7 @@ struct RecommendedEventCard: View {
                 HStack {
                     Image(systemName: "mappin.circle.fill")
                         .foregroundColor(.gray)
-                    Text("New York")
+                    Text(event.location.split(separator: " ")[0] == "The" ? event.location.split(separator: " ")[0] + " " + event.location.split(separator: " ")[1] : event.location.split(separator: " ")[0])
                         .font(.caption)
                         .foregroundColor(.gray)
                     Spacer()
@@ -1438,6 +1448,17 @@ struct RecommendedEventCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.gray.opacity(0.2), lineWidth: 1)
         )
+    }
+    func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {
+        let calendar = Calendar.current
+        if getDayNumber {
+            let day = calendar.component(.day, from: date)
+            return "\(day)"
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "MMM"
+            return dateFormatter.string(from: date)
+        }
     }
 }
 

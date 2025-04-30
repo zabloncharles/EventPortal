@@ -44,7 +44,7 @@ struct GroupCard: View {
                     Spacer()
                     
                     Image(systemName: categoryIcon(for: group.category))
-                        .font(.system(size: 44))
+                        .font(.system(size: 30))
                         .foregroundStyle(
                             LinearGradient(
                                 gradient: Gradient(colors: [colors.randomElement() ?? Color.red, .blue]),

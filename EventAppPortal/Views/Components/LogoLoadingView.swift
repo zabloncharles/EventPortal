@@ -15,26 +15,39 @@ struct LogoLoadingView: View {
     var body: some View {
        
          
+        ZStack {
+            
             VStack {
-                Spacer()
-                Image("transparent-icon")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height:150)
-                    .offset(y: isAnimating ? -10 : 10)
-                    .animation(
-                        Animation.easeInOut(duration: 1.5)
-                            .repeatForever(autoreverses: true),
-                        value: isAnimating
-                    )
-                    .onAppear {
-                        isAnimating = true
-                    }
+                    Spacer()
+                
+                ZStack {
                     
-                ShimmerVar("LinkedUp",  font: .system(size: 25, weight: .bold), gradientColors: [.purple, .blue])
-                    .scaleEffect(1.0)
-                Spacer()
-            }.background(Color.dynamic.edgesIgnoringSafeArea(.all))
+                    Image("transparent-icon")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            
+                            .frame(height:150)
+                            .scaleEffect( isAnimating ? 1 : 0.90)
+                            .animation(
+                                Animation.easeInOut(duration: 1.8)
+                                    .repeatForever(autoreverses: true),
+                                value: isAnimating
+                            )
+                            .onAppear {
+                              isAnimating = true
+                        }
+                }
+                        
+                    HStack {
+                        Spacer()
+                        ShimmerVar("LinkedUp",  font: .title3, gradientColors: [.dynamic, .orange])
+                            .fontWeight(.bold)
+                        Spacer()
+                    }
+                Text("Make a connection.")
+                    Spacer()
+            }
+        }
         
     }
 }
