@@ -399,7 +399,10 @@ struct GroupDetailView: View {
             fetchLatestGroupData()  // This will also call checkIfOwner after fetching
             fetchUserNames()  // Fetch member names
         }
-        
+        .onDisappear {
+            tabBarManager.hideTab = false
+        }
+
         .alert("Join Group", isPresented: $showJoinAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Join") {

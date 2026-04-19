@@ -22,7 +22,7 @@ class GroupFilterModel: ObservableObject {
 }
 
 struct GroupsView: View {
-    @StateObject private var locationManager = LocationManager.shared
+    @ObservedObject private var locationManager = LocationManager.shared
     @State private var groups: [EventGroup] = []
     @State private var isLoading = true
     @State private var selectedGroup: EventGroup?

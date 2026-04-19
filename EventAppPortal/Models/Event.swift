@@ -162,6 +162,22 @@ struct Event: Identifiable, Codable, Equatable {
     }
 }
 
+extension Dictionary where Key == String, Value == Any {
+    func firestoreEventImageStrings() -> [String] {
+        if let arr = self["images"] as? [String] {
+            return arr.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        }
+        if let arr = self["images"] as? [Any] {
+            return arr.compactMap { $0 as? String }.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        }
+        if let s = self["imageURL"] as? String {
+            let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? [] : [t]
+        }
+        return []
+    }
+}
+
 // Sample events for previews
 let sampleEvents = [
     Event(

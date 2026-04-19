@@ -6,17 +6,26 @@
 //
 
 import SwiftUI
-// Add TabBar visibility manager
 class TabBarVisibilityManager: ObservableObject {
     static let shared = TabBarVisibilityManager()
-    @AppStorage("hideTab") var hideTab: Bool = false {
+    static let hideTabStorageKey = "hideTab"
+
+    @Published var hideTab: Bool {
         didSet {
+            UserDefaults.standard.set(hideTab, forKey: Self.hideTabStorageKey)
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 isVisible = !hideTab
             }
         }
     }
-    @Published var isVisible: Bool = true
+
+    @Published var isVisible: Bool
+
+    private init() {
+        let stored = UserDefaults.standard.object(forKey: Self.hideTabStorageKey) as? Bool ?? false
+        _hideTab = Published(initialValue: stored)
+        _isVisible = Published(initialValue: !stored)
+    }
 }
 
 // Add TabBar visibility modifier
@@ -30,7 +39,7 @@ struct TabBarModifier: ViewModifier {
 }
 struct TabBar: View {
     @AppStorage("selectedTab") var selectedTab: Tab = .home
-    @AppStorage("hideTab") var hideTab: Bool = false
+    @ObservedObject private var tabBarManager = TabBarVisibilityManager.shared
     @State var color: Color = .teal
     @State var tabItemWidth: CGFloat = 0
     @State var animateClick = false
@@ -56,8 +65,8 @@ struct TabBar: View {
             RoundedRectangle(cornerRadius: 0)
                 .stroke(Color.invert.opacity(0.00), lineWidth: 1)
         )
-        .offset(y: hideTab ? 200 : 100) // Move the tab downwards when hideTab is true
-        .animation(.spring(), value: hideTab) // Animate the offset change
+        .offset(y: tabBarManager.hideTab ? 200 : 100)
+        .animation(.spring(), value: tabBarManager.hideTab)
         .frame(maxHeight: .infinity, alignment: .bottom)
         .onChange(of: selectedTab, perform: { change in
             withAnimation(.spring()) {

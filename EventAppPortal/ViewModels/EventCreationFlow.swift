@@ -151,9 +151,10 @@ class CreateEventViewModel: ObservableObject {
             }
             
             let coordinates = location.coordinate
-            
-            // Create event data
+            let docRef = self.db.collection("events").document()
+            let newEventId = docRef.documentID
             let eventData: [String: Any] = [
+                "id": newEventId,
                 "name": self.name,
                 "description": self.description,
                 "type": self.type,
@@ -161,22 +162,19 @@ class CreateEventViewModel: ObservableObject {
                 "location": self.location,
                 "price": self.price,
                 "owner": userId,
-                "organizerName": "Event Organizer", // This could be fetched from user profile
+                "organizerName": "Event Organizer",
                 "shareContactInfo": true,
                 "startDate": Timestamp(date: self.startDate),
                 "endDate": Timestamp(date: self.endDate),
                 "images": [],
-                "participants": [userId], // Creator is the first participant
+                "participants": [userId],
                 "maxParticipants": Int(self.maxParticipants) ?? 0,
                 "isTimed": true,
                 "createdAt": Timestamp(date: Date()),
-                "latitude": coordinates.latitude,
-                "longitude": coordinates.longitude,
+                "coordinates": [coordinates.latitude, coordinates.longitude],
                 "status": "active"
             ]
             
-            // Add event to Firestore
-            let docRef = self.db.collection("events").document()
             docRef.setData(eventData) { [weak self] error in
                 guard let self = self else { return }
                 

@@ -46,14 +46,12 @@ struct HomeView: View {
         showlogo = true
 
         do {
-            // Single query to fetch all events with appropriate filters
             let eventsQuery = db.collection("events")
                 .whereField("status", isEqualTo: "active")
-                .order(by: "views", descending: true)
-                .limit(to: 20) // Fetch more than needed to cover all sections
-            
+                .limit(to: 50)
+
             let snapshot = try await eventsQuery.getDocuments()
-            let allEvents = snapshot.documents.compactMap { document -> Event? in
+            let parsedEvents = snapshot.documents.compactMap { document -> Event? in
                 let data = document.data()
                 guard let id = data["id"] as? String,
                       let name = data["name"] as? String,
@@ -64,11 +62,12 @@ struct HomeView: View {
                       let owner = data["owner"] as? String,
                       let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
                       let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                      let images = data["images"] as? [String],
                       let isTimed = data["isTimed"] as? Bool,
                       let coordinates = data["coordinates"] as? [Double]
                 else { return nil }
-                
+
+                let images = data.firestoreEventImageStrings()
+
                 let maxParticipants = data["maxParticipants"] as? Int ?? 100
                 let participants = Array(repeating: "Participant", count: maxParticipants)
                 
@@ -94,8 +93,11 @@ struct HomeView: View {
                     status: data["status"] as? String ?? "active"
                 )
             }
-            
-            // Process events for different sections
+
+            let allEvents = parsedEvents.sorted {
+                (Int($0.views) ?? 0) > (Int($1.views) ?? 0)
+            }
+
             popularEvents = Array(allEvents.prefix(10))
             nearbyEvents = Array(allEvents
                 .filter { $0.startDate > Date() }
@@ -118,6 +120,8 @@ struct HomeView: View {
             isLoadingPopular = false
             isLoadingNearby = false
             isLoadingRecommended = false
+            isLoadingGroups = false
+            showlogo = false
         }
     }
     
@@ -173,11 +177,12 @@ struct HomeView: View {
                       let owner = data["owner"] as? String,
                       let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
                       let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                      let images = data["images"] as? [String],
                       let isTimed = data["isTimed"] as? Bool,
                       let coordinates = data["coordinates"] as? [Double]
                 else { return nil }
-                
+
+                let images = data.firestoreEventImageStrings()
+
                 // Calculate relevance score
                 let searchableText = "\(name) \(description) \(type) \(location)".lowercased()
                 let relevanceScore = keywords.reduce(0) { score, keyword in
@@ -233,7 +238,10 @@ struct HomeView: View {
     
     // Add this function to fetch recommended groups
     private func fetchRecommendedGroups() async {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+        guard let userId = Auth.auth().currentUser?.uid else {
+            await MainActor.run { isLoadingGroups = false }
+            return
+        }
         let db = Firestore.firestore()
         
         do {
@@ -888,7 +896,7 @@ struct RegularEventCard: View {
                         HStack(alignment: .bottom) {
                             Spacer()
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(event.description.split(separator: ".")[0] + ".")
+                                Text(firstDescriptionSentence(from: event.description))
                                     .font(.callout)
                                     .foregroundColor(.white)
                                     .padding(.leading)
@@ -946,6 +954,18 @@ struct RegularEventCard: View {
             .cornerRadius(20)
         }
         .frame(height: 200)
+    }
+
+    private func firstDescriptionSentence(from description: String) -> String {
+        let trimmed = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return " "
+        }
+        let parts = trimmed.split(separator: ".", omittingEmptySubsequences: true)
+        if let first = parts.first {
+            return String(first) + "."
+        }
+        return trimmed
     }
     
     func returnMonthOrDay(from date: Date, getDayNumber: Bool) -> String {

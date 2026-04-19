@@ -3,8 +3,36 @@ import CoreLocation
 import FirebaseFirestore
 import SwiftUI
 
+extension Notification.Name {
+    static let eventPortalLocationCacheShouldReload = Notification.Name("EventPortalLocationCacheShouldReload")
+}
+
 class LocationManager: NSObject, ObservableObject {
     static let shared = LocationManager()
+
+    private static let storageKeyLocationString = "userLocationString"
+    private static let storageKeyLatitude = "userLatitude"
+    private static let storageKeyLongitude = "userLongitude"
+    private static let storageKeyLastUpdate = "lastLocationUpdate"
+
+    static func clearDeviceLocationCacheForSessionChange() {
+        let d = UserDefaults.standard
+        d.set("Not Set", forKey: storageKeyLocationString)
+        d.set(0.0, forKey: storageKeyLatitude)
+        d.set(0.0, forKey: storageKeyLongitude)
+        d.set(0.0, forKey: storageKeyLastUpdate)
+        NotificationCenter.default.post(name: .eventPortalLocationCacheShouldReload, object: nil)
+    }
+
+    private static func coordinatesFromFirestore(_ value: Any?) -> [Double]? {
+        if let a = value as? [Double], a.count >= 2 { return a }
+        if let a = value as? [NSNumber] {
+            let mapped = a.map { $0.doubleValue }
+            return mapped.count >= 2 ? mapped : nil
+        }
+        return nil
+    }
+
     private let locationManager = CLLocationManager()
     @Published var location: CLLocation?
     @Published var locationString: String = "Not Set"
@@ -51,10 +79,18 @@ class LocationManager: NSObject, ObservableObject {
                                              selector: #selector(appDidBecomeActive),
                                              name: UIApplication.didBecomeActiveNotification,
                                              object: nil)
+        NotificationCenter.default.addObserver(self,
+                                             selector: #selector(reloadLocationCacheFromDefaults),
+                                             name: .eventPortalLocationCacheShouldReload,
+                                             object: nil)
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func reloadLocationCacheFromDefaults() {
+        loadStoredLocation()
     }
     
     @objc private func appDidBecomeActive() {
@@ -66,10 +102,19 @@ class LocationManager: NSObject, ObservableObject {
     }
     
     private func loadStoredLocation() {
-        locationString = storedLocationString
-        coordinates = [storedLatitude, storedLongitude]
-        if storedLatitude != 0.0 && storedLongitude != 0.0 {
-            location = CLLocation(latitude: storedLatitude, longitude: storedLongitude)
+        let d = UserDefaults.standard
+        let s = d.string(forKey: Self.storageKeyLocationString) ?? "Not Set"
+        let lat = d.object(forKey: Self.storageKeyLatitude) as? Double ?? d.double(forKey: Self.storageKeyLatitude)
+        let lon = d.object(forKey: Self.storageKeyLongitude) as? Double ?? d.double(forKey: Self.storageKeyLongitude)
+        storedLocationString = s
+        storedLatitude = lat
+        storedLongitude = lon
+        locationString = s
+        coordinates = [lat, lon]
+        if lat != 0.0 || lon != 0.0 {
+            location = CLLocation(latitude: lat, longitude: lon)
+        } else {
+            location = nil
         }
     }
     
@@ -81,6 +126,13 @@ class LocationManager: NSObject, ObservableObject {
         self.locationString = locationString
         self.coordinates = [location.coordinate.latitude, location.coordinate.longitude]
         self.location = location
+    }
+
+    func applyManualLocation(address: String, coordinates: [Double]) {
+        guard coordinates.count >= 2 else { return }
+        let clLocation = CLLocation(latitude: coordinates[0], longitude: coordinates[1])
+        storeLocation(clLocation, address)
+        isLoading = false
     }
     
     func forceLocationUpdate() {
@@ -167,6 +219,7 @@ class LocationManager: NSObject, ObservableObject {
             "location": GeoPoint(latitude: location.coordinate.latitude,
                                longitude: location.coordinate.longitude),
             "locationString": locationString,
+            "coordinates": [location.coordinate.latitude, location.coordinate.longitude],
             "lastLocationUpdate": Date()
         ]
         
@@ -182,23 +235,60 @@ class LocationManager: NSObject, ObservableObject {
         
         db.collection("users").document(userId).getDocument { [weak self] document, error in
             guard let self = self else { return }
-            
+
             if let error = error {
                 print("Error fetching user location: \(error.localizedDescription)")
                 return
             }
-            
-            if let data = document?.data(),
-               let locationString = data["locationString"] as? String,
-               let coordinates = data["coordinates"] as? [Double],
+
+            guard let document = document else {
+                DispatchQueue.main.async {
+                    LocationManager.clearDeviceLocationCacheForSessionChange()
+                }
+                return
+            }
+
+            if !document.exists {
+                DispatchQueue.main.async {
+                    LocationManager.clearDeviceLocationCacheForSessionChange()
+                }
+                return
+            }
+
+            guard let data = document.data() else {
+                DispatchQueue.main.async {
+                    LocationManager.clearDeviceLocationCacheForSessionChange()
+                }
+                return
+            }
+
+            if let locationString = data["locationString"] as? String,
+               !locationString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let coordinates = Self.coordinatesFromFirestore(data["coordinates"]),
                coordinates.count >= 2 {
-                
                 let location = CLLocation(
                     latitude: coordinates[0],
                     longitude: coordinates[1]
                 )
-                
-                self.storeLocation(location, locationString)
+                DispatchQueue.main.async {
+                    self.storeLocation(location, locationString)
+                }
+                return
+            }
+
+            if let geo = data["location"] as? GeoPoint {
+                let trimmed = (data["locationString"] as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let label = trimmed.isEmpty ? "Saved location" : trimmed
+                let cl = CLLocation(latitude: geo.latitude, longitude: geo.longitude)
+                DispatchQueue.main.async {
+                    self.storeLocation(cl, label)
+                }
+                return
+            }
+
+            DispatchQueue.main.async {
+                LocationManager.clearDeviceLocationCacheForSessionChange()
             }
         }
     }

@@ -29,7 +29,13 @@ struct CreateView: View {
                         case .none:
                             SelectionView(creationType: $creationType)
                         case .event:
-                            EventCreationFlow(viewModel: eventViewModel)
+                            EventCreationFlow(viewModel: eventViewModel, onEventCreated: {
+                                eventViewModel.resetForm()
+                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                    TabBarVisibilityManager.shared.hideTab = false
+                                    creationType = .none
+                                }
+                            })
                         case .group:
                             GroupCreationFlow(viewModel: groupViewModel)
                         }
@@ -40,7 +46,10 @@ struct CreateView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if creationType != .none {
-                        Button(action: { creationType = .none }) {
+                        Button(action: {
+                            TabBarVisibilityManager.shared.hideTab = false
+                            creationType = .none
+                        }) {
                             HStack(spacing: 4.0) {
                                 Image(systemName: "chevron.left")
                                     .font(.system(size: 16, weight: .bold))
@@ -475,8 +484,16 @@ struct PreviewView: View {
                 
                 // Navigation Buttons
                 VStack(spacing: 16) {
-                    ActionButton(title: "Create Event", gradient: [.purple, .blue]) {
-                        onCreateEvent()
+                    ZStack {
+                        ActionButton(title: "Create Event", gradient: [.purple, .blue]) {
+                            onCreateEvent()
+                        }
+                        .disabled(viewModel.isLoading)
+                        .opacity(viewModel.isLoading ? 0.55 : 1)
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                        }
                     }
                     
                     Button(action: onBack) {
@@ -653,6 +670,30 @@ struct ImageSelectionView: View {
     }
 }
 
+struct LocationSearchCopy {
+    var headline: String
+    var description: String
+    var mapConfirmation: String
+    var navigationTitle: String
+    var searchPlaceholder: String
+
+    static let eventVenue = LocationSearchCopy(
+        headline: "Address",
+        description: "This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location.",
+        mapConfirmation: "Please confirm the location of the event on the map below.",
+        navigationTitle: "Select Location",
+        searchPlaceholder: "Enter Address"
+    )
+
+    static let userProfile = LocationSearchCopy(
+        headline: "Your area",
+        description: "Search for your city, neighborhood, or street. We use this spot to personalize nearby events and recommendations for you—it is not shown to guests like an event venue.",
+        mapConfirmation: "Confirm this is the area you want us to use for your profile and recommendations.",
+        navigationTitle: "Search your location",
+        searchPlaceholder: "City, neighborhood, or address"
+    )
+}
+
 struct LocationSearchView: View {
     @Binding var isPresented: Bool
     @StateObject private var completer = SearchCompleter()
@@ -660,9 +701,10 @@ struct LocationSearchView: View {
     @State private var showMap = false
     @State private var confirmed = false
     @FocusState private var isFocused: Bool
-    
+    var copy: LocationSearchCopy = .eventVenue
+
     let onLocationSelected: (String, [Double]) -> Void
-    
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -685,7 +727,7 @@ struct LocationSearchView: View {
                     
                    
                     VStack {
-                        Text("Address")
+                        Text(copy.headline)
                             .font(.title)
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
@@ -697,7 +739,7 @@ struct LocationSearchView: View {
                         .padding(.bottom, isFocused ? 0 : 5)
                     .padding(.top,20)
                         
-                        Text("This can include the venue name, street address, city, state, and zip code to ensure attendees can easily find and navigate to your event location")
+                        Text(copy.description)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(isFocused ? .center : .center)
                             
@@ -705,7 +747,7 @@ struct LocationSearchView: View {
                     
                     
                     
-                    TextField("Enter Address", text: $searchText)
+                    TextField(copy.searchPlaceholder, text: $searchText)
                         .focused($isFocused)
                         .padding()
                         .background(Color(.systemGray6))
@@ -755,7 +797,7 @@ struct LocationSearchView: View {
                     
                     
                     VStack {
-                        Text("Please confirm the location of the event on the map below.")
+                        Text(copy.mapConfirmation)
                            
                             .multilineTextAlignment(.center)
                         
@@ -825,7 +867,7 @@ struct LocationSearchView: View {
                         isFocused = false
                     }
                 }
-            }.navigationTitle("Select Location")
+            }.navigationTitle(copy.navigationTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarItems(trailing: Button("Cancel") {
                     isPresented = false

@@ -1,33 +1,59 @@
 import SwiftUI
 import Kingfisher
 
+private struct EventSlideImage: View {
+    let raw: String
+    var useFit: Bool
+
+    private var trimmed: String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isRemote: Bool {
+        let lower = trimmed.lowercased()
+        return lower.hasPrefix("http://") || lower.hasPrefix("https://")
+    }
+
+    var body: some View {
+        Group {
+            if isRemote, let url = URL(string: trimmed) {
+                KFImage(url)
+                    .placeholder {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color.gray.opacity(0.1))
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: useFit ? .fit : .fill)
+            } else if !trimmed.isEmpty {
+                Image(trimmed)
+                    .resizable()
+                    .aspectRatio(contentMode: useFit ? .fit : .fill)
+            } else {
+                Color.gray.opacity(0.2)
+                    .overlay(
+                        Image(systemName: "photo.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.gray)
+                    )
+            }
+        }
+    }
+}
+
 struct ImageViewer: View {
     let imageUrls: [String]
     @State private var currentIndex = 0
     @State private var isZoomed = false
     @State private var dragOffset = CGSize.zero
     @State private var showFullScreen = false
-    
+
     var body: some View {
         ZStack {
             if !showFullScreen {
-                // Regular view
                 TabView(selection: $currentIndex) {
                     ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
-                        KFImage(URL(string: url))
-                            .placeholder {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background(Color.gray.opacity(0.1))
-                            }
-                            .onFailure { error in
-                                // Show a default image or error state
-                                Image(systemName: "photo.fill")
-                                    .font(.largeTitle)
-                                    .foregroundColor(.gray)
-                            }
-                            .resizable()
-                            .scaledToFill()
+                        EventSlideImage(raw: url, useFit: false)
                             .tag(index)
                             .onTapGesture {
                                 withAnimation {
@@ -38,7 +64,6 @@ struct ImageViewer: View {
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
                 .overlay(
-                    // Image counter overlay
                     Text("\(currentIndex + 1)/\(imageUrls.count)")
                         .font(.caption)
                         .padding(8)
@@ -49,19 +74,12 @@ struct ImageViewer: View {
                     alignment: .bottomTrailing
                 )
             } else {
-                // Full screen view
                 ZStack {
                     Color.black.edgesIgnoringSafeArea(.all)
-                    
+
                     TabView(selection: $currentIndex) {
                         ForEach(Array(imageUrls.enumerated()), id: \.offset) { index, url in
-                            KFImage(URL(string: url))
-                                .placeholder {
-                                    ProgressView()
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                }
-                                .resizable()
-                                .scaledToFit()
+                            EventSlideImage(raw: url, useFit: true)
                                 .tag(index)
                                 .scaleEffect(isZoomed ? 2 : 1)
                                 .offset(dragOffset)
@@ -96,8 +114,7 @@ struct ImageViewer: View {
                         }
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
-                    
-                    // Close button
+
                     VStack {
                         HStack {
                             Spacer()
@@ -126,7 +143,6 @@ struct ImageViewer: View {
     }
 }
 
-// Preview provider
 struct ImageViewer_Previews: PreviewProvider {
     static var previews: some View {
         ImageViewer(imageUrls: [
@@ -135,4 +151,4 @@ struct ImageViewer_Previews: PreviewProvider {
         ])
         .frame(height: 300)
     }
-} 
+}

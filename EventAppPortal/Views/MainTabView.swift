@@ -10,7 +10,7 @@ struct MainTabView: View {
             case .home:
                     HomeView(showlogo:$showLogo)
             case .explore:
-                DiscoverView()
+                ExploreEventsView()
                     
             case .groups:
                 GroupsView()
@@ -34,8 +34,6 @@ struct MainTabView: View {
         }
         .onAppear {
             tabBarManager.hideTab = false
-            selectedTab = .home
-        
         }
     }
 }

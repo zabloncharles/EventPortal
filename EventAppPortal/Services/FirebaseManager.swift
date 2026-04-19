@@ -9,15 +9,25 @@ class FirebaseManager: ObservableObject {
     @Published var currentUser: User?
     @Published var errorMessage = ""
     @AppStorage("userID") private var userID: String = ""
-    
+    @AppStorage("eventPortalLastKnownAuthUID") private var lastKnownAuthUIDStorage: String = ""
+
     private init() {
-        // Listen for auth state changes
         Auth.auth().addStateDidChangeListener { [weak self] _, user in
             DispatchQueue.main.async {
-                self?.isAuthenticated = user != nil
-                self?.currentUser = user
-                // Update userID in AppStorage
-                self?.userID = user?.uid ?? ""
+                guard let self = self else { return }
+                let next = user?.uid ?? ""
+                let prev = self.lastKnownAuthUIDStorage
+                if next != prev {
+                    if next.isEmpty && !prev.isEmpty {
+                        LocationManager.clearDeviceLocationCacheForSessionChange()
+                    } else if !next.isEmpty && !prev.isEmpty && next != prev {
+                        LocationManager.clearDeviceLocationCacheForSessionChange()
+                    }
+                }
+                self.lastKnownAuthUIDStorage = next
+                self.isAuthenticated = user != nil
+                self.currentUser = user
+                self.userID = next
             }
         }
     }
@@ -59,52 +69,54 @@ class FirebaseManager: ObservableObject {
                 if let error = error {
                     self?.errorMessage = error.localizedDescription
                     completion(false, error.localizedDescription)
-                } else {
-                    // Create user document in Firestore
-                    if let user = result?.user {
-                        // Update display name
-                        let changeRequest = user.createProfileChangeRequest()
-                        changeRequest.displayName = name
-                        changeRequest.commitChanges { error in
-                            if let error = error {
-                                print("Error updating user profile: \(error)")
-                            }
-                        }
-                        
-                        // Create user document with all information
-                        let userData: [String: Any] = [
-                            "uid": user.uid,
-                            "email": email,
-                            "name": name,
-                            "createdAt": Timestamp(),
-                            "lastLogin": Timestamp(),
-                            "profileImageUrl": "",
-                            "eventsCreated": 0,
-                            "eventsAttended": 0,
-                            "isEmailVerified": false,
-                            "settings": [
-                                "notifications": true,
-                                "emailUpdates": true
-                            ],
-                            "deviceTokens": [],
-                            "accountStatus": "active"
-                        ]
-                        
-                        Firestore.firestore().collection("users").document(user.uid).setData(userData) { error in
-                            if let error = error {
-                                print("Error creating user document: \(error)")
-                            } else {
-                                // Send email verification
-                                user.sendEmailVerification { error in
-                                    if let error = error {
-                                        print("Error sending verification email: \(error)")
-                                    }
-                                }
-                            }
-                        }
+                    return
+                }
+                guard let user = result?.user else {
+                    completion(false, "Could not create account")
+                    return
+                }
+
+                let changeRequest = user.createProfileChangeRequest()
+                changeRequest.displayName = name
+                changeRequest.commitChanges { profileError in
+                    if let profileError = profileError {
+                        print("Error updating user profile: \(profileError)")
                     }
-                    self?.errorMessage = ""
-                    completion(true, nil)
+                }
+
+                let userData: [String: Any] = [
+                    "uid": user.uid,
+                    "email": email,
+                    "name": name,
+                    "createdAt": Timestamp(),
+                    "lastLogin": Timestamp(),
+                    "profileImageUrl": "",
+                    "eventsCreated": 0,
+                    "eventsAttended": 0,
+                    "isEmailVerified": false,
+                    "settings": [
+                        "notifications": true,
+                        "emailUpdates": true
+                    ],
+                    "deviceTokens": [],
+                    "accountStatus": "active"
+                ]
+
+                Firestore.firestore().collection("users").document(user.uid).setData(userData) { fsError in
+                    DispatchQueue.main.async {
+                        if let fsError = fsError {
+                            self?.errorMessage = fsError.localizedDescription
+                            completion(false, fsError.localizedDescription)
+                            return
+                        }
+                        user.sendEmailVerification { verifyError in
+                            if let verifyError = verifyError {
+                                print("Error sending verification email: \(verifyError)")
+                            }
+                        }
+                        self?.errorMessage = ""
+                        completion(true, nil)
+                    }
                 }
             }
         }
@@ -112,11 +124,13 @@ class FirebaseManager: ObservableObject {
     
     func signOut() {
         do {
+            LocationManager.clearDeviceLocationCacheForSessionChange()
             try Auth.auth().signOut()
             DispatchQueue.main.async {
                 self.isAuthenticated = false
                 self.currentUser = nil
-                self.userID = "" // Clear userID from AppStorage
+                self.userID = ""
+                self.lastKnownAuthUIDStorage = ""
             }
         } catch {
             print("Error signing out: \(error)")
@@ -255,7 +269,6 @@ class FirebaseManager: ObservableObject {
                           let owner = data["owner"] as? String,
                           let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
                           let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                          let images = data["images"] as? [String],
                           let isTimed = data["isTimed"] as? Bool,
                           let coordinates = data["coordinates"] as? [Double],
                           let organizerName = data["organizerName"] as? String,
@@ -263,7 +276,9 @@ class FirebaseManager: ObservableObject {
                           let maxParticipants = data["maxParticipants"] as? Int else {
                         return nil
                     }
-                    
+
+                    let images = data.firestoreEventImageStrings()
+
                     let participants = data["participants"] as? [String] ?? []
                     
                     return Event(

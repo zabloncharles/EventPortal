@@ -257,16 +257,6 @@ struct RegistrationView: View {
         firebaseManager.signUp(email: email, name: name, password: password) { success, error in
             isLoading = false
             if success {
-                // Update user profile with name
-                if let user = firebaseManager.currentUser {
-                    let changeRequest = user.createProfileChangeRequest()
-                    changeRequest.displayName = name
-                    changeRequest.commitChanges { error in
-                        if let error = error {
-                            print("Error updating user profile: \(error)")
-                        }
-                    }
-                }
                 isSuccessful = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     dismiss()

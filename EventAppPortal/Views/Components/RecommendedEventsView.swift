@@ -52,20 +52,31 @@ private struct RecommendedEventCardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 // Event Image
                 if let firstImage = self.event.images.first {
-                    AsyncImage(url: URL(string: firstImage)) { phase in
-                        switch phase {
-                        case .empty:
-                            Rectangle()
-                                .foregroundColor(.gray.opacity(0.2))
-                        case .success(let image):
-                            image
+                    let trimmed = firstImage.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let lower = trimmed.lowercased()
+                    let isRemote = lower.hasPrefix("http://") || lower.hasPrefix("https://")
+                    Group {
+                        if isRemote, let url = URL(string: trimmed) {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .empty:
+                                    Rectangle()
+                                        .foregroundColor(.gray.opacity(0.2))
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                case .failure:
+                                    Image(systemName: "photo")
+                                        .foregroundColor(.gray)
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                        } else if !trimmed.isEmpty {
+                            Image(trimmed)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                        case .failure:
-                            Image(systemName: "photo")
-                                .foregroundColor(.gray)
-                        @unknown default:
-                            EmptyView()
                         }
                     }
                     .frame(width: 240, height: 135)

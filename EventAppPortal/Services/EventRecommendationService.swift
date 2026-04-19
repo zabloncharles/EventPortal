@@ -239,7 +239,7 @@ extension Event {
         self.shareContactInfo = data["shareContactInfo"] as? Bool ?? false
         self.startDate = (data["startDate"] as? Timestamp)?.dateValue() ?? Date()
         self.endDate = (data["endDate"] as? Timestamp)?.dateValue() ?? Date()
-        self.images = data["images"] as? [String] ?? []
+        self.images = data.firestoreEventImageStrings()
         self.participants = data["participants"] as? [String] ?? []
         self.maxParticipants = data["maxParticipants"] as? Int ?? 100
         self.isTimed = data["isTimed"] as? Bool ?? false

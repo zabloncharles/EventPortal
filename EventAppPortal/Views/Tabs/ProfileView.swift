@@ -13,8 +13,7 @@ struct ProfileView: View {
     @State private var showPhotoUpload = false
     @State private var userPhotos: [String] = []
     @State private var showEventImageUpdate = false
-    @StateObject private var locationManager = LocationManager()
-    @State private var showLocationSettings = false
+    @ObservedObject private var locationManager = LocationManager.shared
     @State private var userName: String = ""
     @State private var userEmail: String = ""
     
@@ -110,9 +109,9 @@ struct ProfileView: View {
                             Text("Location")
                                 .font(.headline)
                                 .padding(.horizontal)
-                            Button(action: {
-                                showLocationSettings = true
-                            }) {
+                            NavigationLink {
+                                UpdateLocationDetailView(locationManager: locationManager, userId: userID)
+                            } label: {
                                 HStack {
                                     Image(systemName: "location.fill")
                                         .foregroundColor(.blue)
@@ -123,13 +122,14 @@ struct ProfileView: View {
                                         .foregroundColor(.gray)
                                         .lineLimit(1)
                                     Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
+                                        .foregroundColor(.gray)
+                                }
                                 .padding()
                                 .background(Color(.systemBackground))
                                 .cornerRadius(12)
                                 .shadow(color: Color.invert.opacity(0.05), radius: 5, x: 0, y: 2)
                             }
+                            .buttonStyle(.plain)
                         }
                         
                         SettingsCard(title: "Support", items: [
@@ -182,7 +182,7 @@ struct ProfileView: View {
                 }
             } message: {
                 Text("Are you sure you want to sign out?")
-        }
+            }
         .sheet(isPresented: $showPhotoUpload) {
             PhotoUploadView { urls in
                 self.userPhotos.append(contentsOf: urls)
@@ -192,9 +192,6 @@ struct ProfileView: View {
         .sheet(isPresented: $showEventImageUpdate) {
             EventImageUpdateView()
         }
-        .sheet(isPresented: $showLocationSettings) {
-                LocationSettingsView(locationManager: locationManager, userId: userID, locationString: userData?["locationString"] as? String ?? "Not Set")
-            }
         }
     }
     
@@ -1027,13 +1024,14 @@ struct BookmarkedView: View {
                           let owner = data["owner"] as? String,
                           let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
                           let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                          let images = data["images"] as? [String],
                           let isTimed = data["isTimed"] as? Bool,
                           let coordinates = data["coordinates"] as? [Double] else {
                         print("Invalid event data for \(eventId)")
                         return
                     }
-                    
+
+                    let images = data.firestoreEventImageStrings()
+
                     let maxParticipants = data["maxParticipants"] as? Int ?? 0
                     let participants = Array(repeating: "Participant", count: maxParticipants)
                     
@@ -1588,19 +1586,20 @@ struct DataUsageRow: View {
     }
 }
 
-struct LocationSettingsView: View {
+struct UpdateLocationDetailView: View {
     @ObservedObject var locationManager: LocationManager
-    @Environment(\.presentationMode) var presentationMode
     var userId: String = ""
-    var locationString : String = "Not Set"
-    @State var oldLocation = ""
+    @State private var oldLocation = ""
+    @State private var showManualLocationSearch = false
+
     var body: some View {
         ZStack {
-            Color.dynamic.edgesIgnoringSafeArea(.all)
-            NavigationView {
-                Form {
-                    Text("Select Your Location")
+            Color.dynamic.ignoresSafeArea()
+            Form {
+                Section {
+                    Text("Select your location")
                         .font(.title3)
+                        .fontWeight(.bold)
                         .foregroundStyle(
                             LinearGradient(
                                 gradient: Gradient(colors: [Color.purple, .blue]),
@@ -1608,68 +1607,92 @@ struct LocationSettingsView: View {
                                 endPoint: .trailing
                             )
                         )
-                        .fontWeight(.bold)
-                    
-                    Text("Your location will be utilized to tailor event recommendations and provide personalized experiences.")
+                    Text("We use this to tailor event recommendations and nearby suggestions for your account.")
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
-                    Section(header: Text("Current Location")) {
-                        if locationManager.isLoading {
-                            HStack {
-                                Spacer()
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle())
-                                Spacer()
-                            }
-                        } else {
-                            Text(locationManager.locationString)
+                }
+                .listRowBackground(Color.clear)
+
+                Section(header: Text("Current location")) {
+                    if locationManager.isLoading {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                            Spacer()
                         }
+                    } else {
+                        Text(locationManager.locationString)
                     }
-                    
+                }
+
                 Section {
                     Button(action: {
-                            switch locationManager.authorizationStatus {
-                            case .notDetermined:
-                                locationManager.requestPermission()
-                            case .authorizedWhenInUse, .authorizedAlways:
-                                locationManager.requestLocation()
-                            default:
-                                // Open settings if permission denied
-                                if let url = URL(string: UIApplication.openSettingsURLString) {
-                                    UIApplication.shared.open(url)
-                                }
+                        switch locationManager.authorizationStatus {
+                        case .notDetermined:
+                            locationManager.requestPermission()
+                        case .authorizedWhenInUse, .authorizedAlways:
+                            locationManager.requestLocation()
+                        default:
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
                             }
-                        }) {
-                            HStack {
-                                Spacer()
-                                Image(systemName: "location.fill")
-                                Text(locationButtonText)
-                                Spacer()
-                            }
+                        }
+                    }) {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "location.fill")
+                            Text(locationButtonText)
+                            Spacer()
                         }
                     }
                 }
-                .toolbarBackground(Color.dynamic)
-                .navigationTitle("Update Location")
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationBarItems(trailing: Button("Done") {
-                    presentationMode.wrappedValue.dismiss()
-                })
-                .onAppear {
-                    //fetch current location from firebase
-                    locationManager.fetchUserLocation(userId: userId)
-                    oldLocation = locationManager.locationString
+
+                Section {
+                    Text("When GPS is off or you prefer a different area, search for an address to set your profile location.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Button {
+                        showManualLocationSearch = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "mappin.and.ellipse")
+                                .foregroundColor(.blue)
+                            Text("Search address")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Set location manually")
                 }
             }
-        }.onDisappear{
-            
+            .scrollContentBackground(.hidden)
+        }
+        .navigationTitle("Update Location")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(Color.dynamic, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .onAppear {
+            locationManager.fetchUserLocation(userId: userId)
+            oldLocation = locationManager.locationString
+        }
+        .onDisappear {
             if oldLocation != locationManager.locationString {
                 locationManager.updateUserLocation(userId: userId)
             }
-            presentationMode.wrappedValue.dismiss()
+        }
+        .sheet(isPresented: $showManualLocationSearch) {
+            LocationSearchView(isPresented: $showManualLocationSearch, copy: .userProfile) { address, coordinates in
+                locationManager.applyManualLocation(address: address, coordinates: coordinates)
+            }
         }
     }
-    
-    var locationButtonText: String {
+
+    private var locationButtonText: String {
         switch locationManager.authorizationStatus {
         case .notDetermined:
             return "Request Location Permission"

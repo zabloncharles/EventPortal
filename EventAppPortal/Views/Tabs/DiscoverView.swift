@@ -40,89 +40,61 @@ enum FilterType: String, CaseIterable, Identifiable {
 class FilterModel: ObservableObject {
     @Published var filteredEvents: [Event] = []
     @Published var activeFilters: EventFilters = EventFilters()
-    private var allEvents: [Event] = [] // Store all events
-    
+    private var allEvents: [Event] = []
+
+    private static func numericPrice(from event: Event) -> Double? {
+        let s = event.price.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.lowercased() == "free" { return 0 }
+        let cleaned = s.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "").trimmingCharacters(in: .whitespaces)
+        return Double(cleaned)
+    }
+
     func applyFilters(filters: EventFilters) {
-        print("Applying filters: \(filters)")
-        print("Total events before filtering: \(allEvents.count)")
-        
-        // Start with all events
         var filtered = allEvents
-        
-        // Apply type filter
+
         if filters.selectedType != "All" {
-            print("Filtering by type: \(filters.selectedType)")
-            filtered = filtered.filter { event in
-                let matches = event.type == filters.selectedType
-                if !matches {
-                    print("Event '\(event.name)' filtered out due to type mismatch: \(event.type) != \(filters.selectedType)")
-                }
-                return matches
-            }
-            print("After type filter: \(filtered.count) events")
+            filtered = filtered.filter { $0.type == filters.selectedType }
         }
-        
-        // Only apply other filters if we have events after type filtering
+
         if !filtered.isEmpty {
-            // Apply location filter
             if filters.selectedLocation != "All" {
                 filtered = filtered.filter { $0.location == filters.selectedLocation }
-                print("After location filter: \(filtered.count) events")
             }
-            
-            // Apply price range filter
-            filtered = filtered.filter { event in
-                if event.price.lowercased() == "free" {
-                    return true
+
+            if filters.requireFreePrice {
+                filtered = filtered.filter { event in
+                    let s = event.price.lowercased()
+                    return s.contains("free") || Self.numericPrice(from: event) == 0
                 }
-                if let price = Double(event.price) {
-                    let isInRange = price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
-                    if !isInRange {
-                        print("Event '\(event.name)' filtered out due to price: \(price) not in range \(filters.priceRange)")
+            } else {
+                filtered = filtered.filter { event in
+                    if event.price.lowercased() == "free" {
+                        return true
                     }
-                    return isInRange
+                    guard let price = Self.numericPrice(from: event) else {
+                        return false
+                    }
+                    return price >= filters.priceRange.lowerBound && price <= filters.priceRange.upperBound
                 }
-                print("Event '\(event.name)' filtered out due to invalid price format: \(event.price)")
-                return false
             }
-            print("After price filter: \(filtered.count) events")
             
-            // Apply date range filter
             filtered = filtered.filter { event in
                 let eventStartsBeforeFilterEnds = event.startDate <= filters.endDate
                 let eventEndsAfterFilterStarts = event.endDate >= filters.startDate
-                let isInRange = eventStartsBeforeFilterEnds && eventEndsAfterFilterStarts
-                
-                if !isInRange {
-                    print("Event '\(event.name)' filtered out due to date range")
-                }
-                return isInRange
+                return eventStartsBeforeFilterEnds && eventEndsAfterFilterStarts
             }
-            print("After date filter: \(filtered.count) events")
-            
-            // Apply timed events filter
+
             if filters.showTimedEventsOnly {
                 filtered = filtered.filter { $0.isTimed }
-                print("After timed events filter: \(filtered.count) events")
             }
-            
-            // Apply participants filter
+
             if filters.minParticipants > 0 {
                 filtered = filtered.filter { $0.participants.count >= filters.minParticipants }
-                print("After participants filter: \(filtered.count) events")
             }
         }
-        
+
         filteredEvents = filtered
-        print("Final filtered events count: \(filteredEvents.count)")
-        
-        // Print details of remaining events
-        if filteredEvents.isEmpty {
-            print("No events remain after filtering. Original events:")
-            for event in allEvents {
-                print("- \(event.name): Type=\(event.type), Location=\(event.location), Price=\(event.price)")
-            }
-        }
+        activeFilters = filters
     }
     
     // Update this method to store all events
@@ -136,11 +108,12 @@ struct EventFilters {
     var searchText: String = ""
     var selectedType: String = "All"
     var selectedLocation: String = "All"
-    var priceRange: ClosedRange<Double> = 0...1000
+    var priceRange: ClosedRange<Double> = 0...2000
     var startDate: Date = Date()
     var endDate: Date = Date().addingTimeInterval(30*24*60*60)
     var showTimedEventsOnly: Bool = false
     var minParticipants: Int = 0
+    var requireFreePrice: Bool = false
 }
 
 struct DiscoverView: View {
@@ -163,10 +136,10 @@ struct DiscoverView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var showLocationSettings = false
-    @StateObject private var locationManager = LocationManager()
+    @ObservedObject private var locationManager = LocationManager.shared
     @AppStorage("userID") private var userID: String = ""
     @State private var pageAppeared = false
-    @State private var viewMode: ViewMode = .map
+    @State private var selectedQuickPriceFilter: PriceFilter = .all
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060),
         span: MKCoordinateSpan(latitudeDelta: 0.1, longitudeDelta: 0.1)
@@ -190,12 +163,20 @@ struct DiscoverView: View {
         "Technology", "Art & Culture", "Charity", "Literature", "Lifestyle",
         "Environmental", "Entertainment"
     ]
-    
-    enum ViewMode {
-        case list
-        case map
+
+    private var exploreAreaHeadline: String {
+        let parts = locationManager.locationString.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+        let first = parts.first ?? ""
+        if first.isEmpty || first == "Not Set" {
+            return "Events near you"
+        }
+        return first
     }
-    
+
+    private var eventsForMap: [Event] {
+        localizedFilteredEvents().filter { $0.coordinates.count >= 2 }
+    }
+
     enum BottomSheetPosition: CGFloat {
         case bottom = 100
         case middle = 400
@@ -219,19 +200,16 @@ struct DiscoverView: View {
     // Add computed property for displayed events
     private var displayedEvents: [Event] {
         if searchText.isEmpty && selectedFilter == .all {
-            // Show top 3 most viewed events when no search or filter
-            return filterModel.filteredEvents
-                .sorted { 
+            return localizedFilteredEvents()
+                .sorted {
                     let views1 = Int($0.views) ?? 0
                     let views2 = Int($1.views) ?? 0
-                    return views1 > views2 
+                    return views1 > views2
                 }
                 .prefix(3)
                 .map { $0 }
-        } else {
-            // Show filtered results
-            return filteredEvents
         }
+        return filteredEvents
     }
     
     var body: some View {
@@ -261,7 +239,7 @@ struct DiscoverView: View {
                                         .bold()
                                         .foregroundColor(.blue)
                                     
-                                    Text(locationManager.locationString.split(separator: ",")[0] == "Not Set" ? "not logged in!" : locationManager.locationString.split(separator: ",")[0])
+                                    Text(exploreAreaHeadline)
                                         .font(.subheadline)
                             .foregroundColor(.gray)
                                 }
@@ -379,14 +357,14 @@ struct DiscoverView: View {
                         } else {
                                 // Title and Count
                                 HStack {
-                                    Text("Catch the Trending Events")
+                                    Text(searchText.isEmpty && selectedFilter == .all ? "Trending events" : "Results")
                                         .font(.title3)
                                         .bold()
                                     
                                     Spacer()
                                     
                                     Button(action: {
-                                        // Handle explore more action
+                                        showSearchView = true
                                     }) {
                                         Text("Explore More")
                                             .font(.subheadline)
@@ -419,6 +397,14 @@ struct DiscoverView: View {
                         Color.clear.frame(height: 49)
                     }
                 }
+
+                if isLoading {
+                    Color.black.opacity(0.25)
+                        .ignoresSafeArea()
+                    ProgressView("Loading events…")
+                        .padding(20)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Color(.systemBackground)).shadow(radius: 8))
+                }
             }
             .navigationBarHidden(true)
             .sheet(isPresented: $showFilterSheet) {
@@ -428,13 +414,16 @@ struct DiscoverView: View {
                 DateFilterView(selectedFilter: $selectedDateFilter)
             }
             .sheet(isPresented: $showPriceFilter) {
-                PriceFilterView(selectedFilter: .constant(.all))
+                PriceFilterView(selectedFilter: $selectedQuickPriceFilter, onSelect: {
+                    applyQuickPriceFilter()
+                })
             }
             .sheet(isPresented: $showCategoryFilter) {
                 CategoryFilterView(selectedCategory: $selectedCategory, categories: FilterType.allCases.map { $0.rawValue })
             }
             .sheet(isPresented: $showSearchView) {
                 SearchView(
+                    areaHeadline: exploreAreaHeadline,
                     searchText: $searchText,
                     selectedFilter: $selectedFilter,
                     displayedEvents: displayedEvents,
@@ -445,6 +434,21 @@ struct DiscoverView: View {
             .onChange(of: searchText) { newValue in
                 filterEvents()
             }
+            .onChange(of: selectedFilter) { _ in
+                filterEvents()
+                updateNearestEvents()
+            }
+            .alert("Could not load events", isPresented: $showError, actions: {
+                Button("OK", role: .cancel) {
+                    showError = false
+                }
+                Button("Retry") {
+                    showError = false
+                    fetchDiscoverEvents()
+                }
+            }, message: {
+                Text(errorMessage ?? "Unknown error")
+            })
             .onAppear {
                 fetchDiscoverEvents()
                 locationManager.fetchUserLocation(userId: userID)
@@ -474,7 +478,7 @@ struct DiscoverView: View {
         Map(coordinateRegion: $region,
             showsUserLocation: true,
             userTrackingMode: .constant(.none),
-            annotationItems: filterModel.filteredEvents) { event in
+            annotationItems: eventsForMap) { event in
             MapAnnotation(coordinate: CLLocationCoordinate2D(
                 latitude: event.coordinates[0],
                 longitude: event.coordinates[1]
@@ -528,30 +532,6 @@ struct DiscoverView: View {
         .ignoresSafeArea()
     }
     
-    var showEventCard: some View {
-        VStack {
-            if clickedEvent && !showSearchView, let event = clickedData {
-                ZStack {
-                    VStack {
-                        Spacer()
-                        NavigationLink(destination: ViewEventDetail(event: event)) {
-                            RegularEventCard(event: event)
-                                .frame(height: 200)
-                                .padding(.horizontal)
-                        }
-                    }
-                }
-                .onChange(of: hideTab) { newValue in
-                    if !newValue {
-                        clickedEvent = false
-                    }
-                }
-                .offset(y: !clickedEvent ? UIScreen.main.bounds.height * 0.5 : 0)
-                .transition(.slide)
-            }
-        }
-    }
-    
     private func zoomToEvent(event: Event) {
         withAnimation {
             region.center = CLLocationCoordinate2D(
@@ -571,110 +551,122 @@ struct DiscoverView: View {
     private func fetchDiscoverEvents() {
         isLoading = true
         let db = Firestore.firestore()
-        
-        print("Starting to fetch events from Firebase...")
-        
+
         db.collection("events")
             .whereField("status", isEqualTo: "active")
             .getDocuments { snapshot, error in
-                isLoading = false
-                
-                if let error = error {
-                    print("Error fetching events: \(error.localizedDescription)")
-                    errorMessage = error.localizedDescription
-                    showError = true
-                    return
-                }
-                
-                guard let documents = snapshot?.documents else {
-                    print("No documents found in events collection")
-                    errorMessage = "No events found"
-                    showError = true
-                    return
-                }
-                
-                print("Found \(documents.count) documents in events collection")
-                
-                let fetchedEvents = documents.compactMap { document -> Event? in
-                    let data = document.data()
-                    
-                    guard let name = data["name"] as? String,
-                          let description = data["description"] as? String,
-                          let type = data["type"] as? String,
-                          let location = data["location"] as? String,
-                          let price = data["price"] as? String,
-                          let owner = data["owner"] as? String,
-                          let organizerName = data["organizerName"] as? String,
-                          let shareContactInfo = data["shareContactInfo"] as? Bool,
-                          let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
-                          let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
-                          let images = data["images"] as? [String],
-                          let isTimed = data["isTimed"] as? Bool,
-                          let coordinates = data["coordinates"] as? [Double],
-                          let status = data["status"] as? String else {
-                        print("Failed to parse event data for document: \(document.documentID)")
-                        return nil
+                Task { @MainActor in
+                    self.isLoading = false
+
+                    if let error = error {
+                        self.errorMessage = error.localizedDescription
+                        self.showError = true
+                        return
                     }
-                    
-                    let maxParticipants = data["maxParticipants"] as? Int ?? 0
-                    let participants = Array(repeating: "Participant", count: maxParticipants)
-                    
-                    return Event(
-                        name: name,
-                        description: description,
-                        type: type,
-                        views: data["views"] as? String ?? "0",
-                        location: location,
-                        price: price,
-                        owner: owner,
-                        organizerName: organizerName,
-                        shareContactInfo: shareContactInfo,
-                        startDate: startDate,
-                        endDate: endDate,
-                        images: images,
-                        participants: participants,
-                        maxParticipants: maxParticipants,
-                        isTimed: isTimed,
-                        createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                        coordinates: coordinates,
-                        status: status
+
+                    guard let documents = snapshot?.documents else {
+                        self.errorMessage = "No events found"
+                        self.showError = true
+                        return
+                    }
+
+                    let fetchedEvents = documents.compactMap { document -> Event? in
+                        let data = document.data()
+
+                        guard let name = data["name"] as? String,
+                              let description = data["description"] as? String,
+                              let type = data["type"] as? String,
+                              let location = data["location"] as? String,
+                              let price = data["price"] as? String,
+                              let owner = data["owner"] as? String,
+                              let organizerName = data["organizerName"] as? String,
+                              let shareContactInfo = data["shareContactInfo"] as? Bool,
+                              let startDate = (data["startDate"] as? Timestamp)?.dateValue(),
+                              let endDate = (data["endDate"] as? Timestamp)?.dateValue(),
+                              let isTimed = data["isTimed"] as? Bool,
+                              let coordinates = data["coordinates"] as? [Double],
+                              let status = data["status"] as? String else {
+                            return nil
+                        }
+
+                        let images = data.firestoreEventImageStrings()
+                        let maxParticipants = data["maxParticipants"] as? Int ?? 0
+                        let participants = Array(repeating: "Participant", count: maxParticipants)
+                        let eventId = (data["id"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? document.documentID
+
+                        return Event(
+                            id: eventId,
+                            name: name,
+                            description: description,
+                            type: type,
+                            views: data["views"] as? String ?? "0",
+                            location: location,
+                            price: price,
+                            owner: owner,
+                            organizerName: organizerName,
+                            shareContactInfo: shareContactInfo,
+                            startDate: startDate,
+                            endDate: endDate,
+                            images: images,
+                            participants: participants,
+                            maxParticipants: maxParticipants,
+                            isTimed: isTimed,
+                            createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
+                            coordinates: coordinates,
+                            status: status
+                        )
+                    }
+
+                    self.filterModel.updateEvents(fetchedEvents)
+
+                    let currentFilters = EventFilters(
+                        searchText: self.searchText,
+                        selectedType: self.selectedFilter.rawValue,
+                        selectedLocation: self.filterModel.activeFilters.selectedLocation,
+                        priceRange: self.filterModel.activeFilters.priceRange,
+                        startDate: self.filterModel.activeFilters.startDate,
+                        endDate: self.filterModel.activeFilters.endDate,
+                        showTimedEventsOnly: self.filterModel.activeFilters.showTimedEventsOnly,
+                        minParticipants: self.filterModel.activeFilters.minParticipants,
+                        requireFreePrice: self.filterModel.activeFilters.requireFreePrice
                     )
+
+                    self.filterModel.applyFilters(filters: currentFilters)
+                    self.filterEvents()
+                    self.updateNearestEvents()
                 }
-                
-                print("Successfully parsed \(fetchedEvents.count) events")
-                print("Available event types: \(Set(fetchedEvents.map { $0.type }))")
-                
-                // Update the filter model with fetched events
-                filterModel.updateEvents(fetchedEvents)
-                
-                // Create current filters
-                let currentFilters = EventFilters(
-                    searchText: searchText,
-                    selectedType: selectedFilter.rawValue,
-                    selectedLocation: filterModel.activeFilters.selectedLocation,
-                    priceRange: filterModel.activeFilters.priceRange,
-                    startDate: filterModel.activeFilters.startDate,
-                    endDate: filterModel.activeFilters.endDate,
-                    showTimedEventsOnly: filterModel.activeFilters.showTimedEventsOnly,
-                    minParticipants: filterModel.activeFilters.minParticipants
-                )
-                
-                // Apply filters
-                filterModel.applyFilters(filters: currentFilters)
-                
-                print("Updated filter model with \(filterModel.filteredEvents.count) filtered events")
             }
     }
+
+    private func applyQuickPriceFilter() {
+        var f = filterModel.activeFilters
+        switch selectedQuickPriceFilter {
+        case .all:
+            f.requireFreePrice = false
+            f.priceRange = 0...2000
+        case .free:
+            f.requireFreePrice = true
+            f.priceRange = 0...2000
+        case .under10:
+            f.requireFreePrice = false
+            f.priceRange = 0...10
+        case .under25:
+            f.requireFreePrice = false
+            f.priceRange = 0...25
+        case .under50:
+            f.requireFreePrice = false
+            f.priceRange = 0...50
+        }
+        filterModel.applyFilters(filters: f)
+        filterEvents()
+        updateNearestEvents()
+    }
     
-    private func filterEvents() {
+    private func localizedFilteredEvents() -> [Event] {
         var filtered = filterModel.filteredEvents
-        
-        // Apply category filter first
         if selectedFilter != .all {
             filtered = filtered.filter { $0.type == selectedFilter.rawValue }
         }
-        
-        // Then apply search text filter
         if !searchText.isEmpty {
             filtered = filtered.filter { event in
                 event.name.localizedCaseInsensitiveContains(searchText) ||
@@ -683,18 +675,32 @@ struct DiscoverView: View {
                 event.type.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
-        filteredEvents = filtered
+        return filtered
+    }
+
+    private func filterEvents() {
+        filteredEvents = localizedFilteredEvents()
     }
     
     private func updateNearestEvents() {
-        guard let userLocation = locationManager.location else {
-            nearestEvents = filterModel.filteredEvents
+        filterEvents()
+        let base = filteredEvents.filter { $0.coordinates.count >= 2 }
+        let byViews = base.sorted {
+            (Int($0.views) ?? 0) > (Int($1.views) ?? 0)
+        }
+
+        if searchText.isEmpty && selectedFilter == .all {
+            nearestEvents = Array(byViews.prefix(12))
             return
         }
-        
-        nearestEvents = filterModel.filteredEvents
-            .sorted { event1, event2 in
+
+        guard let userLocation = locationManager.location else {
+            nearestEvents = Array(byViews.prefix(12))
+            return
+        }
+
+        nearestEvents = Array(
+            base.sorted { event1, event2 in
                 let location1 = CLLocation(
                     latitude: event1.coordinates[0],
                     longitude: event1.coordinates[1]
@@ -705,6 +711,8 @@ struct DiscoverView: View {
                 )
                 return location1.distance(from: userLocation) < location2.distance(from: userLocation)
             }
+            .prefix(12)
+        )
     }
 }
 
@@ -928,13 +936,20 @@ struct DateFilterView: View {
 struct PriceFilterView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var selectedFilter: PriceFilter
-    
+    var onSelect: (() -> Void)?
+
+    init(selectedFilter: Binding<PriceFilter>, onSelect: (() -> Void)? = nil) {
+        self._selectedFilter = selectedFilter
+        self.onSelect = onSelect
+    }
+
     var body: some View {
         NavigationView {
             List {
                 ForEach(PriceFilter.allCases, id: \.self) { filter in
                     Button(action: {
                         selectedFilter = filter
+                        onSelect?()
                         dismiss()
                     }) {
                         HStack {
@@ -1276,9 +1291,6 @@ struct FilterView: View {
                 }
             }
         }
-        .onDisappear {
-            applyFilters()
-        }
     }
     
     private func applyFilters() {
@@ -1290,7 +1302,8 @@ struct FilterView: View {
             startDate: startDate,
             endDate: endDate,
             showTimedEventsOnly: showTimedEventsOnly,
-            minParticipants: minParticipants
+            minParticipants: minParticipants,
+            requireFreePrice: false
         )
         filterModel.applyFilters(filters: filters)
     }
@@ -1353,7 +1366,7 @@ struct RangeSlider: View {
 // Add MapView component
 struct MapView: View {
     let events: [Event]
-    @StateObject private var locationManager = LocationManager()
+    @ObservedObject private var locationManager = LocationManager.shared
     @State private var selectedEvent: Event?
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 37.3361, longitude: -122.0090),
@@ -1828,6 +1841,7 @@ struct EventListItem: View {
 
 // First, add the SearchView struct
 struct SearchView: View {
+    let areaHeadline: String
     @Environment(\.dismiss) private var dismiss
     @Binding var searchText: String
     @Binding var selectedFilter: FilterType
@@ -1855,11 +1869,11 @@ struct SearchView: View {
             // Header
             VStack {
                 HStack {
-                    Button(action: {}) {
-                        HStack {
-                            Text("Abuja, Nigeria")
-                            Image(systemName: "chevron.down")
-                        }
+                    HStack {
+                        Text(areaHeadline)
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.secondary)
                     }
                     Spacer()
                     

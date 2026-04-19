@@ -4,17 +4,22 @@ import Kingfisher
 struct CompactImageViewer: View {
     let imageUrls: [String]
     @State private var currentIndex = 0
-    @State private var validImageUrls: [String] = []
-    @State private var loadingStates: [String: Bool] = [:]
     var scroll: Bool = true
-    
+
+    private var sources: [String] {
+        imageUrls.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
+    private static func isRemoteURL(_ string: String) -> Bool {
+        let lower = string.lowercased()
+        return lower.hasPrefix("http://") || lower.hasPrefix("https://")
+    }
+
     var body: some View {
         ZStack {
-            if validImageUrls.isEmpty {
-                // Show placeholder when no valid images are available
+            if sources.isEmpty {
                 Rectangle()
                     .fill(Color.gray.opacity(0.1))
-                    
                     .overlay(
                         Image(systemName: "photo.fill")
                             .font(.largeTitle)
@@ -22,74 +27,35 @@ struct CompactImageViewer: View {
                     )
             } else {
                 TabView(selection: $currentIndex) {
-                    ForEach(Array(validImageUrls.enumerated()), id: \.offset) { index, url in
-                        KFImage(URL(string: url))
-                            .placeholder {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .background(Color.gray.opacity(0.1))
+                    ForEach(Array(sources.enumerated()), id: \.offset) { index, item in
+                        Group {
+                            if Self.isRemoteURL(item) {
+                                KFImage(URL(string: item))
+                                    .placeholder {
+                                        ProgressView()
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .background(Color.gray.opacity(0.1))
+                                    }
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
+                                Image(item)
+                                    .resizable()
+                                    .scaledToFill()
                             }
-                            .onSuccess { result in
-                                print("Successfully loaded image at index \(index): \(url)")
-                                loadingStates[url] = true
-                            }
-                            .onFailure { error in
-                                print("Failed to load image at index \(index): \(url)")
-                                print("Error: \(error)")
-                                // Remove the failed image URL from the array
-                                if let index = validImageUrls.firstIndex(of: url) {
-                                    validImageUrls.remove(at: index)
-                                    loadingStates[url] = false
-                                }
-                            }
-                            .resizable()
-                            .scaledToFill()
-                            .tag(index)
+                        }
+                        .tag(index)
                     }
                 }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: validImageUrls.count > 1 && scroll ? .automatic : .never))
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: sources.count > 1 && scroll ? .automatic : .never))
                 .overlay {
-                    scroll ? Color.clear :
-                    Color.gray.opacity(0.02)
+                    scroll ? Color.clear : Color.gray.opacity(0.02)
                 }
             }
-            
-            // Image counter overlay
-//            if imageUrls.count > 1 {
-//                VStack {
-//                    Spacer()
-//                    HStack {
-//                        Spacer()
-//                        Text("\(currentIndex + 1)/\(imageUrls.count)")
-//                            .font(.caption)
-//                            .padding(6)
-//                            .background(Color.black.opacity(0.6))
-//                            .foregroundColor(.white)
-//                            .clipShape(Capsule())
-//                            .padding(8)
-//                    }
-//                }
-//            }
-        }
-        .onAppear {
-            print("CompactImageViewer appeared with \(imageUrls.count) URLs")
-            // Filter out invalid URLs and initialize loading states
-            validImageUrls = imageUrls.filter { urlString in
-                if let _ = URL(string: urlString) {
-                    print("Valid URL found: \(urlString)")
-                    loadingStates[urlString] = false
-                return true
-                } else {
-                    print("Invalid URL found: \(urlString)")
-                    return false
-                }
-            }
-            print("Filtered to \(validImageUrls.count) valid URLs")
         }
     }
 }
 
-// Preview provider
 struct CompactImageViewer_Previews: PreviewProvider {
     static var previews: some View {
         CompactImageViewer(
@@ -98,4 +64,4 @@ struct CompactImageViewer_Previews: PreviewProvider {
             ]
         )
     }
-} 
+}

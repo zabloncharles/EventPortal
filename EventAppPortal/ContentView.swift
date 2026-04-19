@@ -46,18 +46,12 @@ struct ContentView: View {
         }
         .animation(.easeInOut, value: firebaseManager.currentUser != nil)
         .onAppear {
-            // Check if user is already logged in
             if let user = Auth.auth().currentUser {
                 userID = user.uid
                 isLoggedIn = true
+            } else {
+                showLogo = false
             }
-            
-            
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
-//                withAnimation {
-//                    showLogo = false
-//                }
-//            }
         }
         .onChange(of: firebaseManager.currentUser) { newUser in
             if let user = newUser {
@@ -66,6 +60,7 @@ struct ContentView: View {
             } else {
                 userID = ""
                 isLoggedIn = false
+                showLogo = false
             }
         }
     }

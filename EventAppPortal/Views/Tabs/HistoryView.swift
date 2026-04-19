@@ -64,7 +64,7 @@ struct HistoryView: View {
                     .getDocuments { snapshot, error in
                         if let documents = snapshot?.documents {
                             events = documents.compactMap { document in
-                                let data = document.data()
+                                let data = document.data() ?? [:]
                                 return Event(
                                     id: document.documentID,
                                     name: data["name"] as? String ?? "",
@@ -78,7 +78,7 @@ struct HistoryView: View {
                                     shareContactInfo: data["shareContactInfo"] as? Bool ?? false,
                                     startDate: (data["startDate"] as? Timestamp)?.dateValue() ?? Date(),
                                     endDate: (data["endDate"] as? Timestamp)?.dateValue() ?? Date(),
-                                    images: data["images"] as? [String] ?? [],
+                                    images: data.firestoreEventImageStrings(),
                                     participants: data["participants"] as? [String] ?? [],
                                     maxParticipants: data["maxParticipants"] as? Int ?? 0,
                                     isTimed: data["isTimed"] as? Bool ?? false,

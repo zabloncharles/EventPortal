@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
@@ -15,19 +16,21 @@ import MapKit
 
 struct EventCreationFlow: View {
     @ObservedObject var viewModel: CreateEventViewModel
-    @Environment(\.dismiss) private var dismiss
+    var onEventCreated: () -> Void
     @State private var currentStep = 0
     @State private var showLocationSearch = false
     @State private var animateContent = false
     
     let steps = [
         "Event Name",
-        "Description",
         "Event Type",
-        "Date & Time",
+        "Description",
+        "Start Date",
+        "End Date",
         "Location",
         "Price",
         "Capacity",
+        "Photos",
         "Preview"
     ]
     
@@ -324,22 +327,34 @@ struct EventCreationFlow: View {
                 }
                 .tag(7)
                 
-                // Preview
+                OnboardingStepView(
+                    title: "Event photos",
+                    subtitle: "Add up to 3 images (optional)",
+                    icon: "photo.on.rectangle.angled",
+                    gradient: [.indigo, .mint]
+                ) {
+                    EventCreationPhotosStepContent(
+                        viewModel: viewModel,
+                        onBack: { withAnimation { currentStep -= 1 } },
+                        onNext: { withAnimation { currentStep += 1 } }
+                    )
+                }
+                .tag(8)
+                
                 PreviewView(
                     viewModel: viewModel,
                     onBack: { withAnimation { currentStep -= 1 } },
                     onCreateEvent: {
-                        Task {
+                        Task { @MainActor in
                             do {
                                 try await viewModel.createEvent()
-                                dismiss()
+                                onEventCreated()
                             } catch {
-                                print("Error creating event: \(error)")
                             }
                         }
                     }
                 )
-                .tag(8)
+                .tag(9)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut, value: currentStep)
@@ -352,6 +367,104 @@ struct EventCreationFlow: View {
             LocationSearchView(isPresented: $showLocationSearch) { address, coordinates in
                 viewModel.setLocation(address: address, coordinates: coordinates)
             }
+        }
+        .alert("Cannot create event", isPresented: $viewModel.showError) {
+            Button("OK", role: .cancel) {
+                viewModel.showError = false
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+}
+
+struct EventCreationPhotosStepContent: View {
+    @ObservedObject var viewModel: CreateEventViewModel
+    let onBack: () -> Void
+    let onNext: () -> Void
+    @State private var pickerItems: [PhotosPickerItem] = []
+
+    var body: some View {
+        VStack(spacing: 20) {
+            if !viewModel.selectedImages.isEmpty {
+                HStack(spacing: 12) {
+                    ForEach(0..<viewModel.selectedImages.count, id: \.self) { index in
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: viewModel.selectedImages[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipped()
+                                .cornerRadius(12)
+                            Button {
+                                removeImage(at: index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.white, Color.black.opacity(0.55))
+                            }
+                            .offset(x: 8, y: -8)
+                        }
+                    }
+                }
+            }
+
+            PhotosPicker(
+                selection: $pickerItems,
+                maxSelectionCount: 3,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                HStack {
+                    Image(systemName: "photo.badge.plus")
+                    Text(viewModel.selectedImages.isEmpty ? "Choose photos" : "Choose different photos")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.indigo, .mint]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(12)
+            }
+            .onChange(of: pickerItems) { newItems in
+                Task { await loadImages(from: newItems) }
+            }
+
+            Text("\(viewModel.selectedImages.count) of 3 photos")
+                .font(.caption)
+                .foregroundColor(.gray)
+
+            NavigationButtons(onBack: onBack, onNext: onNext)
+        }
+        .padding()
+    }
+
+    private func removeImage(at index: Int) {
+        guard viewModel.selectedImages.indices.contains(index) else { return }
+        viewModel.selectedImages.remove(at: index)
+        if pickerItems.indices.contains(index) {
+            pickerItems.remove(at: index)
+        } else {
+            pickerItems = []
+        }
+    }
+
+    private func loadImages(from items: [PhotosPickerItem]) async {
+        var loaded: [UIImage] = []
+        for item in items.prefix(3) {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                loaded.append(image)
+            }
+        }
+        await MainActor.run {
+            viewModel.selectedImages = loaded
         }
     }
 }
@@ -613,6 +726,7 @@ struct EventLocation {
     let coordinates: [Double]
 }
 
+@MainActor
 class CreateEventViewModel: ObservableObject {
     @Published var name = ""
     @Published var description = ""
@@ -621,7 +735,7 @@ class CreateEventViewModel: ObservableObject {
     @Published var endDate = Date().addingTimeInterval(3600) // 1 hour later
     @Published var location: EventLocation?
     @Published var price = ""
-    @Published var maxParticipants = ""
+    @Published var maxParticipants = "10"
     @Published var isPrivate = false
     @Published var selectedImages: [UIImage] = []
     @Published var showImagePicker = false
@@ -665,7 +779,9 @@ class CreateEventViewModel: ObservableObject {
         }
         
         isLoading = true
-        
+        errorMessage = nil
+        showError = false
+
         // Get current user ID
         guard let userId = Auth.auth().currentUser?.uid else {
             errorMessage = "You must be logged in to create an event"
@@ -674,52 +790,50 @@ class CreateEventViewModel: ObservableObject {
             throw EventCreationError.notAuthenticated
         }
         
-        // Create event data
+        let docRef = self.db.collection("events").document()
+        let newEventId = docRef.documentID
+        let lat = location.coordinates[0]
+        let lon = location.coordinates[1]
         let eventData: [String: Any] = [
+            "id": newEventId,
             "name": self.name,
             "description": self.description,
             "type": self.type,
             "views": "0",
             "location": location.address,
-            "price": self.price,
+            "price": self.price.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "0" : self.price,
             "owner": userId,
-            "organizerName": "Event Organizer", // This could be fetched from user profile
+            "organizerName": "Event Organizer",
             "shareContactInfo": true,
             "startDate": Timestamp(date: self.startDate),
             "endDate": Timestamp(date: self.endDate),
             "images": [],
-            "participants": [userId], // Creator is the first participant
+            "participants": [userId],
             "maxParticipants": maxParticipantsInt,
             "isTimed": true,
             "createdAt": Timestamp(date: Date()),
-            "latitude": location.coordinates[0],
-            "longitude": location.coordinates[1],
+            "coordinates": [lat, lon],
             "status": "active"
         ]
         
         do {
-            // Add event to Firestore
-            let docRef = self.db.collection("events").document()
             try await docRef.setData(eventData)
             
-            let eventId = docRef.documentID
+            let eventId = newEventId
             
             // If there are images, upload them
-            if !self.selectedImages.isEmpty {
-                try await uploadEventImages(images: self.selectedImages, eventId: eventId)
+            let imagesToUpload = Array(self.selectedImages.prefix(3))
+            if !imagesToUpload.isEmpty {
+                try await uploadEventImages(images: imagesToUpload, eventId: eventId)
             }
             
-            DispatchQueue.main.async {
-                self.createdEventId = eventId
-                self.eventCreated = true
-                self.isLoading = false
-            }
+            self.createdEventId = eventId
+            self.eventCreated = true
+            self.isLoading = false
         } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = "Failed to create event: \(error.localizedDescription)"
-                self.showError = true
-                self.isLoading = false
-            }
+            self.errorMessage = "Failed to create event: \(error.localizedDescription)"
+            self.showError = true
+            self.isLoading = false
             throw error
         }
     }
@@ -765,7 +879,7 @@ class CreateEventViewModel: ObservableObject {
         endDate = Date().addingTimeInterval(3600)
         location = nil
         price = ""
-        maxParticipants = ""
+        maxParticipants = "10"
         isPrivate = false
         selectedImages = []
         errorMessage = nil
